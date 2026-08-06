@@ -8,14 +8,9 @@
 # expiring Active Storage URLs would not: they are baked into body_html at
 # ingest.
 class Newsletters::ImagesController < ApplicationController
-  # The content type comes from the sender's MIME header. Serving whatever
-  # they claim, inline and same-origin, would hand them the app's origin —
-  # so only raster images, and never SVG, which can carry script.
-  INLINE_TYPES = %w[image/png image/jpeg image/gif image/webp].freeze
-
   def show
     image = newsletter.inline_images.blobs.find(params[:id])
-    return head :not_found unless INLINE_TYPES.include?(image.content_type)
+    return head :not_found unless Newsletter::InlineImages.displayable?(image)
 
     expires_in 1.year, public: false
     send_data image.download, type: image.content_type, disposition: :inline
@@ -23,7 +18,9 @@ class Newsletters::ImagesController < ApplicationController
 
   private
 
+  # Only the id is needed to scope the blob, and a newsletter row carries a
+  # body that runs to hundreds of kilobytes.
   def newsletter
-    Newsletter.find(params[:newsletter_id])
+    Newsletter.select(:id).find(params[:newsletter_id])
   end
 end

@@ -39,7 +39,7 @@ class Newsletter::InboundMessage
   def store
     Newsletter.transaction do
       newsletter = Newsletter.create!(attributes)
-      Newsletter::InlineImages.new(newsletter, inline_parts).attach
+      Newsletter::InlineImages.new(newsletter, mail.all_parts).attach
       newsletter
     end
   end
@@ -83,10 +83,6 @@ class Newsletter::InboundMessage
     mail.date&.to_time || Time.current
   end
 
-  def inline_parts
-    mail.all_parts.select { |part| part.content_id.present? }
-  end
-
   def html_source
     return mail.html_part.decoded if mail.html_part
     return mail.decoded if mail.mime_type == "text/html"
@@ -116,11 +112,10 @@ class Newsletter::InboundMessage
     plain_text.truncate(SNIPPET_LENGTH, separator: " ")
   end
 
-  # Reads the scrubbed HTML, not the raw: Nokogiri's #text returns the
+  # Newsletter::Body's text, not the raw HTML's: Nokogiri's #text returns the
   # contents of <style> and <script> too, and most newsletters open with a
   # stylesheet longer than the snippet.
   def plain_text
-    text_source.presence&.squish ||
-      Loofah.html5_fragment(Newsletter::Body.new(html_source).scrubbed).text.squish
+    text_source.presence&.squish || Newsletter::Body.new(html_source).text
   end
 end

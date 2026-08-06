@@ -65,6 +65,35 @@ RSpec.describe "Newsletters" do
     expect(response.body).not_to include("color:red")
   end
 
+  it "links to the newer neighbour from the reader" do
+    sign_in
+    create(:newsletter, received_at: 2.days.ago)
+    newer = create(:newsletter, received_at: 1.day.ago, subject: "The later one")
+
+    get newsletter_path(Newsletter.order(:received_at).first)
+
+    expect(response.body).to include(newsletter_path(newer))
+  end
+
+  it "links to the older neighbour from the reader" do
+    sign_in
+    older = create(:newsletter, received_at: 2.days.ago, subject: "The earlier one")
+    create(:newsletter, received_at: 1.day.ago)
+
+    get newsletter_path(Newsletter.order(:received_at).last)
+
+    expect(response.body).to include("The earlier one")
+  end
+
+  it "renders the reader without neighbour links when it is the only newsletter" do
+    sign_in
+    newsletter = create(:newsletter)
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).not_to include("neighbours__title")
+  end
+
   it "marks a newsletter read when it is opened" do
     sign_in
     newsletter = create(:newsletter, read_at: nil)

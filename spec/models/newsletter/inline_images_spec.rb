@@ -53,13 +53,18 @@ RSpec.describe Newsletter::InlineImages do
     expect(newsletter.reload.body_html).to include("https://cdn.example/hero.png")
   end
 
+  def mail_with_unnamed_inline_image
+    Mail.read_from_string(
+      "From: a@b.com\nSubject: s\n" \
+      "Content-Type: multipart/related; boundary=X\n\n--X\n" \
+      "Content-Type: text/html\n\n<img src=\"cid:logo@b.com\">\n--X\n" \
+      "Content-Type: image/png\nContent-ID: <logo@b.com>\n" \
+      "Content-Disposition: inline\nContent-Transfer-Encoding: base64\n\naGk=\n--X--\n"
+    )
+  end
+
   it "stores an inline part that declares a Content-ID but no filename" do
-    raw = "From: a@b.com\nSubject: s\n" \
-          "Content-Type: multipart/related; boundary=X\n\n--X\n" \
-          "Content-Type: text/html\n\n<img src=\"cid:logo@b.com\">\n--X\n" \
-          "Content-Type: image/png\nContent-ID: <logo@b.com>\n" \
-          "Content-Disposition: inline\nContent-Transfer-Encoding: base64\n\naGk=\n--X--\n"
-    mail = Mail.read_from_string(raw)
+    mail = mail_with_unnamed_inline_image
     newsletter = create(:newsletter, body_html: mail.html_part.decoded)
 
     Newsletter::InlineImages.new(newsletter, mail.all_parts).attach
@@ -68,12 +73,7 @@ RSpec.describe Newsletter::InlineImages do
   end
 
   it "rewrites a cid reference whose part had no filename" do
-    raw = "From: a@b.com\nSubject: s\n" \
-          "Content-Type: multipart/related; boundary=X\n\n--X\n" \
-          "Content-Type: text/html\n\n<img src=\"cid:logo@b.com\">\n--X\n" \
-          "Content-Type: image/png\nContent-ID: <logo@b.com>\n" \
-          "Content-Disposition: inline\nContent-Transfer-Encoding: base64\n\naGk=\n--X--\n"
-    mail = Mail.read_from_string(raw)
+    mail = mail_with_unnamed_inline_image
     newsletter = create(:newsletter, body_html: mail.html_part.decoded)
 
     Newsletter::InlineImages.new(newsletter, mail.all_parts).attach

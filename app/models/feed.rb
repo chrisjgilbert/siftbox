@@ -6,7 +6,7 @@
 # theatre. See .claude/rules/security.md, and the note in README.md on what
 # multiple users would take.
 class Feed
-  WINDOW = 7.days
+  UNREAD = "unread".freeze
 
   Group = Struct.new(:label, :sublabel, :newsletters)
 
@@ -14,40 +14,39 @@ class Feed
     @filter = filter
   end
 
+  # Memoised because the view asks twice: once to render, once to decide
+  # between the end-of-list line and the empty state.
   def groups
-    buckets.filter_map do |name, found|
-      next if found.empty?
-
-      Group.new(label_for(name), sublabel_for(name), present(found))
-    end
+    @_groups ||= grouped.filter_map { |name, found| group(name, found) }
   end
 
   def unread_count
     within_window.unread.count
   end
 
+  def unread_only?
+    filter == UNREAD
+  end
+
+  def everything?
+    !unread_only?
+  end
+
   private
 
   attr_reader :filter
 
-  # group_by rather than three range filters, so the buckets cannot overlap:
-  # an inclusive range ending where the next one begins put a newsletter that
-  # arrived at exactly midnight into the feed twice.
-  def buckets
-    grouped = newsletters.group_by { |newsletter| bucket_for(newsletter.received_at) }
+  # group_by rather than a range filter per bucket, so the buckets cannot
+  # overlap: inclusive ranges that met at midnight put a newsletter into the
+  # feed twice.
+  def grouped
+    found = newsletters.group_by { |newsletter| Newsletter::Age.new(newsletter.received_at).bucket }
 
-    [ :today, :yesterday, :earlier ].map { |name| [ name, grouped.fetch(name, []) ] }
+    [ :today, :yesterday, :earlier ].filter_map { |name| [ name, found[name] ] if found[name] }
   end
 
-  # Open at the top. received_at comes from the sender's Date header, so a
-  # skewed clock or a scheduled send can date a newsletter in the future;
-  # bounding this at end of day left it counted as unread but in no group,
-  # and so unreachable.
-  def bucket_for(received_at)
-    return :today if received_at >= Date.current.beginning_of_day
-    return :yesterday if received_at >= Date.yesterday.beginning_of_day
-
-    :earlier
+  def group(name, found)
+    Group.new(label_for(name), sublabel_for(name), present(found))
   end
 
   def label_for(name)
@@ -71,12 +70,12 @@ class Feed
   end
 
   def filtered
-    return within_window.unread if filter == "unread"
+    return within_window.unread if unread_only?
 
     within_window
   end
 
   def within_window
-    Newsletter.where(received_at: WINDOW.ago..)
+    Newsletter.where(received_at: Newsletter::Age::WINDOW.ago..)
   end
 end

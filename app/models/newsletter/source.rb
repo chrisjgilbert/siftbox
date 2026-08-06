@@ -14,18 +14,24 @@ class Newsletter::Source
     @newsletter = newsletter
   end
 
+  # One pass over the body. A gsub per image would copy the whole markup
+  # again each time, over a string already grown by every data URI before it.
   def html
-    newsletter.inline_images.blobs.reduce(newsletter.body_html) do |markup, blob|
-      markup.gsub(path_for(blob), data_uri(blob))
-    end
+    return newsletter.body_html if embedded.empty?
+
+    newsletter.body_html.gsub(Regexp.union(embedded.keys)) { |found| embedded.fetch(found) }
   end
 
   private
 
   attr_reader :newsletter
 
-  def path_for(blob)
-    Rails.application.routes.url_helpers.newsletter_image_path(newsletter, blob)
+  # Same allowlist the serving controller applies. A part this app will not
+  # render there should not be embedded here either.
+  def embedded
+    @_embedded ||= newsletter.inline_images.blobs
+      .select { |blob| Newsletter::InlineImages.displayable?(blob) }
+      .to_h { |blob| [ newsletter.inline_image_path(blob), data_uri(blob) ] }
   end
 
   def data_uri(blob)

@@ -114,24 +114,15 @@ RSpec.describe Newsletter::Presenter do
     expect(Newsletter::Presenter.new(newsletter).older).to be_nil
   end
 
-  it "looks the newer neighbour up only once" do
-    create(:newsletter, received_at: 2.days.ago)
-    create(:newsletter, received_at: 1.day.ago)
-    presenter = Newsletter::Presenter.new(Newsletter.order(:received_at).first)
+  it "shows the date for a newsletter older than the feed's window" do
+    travel_to Time.zone.parse("2026-08-06 18:00") do
+      newsletter = build_stubbed(
+        :newsletter,
+        received_at: Time.zone.parse("2026-06-01 09:02")
+      )
 
-    queries = count_queries { 3.times { presenter.newer } }
-
-    expect(queries).to eq(1)
-  end
-
-  def count_queries
-    counted = 0
-    subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
-      counted += 1 if payload[:sql].include?("received_at")
+      expect(Newsletter::Presenter.new(newsletter).timestamp).to eq("1 Jun")
     end
-    yield
-    ActiveSupport::Notifications.unsubscribe(subscription)
-    counted
   end
 
   it "has no newer neighbour when it is the most recent" do

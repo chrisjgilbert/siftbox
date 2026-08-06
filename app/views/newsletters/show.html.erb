@@ -30,22 +30,13 @@
   <div class="body"><%= newsletter_body(@newsletter) %></div>
 
   <nav class="neighbours">
-    <div class="neighbours__cell neighbours__cell--newer">
-      <% if @newsletter.newer %>
-        <p class="neighbours__label"><%= t("newsletters.show.newer") %></p>
-        <%= link_to @newsletter.newer.title,
-              newsletter_path(@newsletter.newer),
-              class: "neighbours__title" %>
-      <% end %>
-    </div>
-
-    <div class="neighbours__cell neighbours__cell--older">
-      <% if @newsletter.older %>
-        <p class="neighbours__label"><%= t("newsletters.show.older") %></p>
-        <%= link_to @newsletter.older.title,
-              newsletter_path(@newsletter.older),
-              class: "neighbours__title" %>
-      <% end %>
-    </div>
+    <%= render "newsletters/neighbour",
+          newsletter: @newsletter.newer,
+          label: t("newsletters.show.newer"),
+          class_name: nil %>
+    <%= render "newsletters/neighbour",
+          newsletter: @newsletter.older,
+          label: t("newsletters.show.older"),
+          class_name: "neighbours__cell--older" %>
   </nav>
 </article>

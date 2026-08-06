@@ -9,7 +9,9 @@ RSpec.describe Newsletter::Source do
       content_type: "image/png"
     )
     newsletter.inline_images.attach(blob)
-    path = "/newsletters/#{newsletter.id}/images/#{blob.id}"
+    # Built by the app, not hand-written, so this fails if the two ever
+    # disagree about the path rather than silently testing a literal.
+    path = newsletter.inline_image_path(blob)
     newsletter.update!(body_html: %(<p>Hi</p><img src="#{path}">))
     newsletter
   end

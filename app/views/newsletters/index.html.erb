@@ -6,10 +6,10 @@
 <nav class="filters">
   <%= link_to t("newsletters.filters.everything"),
         newsletters_path,
-        class: class_names("filters__link", "filters__link--active" => params[:filter].blank?) %>
+        class: class_names("filters__link", "filters__link--active" => @feed.everything?) %>
   <%= link_to t("newsletters.filters.unread", count: @feed.unread_count),
-        newsletters_path(filter: "unread"),
-        class: class_names("filters__link", "filters__link--active" => params[:filter] == "unread") %>
+        newsletters_path(filter: Feed::UNREAD),
+        class: class_names("filters__link", "filters__link--active" => @feed.unread_only?) %>
 </nav>
 
 <main class="feed">

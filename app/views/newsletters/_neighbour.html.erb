@@ -1,0 +1,8 @@
+<%= tag.div(class: class_name) do %>
+  <% if newsletter %>
+    <p class="neighbours__label"><%= label %></p>
+    <%= link_to newsletter.title,
+          newsletter_path(newsletter),
+          class: "neighbours__title" %>
+  <% end %>
+<% end %>

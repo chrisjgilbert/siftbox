@@ -4,6 +4,17 @@
 # browser — so they are stored and the references rewritten at ingest, while
 # the raw email still exists. Action Mailbox incinerates it after 30 days.
 class Newsletter::InlineImages
+  # The content type is the sender's claim. Rendering whatever they claim,
+  # inline and same-origin, would hand them the app's origin — so only raster
+  # images, and never SVG, which can carry script. A property of the stored
+  # blob, so both the controller that serves it and Newsletter::Source ask
+  # the same question.
+  DISPLAYABLE_TYPES = %w[image/png image/jpeg image/gif image/webp].freeze
+
+  def self.displayable?(blob)
+    DISPLAYABLE_TYPES.include?(blob.content_type)
+  end
+
   def initialize(newsletter, parts)
     @newsletter = newsletter
     @parts = parts.select { |part| part.content_id.present? }
@@ -38,21 +49,17 @@ class Newsletter::InlineImages
     "#{part.cid.to_s.parameterize.presence || 'inline'}.#{extension_for(part)}"
   end
 
+  # Mime::Type knows the structured subtypes that splitting on "/" gets
+  # wrong — image/svg+xml is "svg", not "svg+xml".
   def extension_for(part)
-    part.mime_type.to_s.split("/").last.presence || "bin"
+    Mime::Type.lookup(part.mime_type.to_s)&.symbol || "bin"
   end
 
   # One pass over the body rather than one full copy per image.
   def rewritten_html(blobs)
-    paths = parts.zip(blobs).to_h { |part, blob| [ "cid:#{part.cid}", path_for(blob) ] }
+    paths = parts.zip(blobs)
+      .to_h { |part, blob| [ "cid:#{part.cid}", newsletter.inline_image_path(blob) ] }
 
     newsletter.body_html.gsub(Regexp.union(paths.keys)) { |found| paths.fetch(found) }
-  end
-
-  # The app's own route rather than rails_blob_path: Active Storage's blob
-  # routes are not behind the authentication gate. See
-  # Newsletters::ImagesController.
-  def path_for(blob)
-    Rails.application.routes.url_helpers.newsletter_image_path(newsletter, blob)
   end
 end
