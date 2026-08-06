@@ -1,6 +1,7 @@
 # Project: newsbox
 
-[One sentence: what the app does and who uses it.]
+Receives newsletter emails at one dedicated address via Action Mailbox and
+Postmark, and presents them as a clean reading feed for a single reader.
 
 ## Commands
 

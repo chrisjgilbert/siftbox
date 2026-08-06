@@ -1,0 +1,18 @@
+<%= link_to newsletter_path(newsletter),
+      class: class_names("row", "row--read" => newsletter.read?) do %>
+  <span class="row__marker">
+    <% unless newsletter.read? %>
+      <span class="row__marker-dot"></span>
+    <% end %>
+  </span>
+
+  <span class="row__body">
+    <span class="row__sender">
+      <%= newsletter.sender %><span class="row__domain"> — <%= newsletter.sender_domain %></span>
+    </span>
+    <span class="row__subject"><%= newsletter.subject %></span>
+    <span class="row__snippet"><%= newsletter.snippet %></span>
+  </span>
+
+  <span class="row__timestamp"><%= newsletter.timestamp %></span>
+<% end %>

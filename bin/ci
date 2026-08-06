@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Everything that has to pass before a commit lands: tests, linters,
+# security scanners.
+set -e
+
+echo "== rspec =="
+bin/rspec
+
+echo "== rubocop =="
+bin/rubocop
+
+echo "== brakeman =="
+bin/brakeman --quiet --no-pager
+
+echo "== bundle audit =="
+bundle exec bundle-audit check --update

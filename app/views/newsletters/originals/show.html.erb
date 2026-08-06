@@ -1,0 +1,21 @@
+<% content_for :title, @newsletter.subject %>
+
+<header class="topbar">
+  <%= link_to t("newsletters.original.back"),
+        newsletter_path(@newsletter),
+        class: "topbar__back" %>
+</header>
+
+<main class="original">
+  <p class="original__caption"><%= t("newsletters.original.caption") %></p>
+
+  <%# No allow-scripts and no allow-same-origin: the frame gets an opaque
+      origin and cannot reach the app's cookies or DOM. allow-popups and
+      allow-popups-to-escape-sandbox are what make the sender's links work. %>
+  <iframe class="original__frame"
+          src="<%= newsletter_source_path(@newsletter) %>"
+          sandbox="allow-popups allow-popups-to-escape-sandbox"
+          referrerpolicy="no-referrer"
+          loading="lazy"
+          title="<%= @newsletter.subject %>"></iframe>
+</main>

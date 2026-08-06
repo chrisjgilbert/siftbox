@@ -1,0 +1,29 @@
+# Omakase Ruby styling for Rails
+inherit_gem: { rubocop-rails-omakase: rubocop.yml }
+
+# The cops .claude/rules/review.md calls out by name need their extensions
+# loaded, or they never run.
+plugins:
+  - rubocop-rspec
+  - rubocop-thread_safety
+
+AllCops:
+  NewCops: enable
+  Exclude:
+    - bin/**/*
+    - db/schema.rb
+    - vendor/**/*
+
+# .claude/rules/testing.md wants an example to read without scrolling up to
+# find out what an object is. `described_class` asks for exactly that scroll,
+# so specs name the class they are testing.
+RSpec/DescribedClass:
+  Enabled: false
+
+# Four-phase examples with a blank line between setup, exercise and verify run
+# longer than the default. .claude/rules/testing.md asks for that shape.
+RSpec/ExampleLength:
+  Max: 12
+
+RSpec/MultipleExpectations:
+  Max: 2
