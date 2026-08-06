@@ -49,7 +49,10 @@ class Newsletter::InlineImages
     newsletter.body_html.gsub(Regexp.union(paths.keys)) { |found| paths.fetch(found) }
   end
 
+  # The app's own route rather than rails_blob_path: Active Storage's blob
+  # routes are not behind the authentication gate. See
+  # Newsletters::ImagesController.
   def path_for(blob)
-    Rails.application.routes.url_helpers.rails_blob_path(blob, only_path: true)
+    Rails.application.routes.url_helpers.newsletter_image_path(newsletter, blob)
   end
 end

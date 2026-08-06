@@ -23,9 +23,9 @@ class Newsletters::SourcesController < ApplicationController
   ].join("; ").freeze
 
   def show
-    newsletter = Newsletter.find(params[:newsletter_id])
+    source = Newsletter::Source.new(Newsletter.find(params[:newsletter_id]))
 
     response.set_header("Content-Security-Policy", POLICY)
-    render plain: newsletter.body_html, content_type: "text/html"
+    render plain: source.html, content_type: "text/html"
   end
 end

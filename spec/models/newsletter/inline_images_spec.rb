@@ -32,7 +32,7 @@ RSpec.describe Newsletter::InlineImages do
 
     Newsletter::InlineImages.new(newsletter, mail.attachments).attach
 
-    expect(newsletter.reload.body_html).to include("/rails/active_storage/")
+    expect(newsletter.reload.body_html).to include("/newsletters/#{newsletter.id}/images/")
   end
 
   it "leaves no cid reference behind" do

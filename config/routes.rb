@@ -1,5 +1,6 @@
 Rails.application.routes.draw do
   resources :newsletters, only: [ :index, :show ] do
+    resources :images, only: :show, module: :newsletters
     resource :original, only: :show, module: :newsletters
     resource :read, only: :destroy, module: :newsletters
     resource :source, only: :show, module: :newsletters

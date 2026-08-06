@@ -17,6 +17,46 @@ RSpec.describe Newsletter::Body do
     expect(result).not_to include("track.example")
   end
 
+  it "removes a tracking image sized in pixel units" do
+    html = %(<img src="https://track.example/o.gif" width="1px" height="1px">)
+
+    result = Newsletter::Body.new(html).scrubbed
+
+    expect(result).not_to include("track.example")
+  end
+
+  it "removes a tracking image whose size is padded with whitespace" do
+    html = %(<img src="https://track.example/o.gif" width=" 1 ">)
+
+    result = Newsletter::Body.new(html).scrubbed
+
+    expect(result).not_to include("track.example")
+  end
+
+  it "removes a tracking image sized in a style attribute" do
+    html = %(<img src="https://track.example/o.gif" style="width:1px;height:1px">)
+
+    result = Newsletter::Body.new(html).scrubbed
+
+    expect(result).not_to include("track.example")
+  end
+
+  it "removes an image the sender hid with display none" do
+    html = %(<img src="https://track.example/o.gif" style="display:none">)
+
+    result = Newsletter::Body.new(html).scrubbed
+
+    expect(result).not_to include("track.example")
+  end
+
+  it "keeps an image sized in pixel units at a real size" do
+    html = %(<img src="https://cdn.example/hero.png" width="600px">)
+
+    result = Newsletter::Body.new(html).scrubbed
+
+    expect(result).to include("cdn.example/hero.png")
+  end
+
   it "keeps an image that declares a real size" do
     html = %(<img src="https://cdn.example/hero.png" width="600" height="300">)
 

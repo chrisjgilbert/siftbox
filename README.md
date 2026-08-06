@@ -65,6 +65,25 @@ your mail client *as an attachment* to get the `.eml`, then paste its raw
 source into the conductor — that exercises the mailbox against real
 newsletter MIME, which is where the surprises are.
 
+## Deploying
+
+The Kamal files declare what the app needs but not where it runs — no host,
+no database accessory. Those are still open. What is wired up is the list of
+variables, because every one of them fails quietly rather than loudly:
+
+| Variable | Missing means |
+|---|---|
+| `RAILS_INBOUND_EMAIL_PASSWORD` | Every Postmark webhook 500s; newsletters are lost once Postmark stops retrying |
+| `NEWSBOX_INBOUND_ADDRESS` | The feed tells the reader to subscribe to `example.com` |
+| `NEWSBOX_DATABASE_PASSWORD` | Connects with no password |
+| `POSTMARK_SMTP_TOKEN` | Password reset silently fails — the only way back in |
+| `NEWSBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
+| `NEWSBOX_HOST` | Reset links point at localhost |
+| `NEWSBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
+
+Still to decide before a first deploy: where Postgres lives (`DB_HOST`, or the
+commented `accessories.db` block), and the proxy host in `config/deploy.yml`.
+
 ## Decisions worth knowing
 
 **Sanitizing happens at render, not at ingest.** `NewslettersHelper#newsletter_body`

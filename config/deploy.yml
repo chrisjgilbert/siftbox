@@ -35,7 +35,28 @@ registry:
 env:
   secret:
     - RAILS_MASTER_KEY
+    # Action Mailbox rejects every Postmark webhook without this, so inbound
+    # newsletters are lost after Postmark gives up retrying.
+    - RAILS_INBOUND_EMAIL_PASSWORD
+    - NEWSBOX_DATABASE_PASSWORD
+    # Outbound mail, for password reset. The only account-recovery path.
+    - POSTMARK_SMTP_TOKEN
   clear:
+    # The address subscriptions are pointed at, shown in the feed header and
+    # the empty state. Without it, a deployed newsbox tells the reader to
+    # subscribe to example.com.
+    # NEWSBOX_INBOUND_ADDRESS: newsletters@your-domain
+
+    # The feed groups by calendar day, so this decides where the day breaks.
+    # NEWSBOX_TIME_ZONE: London
+
+    # The host password-reset links are built against.
+    # NEWSBOX_HOST: newsbox.your-domain
+
+    # The From address on password-reset mail. Must be a Postmark sender
+    # signature, or Postmark rejects the send.
+    # NEWSBOX_MAIL_FROM: newsbox@your-domain
+
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
     SOLID_QUEUE_IN_PUMA: true
@@ -62,7 +83,7 @@ aliases:
   dbc: app exec --interactive --reuse "bin/rails dbconsole"
 
 
-# Use a persistent storage volume for sqlite database files and local Active Storage files.
+# Local Active Storage files: the images newsletters carry inside the message.
 # Recommended to change this to a mounted volume path that is backed up off server.
 volumes:
   - "newsbox_storage:/rails/storage"
