@@ -13,6 +13,7 @@ class Newsletter::InlineImages
     return if parts.empty?
 
     blobs = parts.map { |part| upload(part) }
+    newsletter.inline_images.attach(*blobs)
     newsletter.update!(body_html: rewritten_html(blobs))
   end
 
@@ -23,15 +24,29 @@ class Newsletter::InlineImages
   def upload(part)
     ActiveStorage::Blob.create_and_upload!(
       io: StringIO.new(part.body.decoded),
-      filename: part.filename,
+      filename: filename_for(part),
       content_type: part.mime_type
-    ).tap { |blob| newsletter.inline_images.attach(blob) }
+    )
   end
 
+  # Mail only reports a filename when the part declares one. A multipart
+  # related image referenced solely by Content-ID often declares none, and
+  # Active Storage will not accept a blank filename.
+  def filename_for(part)
+    return part.filename if part.filename.present?
+
+    "#{part.cid.to_s.parameterize.presence || 'inline'}.#{extension_for(part)}"
+  end
+
+  def extension_for(part)
+    part.mime_type.to_s.split("/").last.presence || "bin"
+  end
+
+  # One pass over the body rather than one full copy per image.
   def rewritten_html(blobs)
-    parts.zip(blobs).reduce(newsletter.body_html) do |html, (part, blob)|
-      html.gsub("cid:#{part.cid}", path_for(blob))
-    end
+    paths = parts.zip(blobs).to_h { |part, blob| [ "cid:#{part.cid}", path_for(blob) ] }
+
+    newsletter.body_html.gsub(Regexp.union(paths.keys)) { |found| paths.fetch(found) }
   end
 
   def path_for(blob)

@@ -52,10 +52,12 @@ RSpec.describe Feed do
 
   it "orders newsletters newest first inside a group" do
     travel_to Time.zone.parse("2026-08-06 18:00") do
-      earlier = create(:newsletter, received_at: 5.hours.ago)
-      later = create(:newsletter, received_at: 1.hour.ago)
+      create(:newsletter, received_at: 5.hours.ago, subject: "Earlier one")
+      create(:newsletter, received_at: 1.hour.ago, subject: "Later one")
 
-      expect(Feed.new.groups.first.newsletters).to eq([ later, earlier ])
+      subjects = Feed.new.groups.first.newsletters.map(&:subject)
+
+      expect(subjects).to eq([ "Later one", "Earlier one" ])
     end
   end
 
@@ -78,10 +80,12 @@ RSpec.describe Feed do
 
   it "shows only unread newsletters when filtered to unread" do
     travel_to Time.zone.parse("2026-08-06 18:00") do
-      unread = create(:newsletter, received_at: 1.hour.ago, read_at: nil)
-      create(:newsletter, received_at: 2.hours.ago, read_at: 1.minute.ago)
+      create(:newsletter, received_at: 1.hour.ago, read_at: nil, subject: "Still unread")
+      create(:newsletter, received_at: 2.hours.ago, read_at: 1.minute.ago, subject: "Read")
 
-      expect(Feed.new(filter: "unread").groups.first.newsletters).to eq([ unread ])
+      subjects = Feed.new(filter: "unread").groups.first.newsletters.map(&:subject)
+
+      expect(subjects).to eq([ "Still unread" ])
     end
   end
 
@@ -90,6 +94,40 @@ RSpec.describe Feed do
       create(:newsletter, received_at: 1.hour.ago, read_at: nil)
 
       expect(Feed.new(filter: "unread").unread_count).to eq(1)
+    end
+  end
+
+  it "puts a newsletter received at exactly midnight in one group only" do
+    travel_to Time.zone.parse("2026-08-06 18:00") do
+      create(:newsletter, received_at: Date.yesterday.beginning_of_day)
+
+      expect(Feed.new.groups.map(&:label)).to eq([ "Yesterday" ])
+    end
+  end
+
+  it "shows a newsletter dated in the future rather than hiding it" do
+    travel_to Time.zone.parse("2026-08-06 18:00") do
+      create(:newsletter, received_at: 2.days.from_now)
+
+      expect(Feed.new.groups.first.label).to eq("Today")
+    end
+  end
+
+  it "counts the same unread newsletters it renders" do
+    travel_to Time.zone.parse("2026-08-06 18:00") do
+      create(:newsletter, received_at: 2.days.from_now, read_at: nil)
+
+      rendered = Feed.new.groups.sum { |group| group.newsletters.length }
+
+      expect(rendered).to eq(Feed.new.unread_count)
+    end
+  end
+
+  it "hands the view presenters rather than records" do
+    travel_to Time.zone.parse("2026-08-06 18:00") do
+      create(:newsletter, received_at: 1.hour.ago, sender_name: "Ruby Weekly")
+
+      expect(Feed.new.groups.first.newsletters.first.title).to include("Ruby Weekly")
     end
   end
 

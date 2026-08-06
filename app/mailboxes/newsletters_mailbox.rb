@@ -21,7 +21,14 @@ class NewslettersMailbox < ApplicationMailbox
   end
 
   # Postmark stamps this on inbound mail. Absent, `to_f` reads 0.0.
+  #
+  # Mail::Header#[] returns an Array when a header repeats, which it does on
+  # anything forwarded through a mailbox that already ran a spam filter — so
+  # `&.value` on the result would raise and lose the newsletter.
   def spam_score
-    mail["X-Spam-Score"]&.value.to_f
+    field = mail["X-Spam-Score"]
+    field = field.first if field.is_a?(Array)
+
+    field&.value.to_f
   end
 end

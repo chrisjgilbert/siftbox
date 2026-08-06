@@ -4,12 +4,7 @@ namespace :sample_data do
     raise "Development only" unless Rails.env.development?
 
     Newsletter.destroy_all
-
-    SampleData::NEWSLETTERS.each do |attributes|
-      Newsletter.create!(attributes.transform_values { |value|
-        value.respond_to?(:call) ? value.call : value
-      })
-    end
+    SampleData.newsletters.each { |attributes| Newsletter.create!(attributes) }
 
     puts "Created #{Newsletter.count} newsletters"
   end
@@ -45,52 +40,56 @@ module SampleData
     if you run more than a handful of workers.</p>
   HTML
 
-  NEWSLETTERS = [
-    {
-      sender_name: "Ruby Weekly",
-      sender_email: "peter@rubyweekly.com",
-      subject: "Ruby 3.4 lands with a rewritten parser",
-      snippet: "The parser rewrite landed this week, and it is the largest " \
-               "change to the language's front end in a decade.",
-      body_html: BODY,
-      received_at: -> { 2.hours.ago }
-    },
-    {
-      sender_name: "This Week in Rails",
-      sender_email: "editors@weblog.rubyonrails.org",
-      subject: "Solid Queue gets recurring jobs, plus a faster query cache",
-      snippet: "Recurring jobs are now part of Solid Queue proper, so most " \
-               "apps can drop their scheduler gem.",
-      body_html: BODY,
-      received_at: -> { 6.hours.ago }
-    },
-    {
-      sender_name: "Postgres Weekly",
-      sender_email: "peter@postgresweekly.com",
-      subject: "Skip scan lands in Postgres 18",
-      snippet: "Multi-column indexes just got considerably more useful for " \
-               "queries that skip the leading column.",
-      body_html: BODY,
-      read_at: -> { 1.hour.ago },
-      received_at: -> { 1.day.ago }
-    },
-    {
-      sender_name: "Offscreen",
-      sender_email: "kai@offscreenmag.com",
-      subject: "On reading things that do not want your attention",
-      snippet: "A short argument for media that has no idea whether you " \
-               "finished it.",
-      body_html: BODY,
-      received_at: -> { 3.days.ago }
-    },
-    {
-      sender_name: "The Browser",
-      sender_email: "editors@thebrowser.com",
-      subject: "Five articles worth your evening",
-      snippet: "On lighthouse keepers, a very long bridge, and why nobody " \
-               "agrees what a sandwich is.",
-      body_html: BODY,
-      received_at: -> { 5.days.ago }
-    }
-  ].freeze
+  # A method rather than a constant, so the timestamps below are read when
+  # the task runs instead of when Rake loads this file.
+  def self.newsletters
+    [
+      {
+        sender_name: "Ruby Weekly",
+        sender_email: "peter@rubyweekly.com",
+        subject: "Ruby 3.4 lands with a rewritten parser",
+        snippet: "The parser rewrite landed this week, and it is the largest " \
+                 "change to the language's front end in a decade.",
+        body_html: BODY,
+        received_at: 2.hours.ago
+      },
+      {
+        sender_name: "This Week in Rails",
+        sender_email: "editors@weblog.rubyonrails.org",
+        subject: "Solid Queue gets recurring jobs, plus a faster query cache",
+        snippet: "Recurring jobs are now part of Solid Queue proper, so most " \
+                 "apps can drop their scheduler gem.",
+        body_html: BODY,
+        received_at: 6.hours.ago
+      },
+      {
+        sender_name: "Postgres Weekly",
+        sender_email: "peter@postgresweekly.com",
+        subject: "Skip scan lands in Postgres 18",
+        snippet: "Multi-column indexes just got considerably more useful for " \
+                 "queries that skip the leading column.",
+        body_html: BODY,
+        read_at: 1.hour.ago,
+        received_at: 1.day.ago
+      },
+      {
+        sender_name: "Offscreen",
+        sender_email: "kai@offscreenmag.com",
+        subject: "On reading things that do not want your attention",
+        snippet: "A short argument for media that has no idea whether you " \
+                 "finished it.",
+        body_html: BODY,
+        received_at: 3.days.ago
+      },
+      {
+        sender_name: "The Browser",
+        sender_email: "editors@thebrowser.com",
+        subject: "Five articles worth your evening",
+        snippet: "On lighthouse keepers, a very long bridge, and why nobody " \
+                 "agrees what a sandwich is.",
+        body_html: BODY,
+        received_at: 5.days.ago
+      }
+    ]
+  end
 end

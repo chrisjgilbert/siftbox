@@ -44,11 +44,40 @@ RSpec.describe NewslettersMailbox, type: :mailbox do
     expect(Newsletter.count).to eq(1)
   end
 
-  it "marks discarded spam as delivered rather than failed" do
+  it "does not bounce discarded spam back to its forged sender" do
     mail = newsletter_mail
     mail["X-Spam-Score"] = "9.4"
 
     inbound_email = receive_inbound_email_from_source(mail.to_s)
+
+    expect(inbound_email).not_to be_bounced
+  end
+
+  # Anything raised in processing loses the newsletter, and a header that
+  # repeats is ordinary in mail forwarded through another spam filter.
+  it "stores mail carrying the spam score header twice" do
+    mail = newsletter_mail
+    mail.header["X-Spam-Score"] = "0.1"
+    mail.header["X-Spam-Score"] = "0.2"
+
+    receive_inbound_email_from_source(mail.to_s)
+
+    expect(Newsletter.count).to eq(1)
+  end
+
+  it "stores mail whose From header is not a parseable address" do
+    receive_inbound_email_from_source(
+      "From: Ruby Weekly\nTo: news@example.com\nSubject: Issue 742\n\nMorning"
+    )
+
+    expect(Newsletter.count).to eq(1)
+  end
+
+  it "stores a redelivery once rather than failing on it" do
+    source = newsletter_mail(message_id: "<issue-742@rubyweekly.com>").to_s
+    receive_inbound_email_from_source(source)
+
+    inbound_email = receive_inbound_email_from_source("#{source}\n")
 
     expect(inbound_email).to be_delivered
   end

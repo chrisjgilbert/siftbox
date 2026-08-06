@@ -33,8 +33,10 @@ module Newsbox
     # These settings can be overridden in specific environments using the files
     # in config/environments, which are processed later.
     #
-    # config.time_zone = "Central Time (US & Canada)"
-    # config.eager_load_paths << Rails.root.join("extras")
+    # The feed groups by calendar day and labels rows with wall-clock times,
+    # so leaving this at UTC files the reader's late-evening mail under the
+    # wrong heading and shows every timestamp in the wrong zone.
+    config.time_zone = ENV.fetch("NEWSBOX_TIME_ZONE", "London")
 
     config.action_mailbox.ingress = :postmark
 

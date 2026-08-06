@@ -22,7 +22,7 @@
 
       <div class="feed__rows">
         <% group.newsletters.each do |newsletter| %>
-          <%= render "newsletters/row", newsletter: Newsletter::Presenter.new(newsletter) %>
+          <%= render "newsletters/row", newsletter: newsletter %>
         <% end %>
       </div>
     </section>

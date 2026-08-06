@@ -105,7 +105,7 @@ RSpec.describe Newsletter::InboundMessage do
     expect(newsletter.snippet.length).to be <= Newsletter::InboundMessage::SNIPPET_LENGTH
   end
 
-  it "stores the Message-ID so a redelivery can be recognised" do
+  it "stores the Message-ID" do
     message = Newsletter::InboundMessage.new(
       mail: inbound_mail(message_id: "<issue-742@rubyweekly.com>")
     )
@@ -113,5 +113,89 @@ RSpec.describe Newsletter::InboundMessage do
     newsletter = message.save
 
     expect(newsletter.message_id).to eq("issue-742@rubyweekly.com")
+  end
+
+  it "recognises a redelivery instead of storing it twice" do
+    identifier = "<issue-742@rubyweekly.com>"
+    Newsletter::InboundMessage.new(mail: inbound_mail(message_id: identifier)).save
+
+    Newsletter::InboundMessage.new(
+      mail: inbound_mail(message_id: identifier, html: "<p>Edited</p>")
+    ).save
+
+    expect(Newsletter.count).to eq(1)
+  end
+
+  it "returns the newsletter already stored when a redelivery arrives" do
+    identifier = "<issue-742@rubyweekly.com>"
+    first = Newsletter::InboundMessage.new(mail: inbound_mail(message_id: identifier)).save
+
+    second = Newsletter::InboundMessage.new(mail: inbound_mail(message_id: identifier)).save
+
+    expect(second).to eq(first)
+  end
+
+  it "still stores two newsletters that carry no Message-ID" do
+    Newsletter::InboundMessage.new(mail: inbound_mail).save
+    Newsletter::InboundMessage.new(mail: inbound_mail).save
+
+    expect(Newsletter.count).to eq(2)
+  end
+
+  it "renders a plain-text newsletter as paragraphs" do
+    mail = Mail.read_from_string(
+      "From: a@b.com\nSubject: s\nContent-Type: text/plain\n\nFirst para\n\nSecond para"
+    )
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.body_html).to eq("<p>First para</p><p>Second para</p>")
+  end
+
+  it "builds a snippet for a plain-text newsletter" do
+    mail = Mail.read_from_string(
+      "From: a@b.com\nSubject: s\nContent-Type: text/plain\n\nRuby 3.4 is out"
+    )
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.snippet).to eq("Ruby 3.4 is out")
+  end
+
+  it "stores a non-multipart HTML newsletter" do
+    mail = Mail.read_from_string(
+      "From: a@b.com\nSubject: s\nContent-Type: text/html\n\n<p>Ruby 3.4</p>"
+    )
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.body_html).to include("<p>Ruby 3.4</p>")
+  end
+
+  it "keeps stylesheet rules out of the snippet" do
+    style = "<style>body{margin:0;padding:0;-webkit-text-size-adjust:100%}</style>"
+    message = Newsletter::InboundMessage.new(
+      mail: inbound_mail(html: "#{style}<p>Ruby 3.4 is out</p>")
+    )
+
+    newsletter = message.save
+
+    expect(newsletter.snippet).to eq("Ruby 3.4 is out")
+  end
+
+  it "stores a newsletter whose From header is not an address" do
+    mail = Mail.read_from_string("From: Ruby Weekly\nSubject: s\n\nhi")
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.sender_email).to eq("")
+  end
+
+  it "stores a newsletter with no From header at all" do
+    mail = Mail.read_from_string("Subject: s\n\nhi")
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter).to be_persisted
   end
 end

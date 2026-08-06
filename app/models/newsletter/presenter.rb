@@ -1,15 +1,11 @@
 # Display logic for one newsletter, built in the controller and used in the
 # views, so no template has to format a date or assemble a sender line.
 class Newsletter::Presenter
-  delegate :id, :subject, :snippet, :sender_domain, :body_html, :read?,
-    :to_model, :to_param, to: :newsletter
+  delegate :subject, :snippet, :sender_domain, :body_html, :read?, :to_param,
+    to: :newsletter
 
   def initialize(newsletter)
     @newsletter = newsletter
-  end
-
-  def sender_line
-    "#{sender} — #{sender_domain}"
   end
 
   def title
@@ -38,12 +34,19 @@ class Newsletter::Presenter
     )
   end
 
+  # The show view reads each neighbour three times — the guard, the title and
+  # the link. `defined?` rather than `||=` so a nil neighbour is remembered
+  # too, instead of re-querying on every read.
   def newer
-    present(newsletter.newer)
+    return @_newer if defined?(@_newer)
+
+    @_newer = present(newsletter.newer)
   end
 
   def older
-    present(newsletter.older)
+    return @_older if defined?(@_older)
+
+    @_older = present(newsletter.older)
   end
 
   private

@@ -27,13 +27,24 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("Unread (1)")
   end
 
-  it "shows only unread newsletters when filtered" do
+  it "hides read newsletters when filtered to unread" do
     sign_in
     create(:newsletter, subject: "Already read", read_at: 1.hour.ago)
+    create(:newsletter, subject: "Not yet read", read_at: nil)
 
     get newsletters_path(filter: "unread")
 
     expect(response.body).not_to include("Already read")
+  end
+
+  it "keeps unread newsletters when filtered to unread" do
+    sign_in
+    create(:newsletter, subject: "Already read", read_at: 1.hour.ago)
+    create(:newsletter, subject: "Not yet read", read_at: nil)
+
+    get newsletters_path(filter: "unread")
+
+    expect(response.body).to include("Not yet read")
   end
 
   it "renders the newsletter body in the reader" do
@@ -127,5 +138,65 @@ RSpec.describe "Newsletters" do
     get newsletter_source_path(newsletter)
 
     expect(response).to redirect_to(new_session_path)
+  end
+
+  it "keeps a signed-out reader out of the reader view" do
+    newsletter = create(:newsletter)
+
+    get newsletter_path(newsletter)
+
+    expect(response).to redirect_to(new_session_path)
+  end
+
+  it "keeps a signed-out reader off the view-original screen" do
+    newsletter = create(:newsletter)
+
+    get newsletter_original_path(newsletter)
+
+    expect(response).to redirect_to(new_session_path)
+  end
+
+  it "keeps a signed-out visitor from changing read state" do
+    newsletter = create(:newsletter, read_at: 1.hour.ago)
+
+    delete newsletter_read_path(newsletter)
+
+    expect(newsletter.reload).to be_read
+  end
+
+  it "sends the reader back to the feed after marking unread" do
+    sign_in
+    newsletter = create(:newsletter, read_at: 1.hour.ago)
+
+    delete newsletter_read_path(newsletter)
+
+    expect(response).to redirect_to(newsletters_url)
+  end
+
+  it "sandboxes the source response itself, not just the frame around it" do
+    sign_in
+    newsletter = create(:newsletter)
+
+    get newsletter_source_path(newsletter)
+
+    expect(response.headers["Content-Security-Policy"]).to include("sandbox allow-popups")
+  end
+
+  it "lets the source view load the inline images it stored" do
+    sign_in
+    newsletter = create(:newsletter)
+
+    get newsletter_source_path(newsletter)
+
+    expect(response.headers["Content-Security-Policy"]).to include("img-src 'self'")
+  end
+
+  it "sends a content security policy with the reader view" do
+    sign_in
+    newsletter = create(:newsletter)
+
+    get newsletter_path(newsletter)
+
+    expect(response.headers["Content-Security-Policy"]).to include("object-src 'none'")
   end
 end

@@ -5,6 +5,6 @@ class Newsletters::ReadsController < ApplicationController
     newsletter = Newsletter.find(params[:newsletter_id])
     newsletter.mark_unread
 
-    redirect_to newsletters_path
+    redirect_to newsletters_url
   end
 end

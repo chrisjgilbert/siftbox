@@ -10,6 +10,7 @@ en:
       yesterday: Yesterday
   layouts:
     application:
+      title: Newsbox
       wordmark: reader
   newsletters:
     filters:
@@ -28,6 +29,16 @@ en:
       older: Older
       received: Received %{date} at %{time}
       view_original: View original
+  passwords:
+    edit:
+      confirmation: Repeat new password
+      password: New password
+      submit: Save
+      title: Update your password
+    new:
+      email: Email address
+      submit: Email reset instructions
+      title: Forgot your password?
   sessions:
     new:
       email: Email address

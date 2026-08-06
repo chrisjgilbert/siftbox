@@ -53,3 +53,55 @@ jobs:
       - name: Lint code for consistent style
         run: bin/rubocop -f github
 
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Check bundled gems for known vulnerabilities
+        run: bundle exec bundle-audit check --update
+
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Run the test suite
+        env:
+          RAILS_ENV: test
+          # test.rb only eager loads when CI is set, which is how a constant
+          # that Zeitwerk cannot resolve gets caught before a deploy does it.
+          CI: "1"
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
+        run: |
+          bin/rails db:test:prepare
+          bin/rspec
+

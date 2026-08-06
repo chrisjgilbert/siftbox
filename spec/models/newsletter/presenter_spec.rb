@@ -1,16 +1,12 @@
 require "rails_helper"
 
 RSpec.describe Newsletter::Presenter do
-  it "joins the sender name and domain for the feed row" do
-    newsletter = build_stubbed(
-      :newsletter,
-      sender_name: "Ruby Weekly",
-      sender_email: "peter@rubyweekly.com"
-    )
+  it "shows the sender's display name" do
+    newsletter = build_stubbed(:newsletter, sender_name: "Ruby Weekly")
 
     presenter = Newsletter::Presenter.new(newsletter)
 
-    expect(presenter.sender_line).to eq("Ruby Weekly — rubyweekly.com")
+    expect(presenter.sender).to eq("Ruby Weekly")
   end
 
   it "falls back to the address when the sender has no display name" do
@@ -22,7 +18,7 @@ RSpec.describe Newsletter::Presenter do
 
     presenter = Newsletter::Presenter.new(newsletter)
 
-    expect(presenter.sender_line).to eq("peter@rubyweekly.com — rubyweekly.com")
+    expect(presenter.sender).to eq("peter@rubyweekly.com")
   end
 
   it "shows the time of day for a newsletter that arrived today" do
@@ -92,12 +88,50 @@ RSpec.describe Newsletter::Presenter do
     expect(presenter.title).to eq("Ruby Weekly — Issue 742")
   end
 
-  it "presents the newer neighbour" do
+  # `title` is the presenter's own, so this fails if the neighbour comes back
+  # unwrapped — which `subject` alone could not tell apart.
+  it "wraps the newer neighbour in a presenter" do
     create(:newsletter, received_at: 2.days.ago)
-    newer = create(:newsletter, received_at: 1.day.ago, subject: "Later one")
+    create(:newsletter, received_at: 1.day.ago, sender_name: "Ruby Weekly",
+      subject: "Later one")
     presenter = Newsletter::Presenter.new(Newsletter.order(:received_at).first)
 
-    expect(presenter.newer.subject).to eq(newer.subject)
+    expect(presenter.newer.title).to eq("Ruby Weekly — Later one")
+  end
+
+  it "wraps the older neighbour in a presenter" do
+    create(:newsletter, received_at: 2.days.ago, sender_name: "Ruby Weekly",
+      subject: "Earlier one")
+    create(:newsletter, received_at: 1.day.ago)
+    presenter = Newsletter::Presenter.new(Newsletter.order(:received_at).last)
+
+    expect(presenter.older.title).to eq("Ruby Weekly — Earlier one")
+  end
+
+  it "has no older neighbour when it is the oldest" do
+    newsletter = create(:newsletter, received_at: 1.day.ago)
+
+    expect(Newsletter::Presenter.new(newsletter).older).to be_nil
+  end
+
+  it "looks the newer neighbour up only once" do
+    create(:newsletter, received_at: 2.days.ago)
+    create(:newsletter, received_at: 1.day.ago)
+    presenter = Newsletter::Presenter.new(Newsletter.order(:received_at).first)
+
+    queries = count_queries { 3.times { presenter.newer } }
+
+    expect(queries).to eq(1)
+  end
+
+  def count_queries
+    counted = 0
+    subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+      counted += 1 if payload[:sql].include?("received_at")
+    end
+    yield
+    ActiveSupport::Notifications.unsubscribe(subscription)
+    counted
   end
 
   it "has no newer neighbour when it is the most recent" do

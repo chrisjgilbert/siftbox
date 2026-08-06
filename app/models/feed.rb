@@ -1,5 +1,5 @@
 # The index view's collection: newsletters from the last week, grouped by the
-# day they arrived.
+# day they arrived, each row already wrapped in its presenter.
 #
 # Not scoped to a user. With one inbound address and one account, the
 # authentication gate is the scope; a user_id nothing filters on would be
@@ -15,7 +15,11 @@ class Feed
   end
 
   def groups
-    [ today, yesterday, earlier ].compact
+    buckets.filter_map do |name, found|
+      next if found.empty?
+
+      Group.new(label_for(name), sublabel_for(name), present(found))
+    end
   end
 
   def unread_count
@@ -26,30 +30,44 @@ class Feed
 
   attr_reader :filter
 
-  def today
-    group("today", Date.current.all_day, I18n.l(Date.current, format: :feed_group))
+  # group_by rather than three range filters, so the buckets cannot overlap:
+  # an inclusive range ending where the next one begins put a newsletter that
+  # arrived at exactly midnight into the feed twice.
+  def buckets
+    grouped = newsletters.group_by { |newsletter| bucket_for(newsletter.received_at) }
+
+    [ :today, :yesterday, :earlier ].map { |name| [ name, grouped.fetch(name, []) ] }
   end
 
-  def yesterday
-    group("yesterday", Date.yesterday.all_day,
-      I18n.l(Date.yesterday, format: :feed_group))
+  # Open at the top. received_at comes from the sender's Date header, so a
+  # skewed clock or a scheduled send can date a newsletter in the future;
+  # bounding this at end of day left it counted as unread but in no group,
+  # and so unreachable.
+  def bucket_for(received_at)
+    return :today if received_at >= Date.current.beginning_of_day
+    return :yesterday if received_at >= Date.yesterday.beginning_of_day
+
+    :earlier
   end
 
-  def earlier
-    group("earlier", WINDOW.ago..Date.yesterday.beginning_of_day,
-      I18n.t("feed.groups.this_week"))
+  def label_for(name)
+    I18n.t("feed.groups.#{name}")
   end
 
-  def group(name, range, sublabel)
-    found = newsletters.select { |newsletter| range.cover?(newsletter.received_at) }
-    return if found.empty?
+  def sublabel_for(name)
+    return I18n.t("feed.groups.this_week") if name == :earlier
+    return I18n.l(Date.current, format: :feed_group) if name == :today
 
-    Group.new(I18n.t("feed.groups.#{name}"), sublabel, found)
+    I18n.l(Date.yesterday, format: :feed_group)
+  end
+
+  def present(found)
+    found.map { |newsletter| Newsletter::Presenter.new(newsletter) }
   end
 
   # Loaded once and partitioned in Ruby: three date groups off one query.
   def newsletters
-    @_newsletters ||= filtered.newest_first.to_a
+    @_newsletters ||= filtered.for_feed.newest_first.to_a
   end
 
   def filtered
