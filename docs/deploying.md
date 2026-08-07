@@ -94,7 +94,7 @@ gives you `ghcr.io/ghcr.io/user/newsbox`.
 Then uncomment and fill the `env.clear` block:
 
 ```yaml
-NEWSBOX_INBOUND_ADDRESS: newsletters@news.siftbox.co
+NEWSBOX_INBOUND_ADDRESS: news@news.siftbox.co
 NEWSBOX_HOST: siftbox.co
 NEWSBOX_MAIL_FROM: newsbox@siftbox.co     # must match the sender signature
 NEWSBOX_TIME_ZONE: London

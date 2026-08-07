@@ -50,7 +50,7 @@ env:
     # The address subscriptions are pointed at, shown in the feed header and
     # the empty state. Without it, a deployed newsbox tells the reader to
     # subscribe to example.com.
-    NEWSBOX_INBOUND_ADDRESS: newsletters@news.siftbox.co
+    NEWSBOX_INBOUND_ADDRESS: news@news.siftbox.co
 
     # The feed groups by calendar day, so this decides where the day breaks.
     NEWSBOX_TIME_ZONE: London
