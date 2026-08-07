@@ -114,51 +114,25 @@ a {
   }
 }
 
-/* Header ------------------------------------------------------------------ */
+/* Feed masthead ----------------------------------------------------------- */
 
-.header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 22px var(--gutter) 18px;
-  border-bottom: 1px solid var(--rule);
+/* Below 720px the brand and the filters are two stacked bands with their own
+   rules; from 720px they sit on one line under a single 2px rule. */
+.masthead__brand {
+  padding: 24px var(--gutter) 20px;
+  border-bottom: 2px solid var(--ink);
 }
-
-.header__wordmark {
-  margin: 0;
-  font-family: var(--sans);
-  font-size: 20px;
-  font-weight: 500;
-  color: var(--ink);
-}
-
-.header__address {
-  font-size: 12px;
-  color: var(--mute);
-}
-
-@media (min-width: 720px) {
-  .header {
-    padding: 28px var(--gutter);
-  }
-
-  .header__wordmark {
-    font-size: 22px;
-  }
-
-  .header__address {
-    font-size: 13px;
-  }
-}
-
-/* Filter bar -------------------------------------------------------------- */
 
 .filters {
   display: flex;
-  align-items: baseline;
-  gap: 18px;
+  align-items: center;
+  gap: 14px;
   padding: 14px var(--gutter);
-  font-size: 13px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .filters__link {
@@ -168,198 +142,384 @@ a {
 
 .filters__link:hover {
   color: var(--ink);
-  opacity: 1;
 }
 
+/* The number is the unread marker in the feed, so the active filter is the
+   only place blue fills a shape rather than colouring type. */
 .filters__link--active {
-  color: var(--ink);
-  border-bottom: 1px solid var(--ink);
-  padding-bottom: 2px;
+  background: var(--blue);
+  color: var(--paper);
+  padding: 4px 7px;
+}
+
+.filters__link--active:hover {
+  color: var(--paper);
 }
 
 @media (min-width: 720px) {
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px var(--gutter);
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .masthead__brand {
+    padding: 0;
+    border-bottom: 0;
+  }
+
   .filters {
-    gap: 20px;
-    padding: 18px var(--gutter);
-    border-bottom: 1px solid var(--rule);
-    font-size: 14px;
+    gap: 26px;
+    padding: 0;
+    border-bottom: 0;
+    font-size: 11px;
+  }
+
+  .filters__link--active {
+    padding: 4px 8px;
   }
 }
 
 /* Feed -------------------------------------------------------------------- */
 
 .feed {
-  padding: 8px var(--gutter) 0;
+  padding: 0 var(--gutter) 48px;
 }
 
 .feed__group {
-  padding-top: 28px;
+  padding-top: 24px;
 }
 
 .feed__group-header {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding-bottom: 6px;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .feed__group-label {
   margin: 0;
-  font-family: var(--sans);
-  font-size: 18px;
-  font-weight: 400;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
+  letter-spacing: inherit;
 }
 
 .feed__group-sublabel {
-  font-size: 12px;
   color: var(--mute);
 }
 
 .feed__end {
-  border-top: 1px solid var(--rule);
-  margin-top: 28px;
-  padding: 22px 0 64px;
-  font-size: 13px;
+  padding-top: 28px;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.9;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--mute);
 }
 
+.feed__end-line {
+  margin: 0;
+}
+
 .feed__empty {
-  padding: 64px 0;
-  font-size: 14px;
-  color: var(--mute);
+  padding: 48px 0;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--body);
+  text-wrap: pretty;
 }
 
 @media (min-width: 720px) {
   .feed {
-    display: flex;
-    flex-direction: column;
-    gap: 56px;
-    padding: 56px var(--gutter) 64px;
+    padding: 0 var(--gutter) 72px;
   }
 
   .feed__group {
-    display: grid;
-    grid-template-columns: 150px 1fr;
-    column-gap: 48px;
-    align-items: start;
-    padding-top: 0;
+    padding-top: 48px;
   }
 
   .feed__group-header {
-    display: block;
-    text-align: right;
-    padding-top: 24px;
-  }
-
-  .feed__group-label {
-    font-size: 20px;
-  }
-
-  .feed__group-sublabel {
-    display: block;
-    margin-top: 4px;
-    font-size: 13px;
+    padding-bottom: 10px;
+    font-size: 11px;
   }
 
   .feed__end {
-    display: grid;
-    grid-template-columns: 150px 1fr;
-    column-gap: 48px;
-    border-top: 0;
-    margin-top: 0;
-    padding: 0;
+    font-size: 11px;
   }
 
-  .feed__end-text {
-    grid-column: 2;
-    border-top: 1px solid var(--rule);
-    padding-top: 22px;
+  .feed__empty {
+    padding: 72px 0;
+    max-width: var(--measure);
+  }
+}
+
+/* Lead item --------------------------------------------------------------- */
+
+/* The newest item in the feed, when it has an image. Grid areas rather than
+   nested markup so the number, sender and time collapse onto one mono line
+   below 720px and split into their own columns above it. */
+.lead {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  column-gap: 0;
+  grid-template-areas:
+    "image   image   image"
+    "number  sender  time"
+    "subject subject subject"
+    "snippet snippet snippet";
+  padding: 20px 0 24px;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  color: inherit;
+}
+
+.lead--read {
+  opacity: 0.66;
+}
+
+.lead__image {
+  grid-area: image;
+  display: block;
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  margin-bottom: 14px;
+  background: var(--hover);
+}
+
+.lead__number,
+.lead__sender,
+.lead__timestamp {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.lead__number {
+  grid-area: number;
+  color: var(--blue);
+}
+
+.lead--read .lead__number {
+  color: var(--read);
+}
+
+/* The mono line reads "01 / RUBY WEEKLY / 06:12" on mobile. The separators
+   belong to the layout, not to the copy, so they are drawn rather than
+   translated — and they go away when the three split into columns. */
+.lead__number::after,
+.lead__sender::after {
+  content: "\00a0/\00a0";
+}
+
+.lead__sender {
+  grid-area: sender;
+}
+
+.lead__subject {
+  grid-area: subject;
+  margin-top: 8px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  text-wrap: pretty;
+}
+
+.lead__snippet {
+  display: none;
+}
+
+.lead__timestamp {
+  grid-area: time;
+  justify-self: start;
+}
+
+@media (min-width: 720px) {
+  .lead {
+    grid-template-columns: 44px 1fr 96px;
+    column-gap: 24px;
+    grid-template-areas:
+      "image  image   image"
+      "number sender  time"
+      "number subject time"
+      "number snippet time";
+    padding: 32px 0 36px;
+  }
+
+  .lead__image {
+    height: 360px;
+    margin-bottom: 28px;
+  }
+
+  .lead__number,
+  .lead__timestamp {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .lead__sender {
+    font-size: 11px;
+  }
+
+  .lead__number::after,
+  .lead__sender::after {
+    content: none;
+  }
+
+  .lead__subject {
+    margin-top: 12px;
+    max-width: 900px;
+    font-size: 40px;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+
+  .lead__snippet {
+    grid-area: snippet;
+    display: block;
+    margin-top: 14px;
+    max-width: 640px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--mute);
+    text-wrap: pretty;
+  }
+
+  .lead__timestamp {
+    justify-self: end;
   }
 }
 
 /* Feed row ---------------------------------------------------------------- */
 
-/* One three-column grid at both widths. The design describes the mobile row
-   as a flex meta line with the timestamp pushed right; a grid column lands in
-   the same place and keeps the timestamp a direct child, which the desktop
-   layout needs. */
 .row {
   display: grid;
-  grid-template-columns: 12px 1fr auto;
-  column-gap: 12px;
+  grid-template-columns: auto auto 1fr 92px;
+  column-gap: 0;
+  grid-template-areas:
+    "number  sender  time    thumb"
+    "subject subject subject thumb"
+    "snippet snippet snippet thumb";
   align-items: start;
-  padding: 16px 0;
-  border-top: 1px solid var(--rule);
+  padding: 20px 0;
+  border-bottom: 1px solid var(--rule);
   text-decoration: none;
   color: inherit;
 }
 
-.row:hover {
-  opacity: 1;
-}
-
 .row--read {
-  opacity: 0.72;
+  opacity: 0.66;
 }
 
-.row__marker {
-  display: block;
-  padding-top: 10px;
+.row__number,
+.row__sender,
+.row__timestamp {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
 }
 
-.row__marker-dot {
-  display: block;
-  width: 5px;
-  height: 5px;
-  background: var(--blue);
+/* The number replaces the unread dot: blue while unread, grey once read. */
+.row__number {
+  grid-area: number;
+  color: var(--blue);
 }
 
-.row__body {
-  display: block;
-  min-width: 0;
+.row--read .row__number {
+  color: var(--read);
+}
+
+.row__number::after {
+  content: "\00a0/\00a0";
 }
 
 .row__sender {
-  display: block;
-  font-size: 12px;
-  color: var(--mute);
-  letter-spacing: 0.01em;
-}
-
-.row__timestamp {
-  font-size: 12px;
-  color: var(--mute);
-  font-variant-numeric: tabular-nums;
-}
-
-.row__domain {
-  display: none;
+  grid-area: sender;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .row__subject {
-  display: block;
-  margin-top: 4px;
-  font-family: var(--sans);
+  grid-area: subject;
+  margin-top: 6px;
   font-size: 18px;
-  font-weight: 400;
-  line-height: 1.3;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
   color: var(--ink);
+  text-wrap: pretty;
 }
 
 .row__snippet {
+  display: none;
+}
+
+.row__timestamp {
+  grid-area: time;
+  justify-self: end;
+}
+
+.row__thumbnail {
+  grid-area: thumb;
   display: block;
-  margin-top: 5px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--mute);
-  text-wrap: pretty;
+  margin-left: 16px;
+  width: 92px;
+  height: 68px;
+  object-fit: cover;
+  background: var(--hover);
+}
+
+/* The dashed box keeps the right edge aligned. Without it every row with no
+   image pulls its text wider than the rows around it. */
+.row__thumbnail--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--rule);
+  padding: 0 8px;
+  background: none;
+}
+
+.row__fallback {
+  display: none;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--fallback);
+}
+
+.row__fallback--compact {
+  display: block;
 }
 
 @media (min-width: 720px) {
   .row {
-    grid-template-columns: 14px 1fr 78px;
-    column-gap: 16px;
-    padding: 22px 14px;
+    grid-template-columns: 44px 1fr 200px 96px;
+    column-gap: 24px;
+    grid-template-areas:
+      "number sender  thumb time"
+      "number subject thumb time"
+      "number snippet thumb time";
+    padding: 24px 14px;
     margin: 0 -14px;
   }
 
@@ -367,34 +527,56 @@ a {
     background: var(--hover);
   }
 
-  .row__marker {
-    padding-top: 12px;
+  .row__number,
+  .row__timestamp {
+    padding-top: 4px;
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .row__number::after {
+    content: none;
   }
 
   .row__sender {
-    font-size: 13px;
-  }
-
-  .row__domain {
-    display: inline;
-  }
-
-  .row__timestamp {
-    text-align: right;
-    padding-top: 2px;
-    font-size: 13px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
   }
 
   .row__subject {
-    margin-top: 5px;
-    font-size: 21px;
+    margin-top: 7px;
+    font-size: 23px;
   }
 
   .row__snippet {
-    margin-top: 7px;
-    max-width: 600px;
+    grid-area: snippet;
+    display: block;
+    margin-top: 8px;
+    max-width: 520px;
     font-size: 14px;
-    line-height: 1.55;
+    line-height: 1.6;
+    color: var(--mute);
+    text-wrap: pretty;
+  }
+
+  .row__thumbnail {
+    margin-left: 0;
+    width: 200px;
+    height: 132px;
+  }
+
+  .row__thumbnail--empty {
+    padding: 0 12px;
+  }
+
+  .row__fallback {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  .row__fallback--compact {
+    display: none;
   }
 }
 

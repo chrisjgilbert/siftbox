@@ -10,7 +10,8 @@ class Newsletter::Presenter
     older: :row_date
   }.freeze
 
-  delegate :subject, :snippet, :body_html, :read?, :to_param, to: :newsletter
+  delegate :body_html, :lead_image?, :lead_image_url, :read?, :snippet,
+    :subject, :to_param, to: :newsletter
 
   def initialize(newsletter)
     @newsletter = newsletter

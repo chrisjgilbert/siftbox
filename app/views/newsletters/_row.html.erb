@@ -1,18 +1,23 @@
-<%= link_to newsletter_path(newsletter),
-      class: class_names("row", "row--read" => newsletter.read?) do %>
-  <span class="row__marker">
-    <% unless newsletter.read? %>
-      <span class="row__marker-dot"></span>
-    <% end %>
-  </span>
+<%# Every part is a direct child of the grid: the number and the time sit in
+    their own columns on desktop and fold into the meta line on mobile, which
+    grid areas can do and nested markup cannot. %>
+<%= link_to newsletter_path(row),
+      class: class_names("row", "row--read" => row.read?) do %>
+  <span class="row__number"><%= row.number %></span>
+  <span class="row__sender"><%= row.sender %></span>
+  <span class="row__subject"><%= row.subject %></span>
+  <span class="row__snippet"><%= row.snippet %></span>
 
-  <span class="row__body">
-    <span class="row__sender">
-      <%= newsletter.sender %><% if newsletter.sender_domain %><span class="row__domain"> — <%= newsletter.sender_domain %></span><% end %>
+  <% if row.lead_image? %>
+    <img class="row__thumbnail" src="<%= row.lead_image_url %>" alt="" loading="lazy">
+  <% else %>
+    <span class="row__thumbnail row__thumbnail--empty">
+      <span class="row__fallback"><%= t("newsletters.index.no_image") %></span>
+      <span class="row__fallback row__fallback--compact">
+        <%= t("newsletters.index.no_image_compact") %>
+      </span>
     </span>
-    <span class="row__subject"><%= newsletter.subject %></span>
-    <span class="row__snippet"><%= newsletter.snippet %></span>
-  </span>
+  <% end %>
 
-  <span class="row__timestamp"><%= newsletter.timestamp %></span>
+  <span class="row__timestamp"><%= row.timestamp %></span>
 <% end %>

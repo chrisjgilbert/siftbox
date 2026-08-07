@@ -1,4 +1,7 @@
 namespace :sample_data do
+  # Three of the five carry a lead image, so the feed shows the lead item, a
+  # thumbnail and the dashed fallback box next to each other. The URLs are
+  # hotlinked placeholders, the way a real newsletter's images are.
   desc "Fill the development feed with newsletters to look at"
   task load: :environment do
     raise "Development only" unless Rails.env.development?
@@ -48,6 +51,7 @@ module SampleData
         sender_name: "Ruby Weekly",
         sender_email: "peter@rubyweekly.com",
         subject: "Ruby 3.4 lands with a rewritten parser",
+        lead_image_url: "https://picsum.photos/seed/parser/1200/600",
         snippet: "The parser rewrite landed this week, and it is the largest " \
                  "change to the language's front end in a decade.",
         body_html: BODY,
@@ -57,6 +61,7 @@ module SampleData
         sender_name: "This Week in Rails",
         sender_email: "editors@weblog.rubyonrails.org",
         subject: "Solid Queue gets recurring jobs, plus a faster query cache",
+        lead_image_url: "https://picsum.photos/seed/queue/800/520",
         snippet: "Recurring jobs are now part of Solid Queue proper, so most " \
                  "apps can drop their scheduler gem.",
         body_html: BODY,
@@ -76,6 +81,7 @@ module SampleData
         sender_name: "Offscreen",
         sender_email: "kai@offscreenmag.com",
         subject: "On reading things that do not want your attention",
+        lead_image_url: "https://picsum.photos/seed/offscreen/800/520",
         snippet: "A short argument for media that has no idea whether you " \
                  "finished it.",
         body_html: BODY,

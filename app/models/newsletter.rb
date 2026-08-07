@@ -3,6 +3,7 @@ class Newsletter < ApplicationRecord
   # index never touches them.
   FEED_COLUMNS = %i[
     id sender_name sender_email subject snippet received_at read_at
+    lead_image_url
   ].freeze
 
   # What the reader's previous/next links render. Without this the two

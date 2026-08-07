@@ -15,10 +15,15 @@ en:
   newsletters:
     filters:
       everything: Everything
-      unread: Unread (%{count})
+      unread: Unread [%{count}]
     index:
       empty: Nothing yet. Point a subscription at %{address} and it will show up here.
-      end_of_list: That's everything from the last seven days.
+      end_of_feed:
+        one: End of feed — 1 issue
+        other: End of feed — %{count} issues
+      no_image: No image in email
+      no_image_compact: No image
+      subscribe: Subscribe with %{address}
     original:
       back: Back to the reader
       caption: Original HTML, sandboxed in an iframe. Styling is the sender's.

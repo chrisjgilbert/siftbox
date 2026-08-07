@@ -24,7 +24,7 @@ RSpec.describe "Newsletters" do
 
     get newsletters_path
 
-    expect(response.body).to include("Unread (1)")
+    expect(response.body).to include("Unread [1]")
   end
 
   it "hides read newsletters when filtered to unread" do
@@ -75,13 +75,76 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("Unknown sender")
   end
 
-  it "drops the separator along with the missing domain" do
+  # The feed row carries the sender alone. The domain moved to the reader's
+  # kicker, which has the room for it.
+  it "leaves the sender domain off the feed row" do
     sign_in
-    create(:newsletter, sender_name: "", sender_email: "", subject: "No sender")
+    create(:newsletter, sender_name: "Ruby Weekly", sender_email: "peter@rubyweekly.com")
 
     get newsletters_path
 
-    expect(response.body).not_to include("row__domain")
+    expect(response.body).not_to include("rubyweekly.com")
+  end
+
+  it "numbers the feed rows" do
+    sign_in
+    create(:newsletter, received_at: 1.hour.ago)
+    create(:newsletter, received_at: 2.hours.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include(">01<").and include(">02<")
+  end
+
+  it "leads the feed with the newest newsletter when it has an image" do
+    sign_in
+    create(:newsletter, lead_image_url: "https://cdn.example/hero.png")
+
+    get newsletters_path
+
+    expect(response.body).to include("lead__image")
+  end
+
+  it "falls back to a standard row when the newest newsletter has no image" do
+    sign_in
+    create(:newsletter, lead_image_url: "")
+
+    get newsletters_path
+
+    expect(response.body).not_to include("lead__image")
+  end
+
+  # The dashed box keeps the right edge aligned when a newsletter carries no
+  # image, so the rows around it do not go ragged.
+  it "shows the fallback box for a row with no image" do
+    sign_in
+    create(:newsletter, lead_image_url: "https://cdn.example/hero.png")
+    create(:newsletter, lead_image_url: "", received_at: 2.hours.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include("No image in email")
+  end
+
+  it "counts the issues at the end of the feed" do
+    sign_in
+    create(:newsletter)
+    create(:newsletter, received_at: 2.hours.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include("End of feed — 2 issues")
+  end
+
+  # The address used to sit in the header. The redesign puts the brand there
+  # instead, so the end-of-feed note is where a subscription gets pointed.
+  it "names the inbound address at the end of the feed" do
+    sign_in
+    create(:newsletter)
+
+    get newsletters_path
+
+    expect(response.body).to include("Subscribe with newsletters@example.com")
   end
 
   it "links to the newer neighbour from the reader" do

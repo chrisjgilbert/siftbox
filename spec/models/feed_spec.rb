@@ -134,4 +134,47 @@ RSpec.describe Feed do
   it "is empty when nothing has arrived" do
     expect(Feed.new.groups).to be_empty
   end
+
+  # Continuously across the whole feed rather than restarting per group, so
+  # the numbers read as an index rather than as three short lists.
+  it "numbers rows continuously across the groups" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 1.hour.ago)
+    create(:newsletter, received_at: 1.day.ago)
+    create(:newsletter, received_at: 3.days.ago)
+
+    numbers = Feed.new.groups.flat_map { |group| group.newsletters.map(&:number) }
+
+    expect(numbers).to eq([ "01", "02", "03" ])
+  end
+
+  it "numbers rows newest first inside a group" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 5.hours.ago, subject: "Earlier one")
+    create(:newsletter, received_at: 1.hour.ago, subject: "Later one")
+
+    first = Feed.new.groups.first.newsletters.first
+
+    expect(first).to have_attributes(number: "01", subject: "Later one")
+  end
+
+  it "counts the issues in the feed for the end-of-feed line" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 1.hour.ago)
+    create(:newsletter, received_at: 3.days.ago)
+
+    expect(Feed.new.issue_count).to eq(2)
+  end
+
+  it "counts only the issues it renders when filtered to unread" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 1.hour.ago, read_at: nil)
+    create(:newsletter, received_at: 2.hours.ago, read_at: 1.minute.ago)
+
+    expect(Feed.new(filter: "unread").issue_count).to eq(1)
+  end
 end

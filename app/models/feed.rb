@@ -17,7 +17,11 @@ class Feed
   # Memoised because the view asks twice: once to render, once to decide
   # between the end-of-list line and the empty state.
   def groups
-    @_groups ||= grouped.filter_map { |name, found| group(name, found) }
+    @_groups ||= numbered(grouped)
+  end
+
+  def issue_count
+    newsletters.length
   end
 
   def unread_count
@@ -45,8 +49,19 @@ class Feed
     [ :today, :yesterday, :earlier ].filter_map { |name| [ name, found[name] ] if found[name] }
   end
 
-  def group(name, found)
-    Group.new(label_for(name), sublabel_for(name), present(found))
+  # Rows are numbered continuously across the whole feed rather than
+  # restarting per group, so the feed reads as an index. The groups are
+  # disjoint and already in order, which makes a running offset enough.
+  def numbered(found)
+    offset = 0
+
+    found.map do |name, newsletters|
+      group(name, newsletters, offset).tap { offset += newsletters.length }
+    end
+  end
+
+  def group(name, found, offset)
+    Group.new(label_for(name), sublabel_for(name), present(found, offset))
   end
 
   def label_for(name)
@@ -60,8 +75,10 @@ class Feed
     I18n.l(Date.yesterday, format: :feed_group)
   end
 
-  def present(found)
-    found.map { |newsletter| Newsletter::Presenter.new(newsletter) }
+  def present(found, offset)
+    found.each_with_index.map do |newsletter, index|
+      Feed::Row.new(Newsletter::Presenter.new(newsletter), offset + index + 1)
+    end
   end
 
   # Loaded once and partitioned in Ruby: three date groups off one query.
