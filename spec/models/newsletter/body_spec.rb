@@ -1,6 +1,9 @@
 require "rails_helper"
 
 RSpec.describe Newsletter::Body do
+  # Also pins the order of the passes: #resize strips every sender-written
+  # width and height, and the scrubber reads exactly those to recognise a
+  # tracker. Strip them first and this goes green while the tracker survives.
   it "removes a one-pixel tracking image" do
     html = %(<p>Hi</p><img src="https://track.example/o.gif" width="1" height="1">)
 
@@ -103,5 +106,44 @@ RSpec.describe Newsletter::Body do
     result = Newsletter::Body.new(html).scrubbed
 
     expect(result).to include("<p>Morning</p>")
+  end
+
+  it "sets the stored size on an image this app hosts" do
+    html = %(<img src="/newsletters/1/images/9">)
+
+    result = Newsletter::Body.new(html, dimensions: { "/newsletters/1/images/9" => [ 69, 69 ] }).scrubbed
+
+    expect(result).to include(%(width="69"), %(height="69"))
+  end
+
+  # The sender's own numbers are a claim about an image this app now stores
+  # and has measured, and they are routinely wrong — a 600px banner declared
+  # at 100% or at the width of some other client's column.
+  it "replaces the sender's size with the stored one" do
+    html = %(<img src="/newsletters/1/images/9" width="600" height="80">)
+
+    result = Newsletter::Body.new(html, dimensions: { "/newsletters/1/images/9" => [ 69, 69 ] }).scrubbed
+
+    expect(result).to include(%(width="69"), %(height="69"))
+  end
+
+  # A download that failed leaves the sender's URL in place, so there is no
+  # stored blob to measure and nothing trustworthy to put here.
+  it "drops the size from an image this app does not host" do
+    html = %(<img src="https://cdn.example/banner.png" width="600" height="80">)
+
+    result = Newsletter::Body.new(html).scrubbed
+
+    expect(result).not_to include("width=", "height=")
+  end
+
+  # Tables are unwrapped to block in CSS, so a sender's column width would
+  # fight the reading column rather than describe anything.
+  it "drops the size from everything that is not an image" do
+    html = %(<table><tr><td width="600" height="40">Hi</td></tr></table>)
+
+    result = Newsletter::Body.new(html).scrubbed
+
+    expect(result).not_to include("width=", "height=")
   end
 end

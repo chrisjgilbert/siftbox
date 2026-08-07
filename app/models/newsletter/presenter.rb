@@ -53,6 +53,14 @@ class Newsletter::Presenter
     present(newsletter.older)
   end
 
+  # The sizes the reader view sets on each image, so the browser can reserve
+  # space before one loads. Here rather than reached for in the helper,
+  # because the view is handed a presenter and .claude/rules/views.md keeps
+  # it that way.
+  def image_dimensions
+    Newsletter::ImageDimensions.new(newsletter).to_h
+  end
+
   private
 
   attr_reader :newsletter
