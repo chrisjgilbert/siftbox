@@ -72,12 +72,17 @@ Rails.application.configure do
     host: ENV.fetch("NEWSBOX_HOST", "localhost"),
     protocol: "https"
   }
+  # Postmark takes the same server token as both username and password. It
+  # lives in credentials alongside the ingress password, so nothing secret is
+  # left on the deploy machine outside config/master.key.
+  postmark_token = Rails.application.credentials.dig(:postmark, :smtp_token)
+
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
     address: "smtp.postmarkapp.com",
     port: 587,
-    user_name: ENV.fetch("POSTMARK_SMTP_TOKEN", nil),
-    password: ENV.fetch("POSTMARK_SMTP_TOKEN", nil),
+    user_name: postmark_token,
+    password: postmark_token,
     authentication: :plain
   }
 

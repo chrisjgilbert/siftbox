@@ -39,13 +39,12 @@ registry:
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
   secret:
-    # Also decrypts action_mailbox.ingress_password, which is what Action
-    # Mailbox authenticates the Postmark webhook against. Without this the
-    # ingress rejects every delivery and newsletters are lost once Postmark
-    # gives up retrying.
+    # The only secret the container needs. It decrypts credentials, which
+    # carry action_mailbox.ingress_password — what Action Mailbox
+    # authenticates the Postmark webhook against — and postmark.smtp_token,
+    # which sends password-reset mail. Without this the ingress rejects every
+    # delivery and newsletters are lost once Postmark gives up retrying.
     - RAILS_MASTER_KEY
-    # Outbound mail, for password reset. The only account-recovery path.
-    - POSTMARK_SMTP_TOKEN
   clear:
     # The address subscriptions are pointed at, shown in the feed header and
     # the empty state. Without it, a deployed newsbox tells the reader to
