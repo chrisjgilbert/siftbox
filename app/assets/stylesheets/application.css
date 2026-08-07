@@ -1150,3 +1150,555 @@ a {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* Landing page ------------------------------------------------------------ */
+
+/* The only textured surface in the system, and the only page a signed-out
+   visitor can reach. */
+.landing {
+  min-height: 100vh;
+  background-color: var(--landing-paper);
+  background-image: radial-gradient(rgba(10, 10, 10, 0.13) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
+}
+
+.landing__frame {
+  max-width: var(--frame);
+  margin: 0 auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+.landing__nav {
+  border-bottom: 2px solid var(--ink);
+}
+
+.landing__nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 22px;
+  padding-bottom: 22px;
+}
+
+.landing__nav-link {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.landing__nav-link::after {
+  content: "\00a0→";
+}
+
+.landing__hero {
+  padding-top: 64px;
+}
+
+.landing__eyebrow {
+  margin: 0 0 24px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+.landing__title {
+  margin: 0;
+  max-width: 1000px;
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.landing__standfirst {
+  margin: 24px 0 0;
+  max-width: var(--measure);
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+.landing__hero .waitlist,
+.landing__hero .joined {
+  margin-top: 40px;
+}
+
+.landing__shot {
+  padding-top: 64px;
+}
+
+.landing__points {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 48px;
+  padding-top: 72px;
+}
+
+.landing__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 32px;
+  padding-bottom: 48px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.landing__footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+}
+
+@media (min-width: 720px) {
+  .landing__hero {
+    padding-top: 96px;
+  }
+
+  .landing__nav-link,
+  .landing__eyebrow {
+    font-size: 11px;
+  }
+
+  .landing__title {
+    font-size: 88px;
+    letter-spacing: -0.045em;
+  }
+
+  .landing__standfirst {
+    margin-top: 32px;
+    font-size: 23px;
+  }
+
+  .landing__hero .waitlist,
+  .landing__hero .joined {
+    margin-top: 56px;
+  }
+
+  .landing__shot {
+    padding-top: 96px;
+  }
+
+  .landing__points {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 80px;
+    padding-top: 120px;
+  }
+
+  .landing__footer {
+    padding-bottom: 56px;
+  }
+}
+
+/* Waitlist form ----------------------------------------------------------- */
+
+.waitlist {
+  max-width: 620px;
+}
+
+.waitlist__label {
+  display: block;
+  margin-bottom: 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* Stacked below 720px: "Join the waitlist" set in mono at 10px is wider than
+   the room a 390px screen leaves beside an input, and squeezing both onto one
+   line pushed the button off the page. */
+.waitlist__controls {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.waitlist__input {
+  border: 0;
+  border-bottom: 2px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  padding: 14px 0;
+  font-family: var(--sans);
+  font-size: 19px;
+  color: var(--ink);
+}
+
+.waitlist__input::placeholder {
+  color: var(--read);
+}
+
+.waitlist__input:focus {
+  outline: 0;
+}
+
+.waitlist__submit {
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 16px 24px;
+  margin-top: 20px;
+  justify-self: start;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.waitlist__submit:hover {
+  background: var(--blue);
+}
+
+/* Off-screen rather than display:none or type="hidden", both of which a bot
+   filling the form knows to skip. aria-hidden and tabindex keep it away from
+   anyone using the page properly. */
+.waitlist__honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.waitlist__error {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.waitlist__note {
+  margin: 16px 0 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.waitlist--inverted .waitlist__label {
+  color: var(--read);
+}
+
+.waitlist--inverted .waitlist__input {
+  border-bottom-color: var(--paper);
+  color: var(--paper);
+}
+
+.waitlist--inverted .waitlist__submit {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.waitlist--inverted .waitlist__submit:hover {
+  background: var(--blue);
+  color: var(--paper);
+}
+
+.waitlist--inverted .waitlist__error {
+  color: var(--paper);
+}
+
+/* The handoff keeps this note at --mute in the dark band, which is 2.5:1 on
+   ink and fails AA. --read is the grey the band already uses for its own
+   paragraph, and clears 5:1. */
+.waitlist--inverted .waitlist__note {
+  color: var(--read);
+}
+
+@media (min-width: 720px) {
+  .waitlist__controls {
+    grid-template-columns: 1fr auto;
+    align-items: stretch;
+  }
+
+  .waitlist__submit {
+    padding: 0 32px;
+    margin-top: 0;
+    margin-left: 20px;
+    font-size: 11px;
+  }
+
+  .waitlist__note {
+    font-size: 11px;
+  }
+}
+
+/* Waitlist success -------------------------------------------------------- */
+
+.joined {
+  max-width: 620px;
+  border-top: 2px solid var(--ink);
+  padding-top: 24px;
+}
+
+.joined__label {
+  margin: 0 0 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+.joined__email {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.joined__note {
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--mute);
+  text-wrap: pretty;
+}
+
+.joined--inverted {
+  border-top-color: var(--paper);
+}
+
+.joined--inverted .joined__label {
+  color: var(--paper);
+}
+
+.joined--inverted .joined__note {
+  color: var(--read);
+}
+
+/* Two points -------------------------------------------------------------- */
+
+.point {
+  border-top: 2px solid var(--ink);
+  padding-top: 20px;
+}
+
+.point__kicker {
+  margin: 0 0 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+.point__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+}
+
+.point__body {
+  margin: 16px 0 0;
+  max-width: 460px;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .point__title {
+    font-size: 32px;
+  }
+}
+
+/* Closing band ------------------------------------------------------------ */
+
+.closing {
+  background: var(--ink);
+  color: var(--paper);
+  margin-top: 72px;
+}
+
+.closing__inner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 48px;
+  align-items: start;
+  padding-top: 64px;
+  padding-bottom: 64px;
+}
+
+.closing__title {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.closing__body {
+  margin: 20px 0 0;
+  max-width: 420px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--read);
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .closing {
+    margin-top: 120px;
+  }
+
+  .closing__inner {
+    grid-template-columns: 1fr 620px;
+    column-gap: 80px;
+    padding-top: 96px;
+    padding-bottom: 96px;
+  }
+
+  .closing__title {
+    font-size: 52px;
+  }
+}
+
+/* Product shot ------------------------------------------------------------ */
+
+/* Fixed sample content, at the feed's row spec and reduced scale. Not the
+   reader's own feed: this page is unauthenticated. */
+.shot {
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.shot__caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.shot__subcaption {
+  color: var(--mute);
+}
+
+.shot__body {
+  padding: 0 20px 24px;
+}
+
+.shot__group {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 2px solid var(--ink);
+  padding: 24px 0 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.shot__date {
+  color: var(--mute);
+}
+
+.shot__row {
+  display: grid;
+  grid-template-columns: 28px 1fr 60px;
+  column-gap: 12px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.shot__row--read {
+  opacity: 0.66;
+}
+
+.shot__number,
+.shot__time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--blue);
+}
+
+.shot__row--read .shot__number {
+  color: var(--read);
+}
+
+.shot__time {
+  color: var(--mute);
+  text-align: right;
+}
+
+.shot__text {
+  display: block;
+  min-width: 0;
+}
+
+.shot__sender {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.shot__subject {
+  display: block;
+  margin-top: 6px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .shot__caption,
+  .shot__body {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .shot__group {
+    padding-top: 32px;
+  }
+
+  .shot__body {
+    padding-bottom: 36px;
+  }
+
+  .shot__row {
+    grid-template-columns: 36px 1fr 80px;
+    column-gap: 20px;
+    padding: 18px 0;
+  }
+
+  .shot__subject {
+    font-size: 20px;
+  }
+}
+

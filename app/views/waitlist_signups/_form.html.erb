@@ -1,0 +1,30 @@
+<%= tag.div(id: id, class: class_names("waitlist", "waitlist--inverted" => inverted)) do %>
+  <%= form_with model: signup, url: waitlist_signup_path do |form| %>
+    <%= form.label :email, t("waitlist_signups.form.label"),
+          for: "#{id}-email", class: "waitlist__label" %>
+
+    <div class="waitlist__controls">
+      <%= form.email_field :email,
+            id: "#{id}-email",
+            required: true,
+            autocomplete: "email",
+            placeholder: t("waitlist_signups.form.placeholder"),
+            class: "waitlist__input" %>
+      <%= form.submit t("waitlist_signups.form.submit"), class: "waitlist__submit" %>
+    </div>
+
+    <%# A real visitor never sees this, so anything in it came from something
+        filling every input on the page. Hidden in CSS rather than with
+        type="hidden", which bots know to skip. %>
+    <div class="waitlist__honeypot" aria-hidden="true">
+      <%= form.label :website, t("waitlist_signups.form.honeypot"), for: "#{id}-website" %>
+      <%= form.text_field :website, id: "#{id}-website", tabindex: -1, autocomplete: "off" %>
+    </div>
+
+    <% if signup.errors.any? %>
+      <p class="waitlist__error"><%= t("waitlist_signups.errors.email") %></p>
+    <% end %>
+
+    <p class="waitlist__note"><%= t("waitlist_signups.form.note") %></p>
+  <% end %>
+<% end %>

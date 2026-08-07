@@ -1,0 +1,113 @@
+require "rails_helper"
+
+RSpec.describe "Waitlist signups" do
+  def join_with(email, website: nil)
+    post waitlist_signup_path, params: {
+      waitlist_signup: { email: email, website: website }
+    }
+  end
+
+  it "shows the landing page to a signed-out visitor" do
+    get root_path
+
+    expect(response.body).to include("Your news feed")
+  end
+
+  # Opening the app should land on the feed, not on a page selling it.
+  it "sends a signed-in reader to the feed" do
+    sign_in
+
+    get root_path
+
+    expect(response).to redirect_to(newsletters_url)
+  end
+
+  # The one page in this app meant to be found. Everything behind the sign-in
+  # gate keeps the noindex tag the layout emits by default.
+  it "lets the landing page be indexed" do
+    get root_path
+
+    expect(response.body).not_to include(%(name="robots"))
+  end
+
+  it "adds an address to the waitlist" do
+    join_with("reader@example.com")
+
+    expect(WaitlistSignup.pluck(:email)).to eq([ "reader@example.com" ])
+  end
+
+  it "replaces the form with the success state in place" do
+    join_with("reader@example.com")
+
+    expect(response.body).to include("On the list")
+  end
+
+  it "shows the address that joined" do
+    join_with("reader@example.com")
+
+    expect(response.body).to include("reader@example.com")
+  end
+
+  # Both instances switch together, or the page shows a form and a
+  # confirmation for the same address at once.
+  it "switches both form instances over a Turbo Stream" do
+    post waitlist_signup_path,
+      params: { waitlist_signup: { email: "reader@example.com" } },
+      as: :turbo_stream
+
+    expect(response.body).to include("waitlist-hero").and include("waitlist-band")
+  end
+
+  it "reports success for an address already on the list" do
+    create(:waitlist_signup, email: "reader@example.com")
+
+    join_with("reader@example.com")
+
+    expect(response.body).to include("On the list")
+  end
+
+  it "keeps one row for an address that joins twice" do
+    create(:waitlist_signup, email: "reader@example.com")
+
+    join_with("reader@example.com")
+
+    expect(WaitlistSignup.count).to eq(1)
+  end
+
+  it "asks again when the address is not one" do
+    join_with("not-an-address")
+
+    expect(response).to have_http_status(422)
+  end
+
+  it "records nothing when the address is not one" do
+    join_with("not-an-address")
+
+    expect(WaitlistSignup.count).to eq(0)
+  end
+
+  it "records nothing when the honeypot has been filled" do
+    join_with("bot@example.com", website: "https://spam.example")
+
+    expect(WaitlistSignup.count).to eq(0)
+  end
+
+  # Answering a bot with a 422 would tell it which field caught it.
+  it "answers a filled honeypot exactly as it answers a real signup" do
+    join_with("bot@example.com", website: "https://spam.example")
+
+    expect(response.body).to include("On the list")
+  end
+
+  it "turns away a visitor signing up over and over" do
+    6.times { |index| join_with("reader#{index}@example.com") }
+
+    expect(response).to have_http_status(:too_many_requests)
+  end
+
+  it "needs no sign-in to reach the waitlist" do
+    join_with("reader@example.com")
+
+    expect(response).not_to redirect_to(new_session_path)
+  end
+end

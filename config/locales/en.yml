@@ -61,3 +61,78 @@ en:
       row_date: "%-d %b"
       row_day: "%a"
       row_time: "%H:%M"
+
+  waitlist_signups:
+    closing:
+      body: Siftbox is a side project, built for one person's reading habit. The
+        waitlist tells me whether to make it work for more.
+      title: Want an address?
+    errors:
+      email: That does not look like an email address.
+    footer:
+      built: A side project · built on Rails and Action Mailbox
+      wordmark: siftbox
+    form:
+      honeypot: Leave this field empty
+      label: Email
+      note: One message when it opens. Nothing else.
+      placeholder: you@example.com
+      submit: Join the waitlist
+    joined:
+      label: On the list
+      note: You'll get one message when siftbox opens.
+      reply: If you want to say what you read, reply to it.
+    nav:
+      waitlist: Join the waitlist
+    new:
+      eyebrow: Early access
+      page_title: siftbox — your news feed
+      standfirst: Siftbox gives your subscriptions a dedicated address and collects
+        everything that arrives into one feed. Newest first, grouped by day, stripped
+        of the styling that makes newsletters hard to read.
+      title: Your news feed
+    points:
+      address:
+        body: Every list gets pointed at one dedicated address. Nothing new lands in
+          your work inbox, and there are no forwarding rules to maintain.
+        kicker: 01 / One address
+        title: Subscribe with siftbox, not with you
+      feed:
+        body: Newest first, grouped by day. Nothing accumulates into a number you have
+          to clear, and nothing gets buried under a receipt.
+        kicker: 02 / A feed, not a mailbox
+        title: Read what you want, when you want
+    shot:
+      caption: The feed
+      date: Thursday 6 August
+      day: Today
+      # Fixed sample content. The design handoff asks for a live feed here, but
+      # this page is unauthenticated — a live feed would publish the reader's
+      # own subjects and senders to anyone who loads it.
+      rows:
+        - number: "01"
+          read: false
+          sender: Ruby Weekly
+          subject: "#742: Frozen string literals, and a faster CSV parser"
+          time: "06:12"
+        - number: "02"
+          read: false
+          sender: Platformer
+          subject: The moderation backlog nobody wants to own
+          time: "05:40"
+        - number: "03"
+          read: true
+          sender: TLDR
+          subject: Postgres 18 beta, Figma's dev mode, and four more links
+          time: "04:00"
+        - number: "04"
+          read: false
+          sender: This Week in Rails
+          subject: Action Mailbox routing, and a quieter Active Record log
+          time: "09:02"
+        - number: "05"
+          read: true
+          sender: The Pragmatic Engineer
+          subject: What senior engineers actually spend the day doing
+          time: "07:15"
+      subcaption: Every subscription, newest first

@@ -7,10 +7,14 @@ Rails.application.routes.draw do
   end
   resources :passwords, param: :token, only: [ :new, :create, :edit, :update ]
   resource :session, only: [ :new, :create, :destroy ]
+  resource :waitlist_signup, only: [ :new, :create ]
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  root "newsletters#index"
+  # The landing page is the new-signup form, so the public root and the
+  # waitlist are one resource rather than a pages controller with a verb for
+  # a name. A signed-in reader is sent on to the feed.
+  root "waitlist_signups#new"
 end
