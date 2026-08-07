@@ -1,4 +1,4 @@
-# Project: newsbox
+# Project: siftbox
 
 Receives newsletter emails at one dedicated address via Action Mailbox and
 Postmark, and presents them as a clean reading feed for a single reader.

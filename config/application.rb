@@ -18,7 +18,7 @@ require "action_cable/engine"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
-module Newsbox
+module Siftbox
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.0
@@ -36,12 +36,12 @@ module Newsbox
     # The feed groups by calendar day and labels rows with wall-clock times,
     # so leaving this at UTC files the reader's late-evening mail under the
     # wrong heading and shows every timestamp in the wrong zone.
-    config.time_zone = ENV.fetch("NEWSBOX_TIME_ZONE", "London")
+    config.time_zone = ENV.fetch("SIFTBOX_TIME_ZONE", "London")
 
     # The address subscriptions are pointed at. Shown in the feed header and
     # the empty state. Placeholder until the inbound domain is decided.
     config.x.inbound_address =
-      ENV.fetch("NEWSBOX_INBOUND_ADDRESS", "newsletters@example.com")
+      ENV.fetch("SIFTBOX_INBOUND_ADDRESS", "newsletters@example.com")
 
     config.action_mailer.preview_paths << Rails.root.join("spec/mailers/previews")
 

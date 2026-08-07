@@ -1,4 +1,4 @@
 class ApplicationMailer < ActionMailer::Base
-  default from: ENV.fetch("NEWSBOX_MAIL_FROM", "newsbox@localhost")
+  default from: ENV.fetch("SIFTBOX_MAIL_FROM", "siftbox@localhost")
   layout "mailer"
 end

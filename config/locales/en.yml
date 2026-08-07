@@ -10,8 +10,8 @@ en:
       yesterday: Yesterday
   layouts:
     application:
-      title: Newsbox
-      wordmark: reader
+      title: siftbox
+      wordmark: siftbox
   newsletters:
     filters:
       everything: Everything

@@ -1,4 +1,4 @@
-# newsbox
+# siftbox
 
 Receives newsletter emails at one dedicated address via Action Mailbox and
 Postmark, and presents them as a clean reading feed for a single reader.
@@ -38,7 +38,7 @@ follows, and `bin/ci` for what has to pass.
 
 ## Receiving mail
 
-`NEWSBOX_INBOUND_ADDRESS` is the address subscriptions get pointed at. It is
+`SIFTBOX_INBOUND_ADDRESS` is the address subscriptions get pointed at. It is
 shown in the feed header and the empty state, and defaults to a placeholder
 until the inbound domain is settled.
 
@@ -106,11 +106,11 @@ quietly rather than loudly:
 | Variable | Missing means |
 |---|---|
 | `RAILS_MASTER_KEY` | Credentials will not decrypt, so the ingress password is unreadable and every Postmark webhook 500s |
-| `NEWSBOX_INBOUND_ADDRESS` | The feed tells the reader to subscribe to `example.com` |
+| `SIFTBOX_INBOUND_ADDRESS` | The feed tells the reader to subscribe to `example.com` |
 | `POSTMARK_SMTP_TOKEN` | Password reset silently fails — the only way back in |
-| `NEWSBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
-| `NEWSBOX_HOST` | Reset links point at localhost |
-| `NEWSBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
+| `SIFTBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
+| `SIFTBOX_HOST` | Reset links point at localhost |
+| `SIFTBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
 
 The two secrets that are neither in credentials nor on disk —
 `KAMAL_REGISTRY_PASSWORD` and `POSTMARK_SMTP_TOKEN` — go in
