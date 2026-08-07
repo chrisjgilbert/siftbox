@@ -1,0 +1,40 @@
+<header class="header">
+  <p class="header__wordmark"><%= t("layouts.application.wordmark") %></p>
+</header>
+
+<main class="signin">
+  <% if flash[:alert] %>
+    <p class="signin__alert"><%= flash[:alert] %></p>
+  <% end %>
+
+  <% if flash[:notice] %>
+    <p class="signin__alert"><%= flash[:notice] %></p>
+  <% end %>
+
+  <%= form_with url: session_path do |form| %>
+    <label class="signin__field">
+      <span class="signin__label"><%= t("sessions.new.email") %></span>
+      <%= form.email_field :email_address,
+            required: true,
+            autofocus: true,
+            autocomplete: "username",
+            value: params[:email_address],
+            class: "signin__input" %>
+    </label>
+
+    <label class="signin__field">
+      <span class="signin__label"><%= t("sessions.new.password") %></span>
+      <%= form.password_field :password,
+            required: true,
+            autocomplete: "current-password",
+            maxlength: 72,
+            class: "signin__input" %>
+    </label>
+
+    <%= form.submit t("sessions.new.submit"), class: "signin__submit" %>
+  <% end %>
+
+  <p class="signin__forgot">
+    <%= link_to t("sessions.new.forgot"), new_password_path %>
+  </p>
+</main>

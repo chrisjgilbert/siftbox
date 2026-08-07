@@ -1,0 +1,54 @@
+en:
+  date:
+    formats:
+      feed_group: "%A %-d %B"
+  feed:
+    groups:
+      earlier: Earlier
+      this_week: This week
+      today: Today
+      yesterday: Yesterday
+  layouts:
+    application:
+      title: Newsbox
+      wordmark: reader
+  newsletters:
+    filters:
+      everything: Everything
+      unread: Unread (%{count})
+    index:
+      empty: Nothing yet. Point a subscription at %{address} and it will show up here.
+      end_of_list: That's everything from the last seven days.
+    original:
+      back: Back to the reader
+      caption: Original HTML, sandboxed in an iframe. Styling is the sender's.
+    show:
+      back: Back to the feed
+      mark_unread: Mark unread
+      newer: Newer
+      older: Older
+      received: Received %{date} at %{time}
+      view_original: View original
+  passwords:
+    edit:
+      confirmation: Repeat new password
+      password: New password
+      submit: Save
+      title: Update your password
+    new:
+      email: Email address
+      submit: Email reset instructions
+      title: Forgot your password?
+  sessions:
+    new:
+      email: Email address
+      forgot: Forgot your password?
+      password: Password
+      submit: Sign in
+  time:
+    formats:
+      received_date: "%-d %B %Y"
+      received_time: "%H:%M"
+      row_date: "%-d %b"
+      row_day: "%a"
+      row_time: "%H:%M"

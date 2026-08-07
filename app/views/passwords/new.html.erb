@@ -1,0 +1,25 @@
+<header class="header">
+  <p class="header__wordmark"><%= t("layouts.application.wordmark") %></p>
+</header>
+
+<main class="signin">
+  <% if flash[:alert] %>
+    <p class="signin__alert"><%= flash[:alert] %></p>
+  <% end %>
+
+  <h1 class="signin__title"><%= t("passwords.new.title") %></h1>
+
+  <%= form_with url: passwords_path do |form| %>
+    <label class="signin__field">
+      <span class="signin__label"><%= t("passwords.new.email") %></span>
+      <%= form.email_field :email_address,
+            required: true,
+            autofocus: true,
+            autocomplete: "username",
+            value: params[:email_address],
+            class: "signin__input" %>
+    </label>
+
+    <%= form.submit t("passwords.new.submit"), class: "signin__submit" %>
+  <% end %>
+</main>

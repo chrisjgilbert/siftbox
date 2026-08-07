@@ -1,0 +1,40 @@
+<header class="header">
+  <p class="header__wordmark"><%= t("layouts.application.wordmark") %></p>
+  <span class="header__address"><%= Rails.configuration.x.inbound_address %></span>
+</header>
+
+<nav class="filters">
+  <%= link_to t("newsletters.filters.everything"),
+        newsletters_path,
+        class: class_names("filters__link", "filters__link--active" => @feed.everything?) %>
+  <%= link_to t("newsletters.filters.unread", count: @feed.unread_count),
+        newsletters_path(filter: Feed::UNREAD),
+        class: class_names("filters__link", "filters__link--active" => @feed.unread_only?) %>
+</nav>
+
+<main class="feed">
+  <% @feed.groups.each do |group| %>
+    <section class="feed__group">
+      <div class="feed__group-header">
+        <h2 class="feed__group-label"><%= group.label %></h2>
+        <span class="feed__group-sublabel"><%= group.sublabel %></span>
+      </div>
+
+      <div class="feed__rows">
+        <% group.newsletters.each do |newsletter| %>
+          <%= render "newsletters/row", newsletter: newsletter %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <% if @feed.groups.any? %>
+    <div class="feed__end">
+      <p class="feed__end-text"><%= t("newsletters.index.end_of_list") %></p>
+    </div>
+  <% else %>
+    <p class="feed__empty">
+      <%= t("newsletters.index.empty", address: Rails.configuration.x.inbound_address) %>
+    </p>
+  <% end %>
+</main>

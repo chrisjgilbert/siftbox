@@ -1,0 +1,42 @@
+<% content_for :title, @newsletter.subject %>
+
+<header class="topbar">
+  <%= link_to t("newsletters.show.back"), newsletters_path, class: "topbar__back" %>
+
+  <div class="topbar__actions">
+    <%= button_to t("newsletters.show.mark_unread"),
+          newsletter_read_path(@newsletter),
+          method: :delete,
+          class: "topbar__action",
+          form_class: "topbar__form" %>
+    <%= link_to t("newsletters.show.view_original"),
+          newsletter_original_path(@newsletter),
+          class: "topbar__action" %>
+  </div>
+</header>
+
+<article class="article">
+  <p class="article__sender">
+    <span class="article__sender-name"><%= @newsletter.sender %></span>
+    — <%= @newsletter.sender_domain %>
+  </p>
+
+  <h1 class="article__title"><%= @newsletter.subject %></h1>
+
+  <p class="article__received"><%= @newsletter.received_line %></p>
+
+  <hr class="article__rule">
+
+  <div class="body"><%= newsletter_body(@newsletter) %></div>
+
+  <nav class="neighbours">
+    <%= render "newsletters/neighbour",
+          newsletter: @newsletter.newer,
+          label: t("newsletters.show.newer"),
+          class_name: nil %>
+    <%= render "newsletters/neighbour",
+          newsletter: @newsletter.older,
+          label: t("newsletters.show.older"),
+          class_name: "neighbours__cell--older" %>
+  </nav>
+</article>
