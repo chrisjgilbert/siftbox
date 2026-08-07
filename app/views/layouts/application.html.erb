@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
 
+    <%# Keeps this app's origin out of the Referer on hotlinked newsletter
+        images. same-origin rather than no-referrer: no-referrer also nulls
+        the Origin header on the app's own form posts, which Rails's CSRF
+        origin check rejects. %>
+    <meta name="referrer" content="same-origin">
+
     <%# Opening a newsletter marks it read, so GET /newsletters/:id writes.
         Turbo prefetches links on hover, which would mark a row read from the
         feed without the reader ever opening it. %>

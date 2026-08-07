@@ -133,6 +133,18 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include(%(<meta name="turbo-prefetch" content="false">))
   end
 
+  # Hotlinked newsletter images are cross-origin requests, and the browser
+  # default sends this app's origin in the Referer header with each one —
+  # telling every sender's image host where the archive lives.
+  it "keeps the app's origin out of requests to newsletter image hosts" do
+    sign_in
+    newsletter = create(:newsletter)
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include(%(<meta name="referrer" content="same-origin">))
+  end
+
   it "marks a newsletter unread again on request" do
     sign_in
     newsletter = create(:newsletter, read_at: 1.hour.ago)

@@ -98,9 +98,9 @@ already-safe string — so nothing in the app calls `html_safe` or `raw` on
 reader-supplied content. Tuning the allowlist in `Newsletter::Body` applies to
 the whole archive immediately, with no cached column to reprocess.
 
-**Images are hotlinked**, with `referrerpolicy="no-referrer"` and a
-tracking-pixel scrubber that drops any `<img>` declaring a size of 2px or
-less. Images a newsletter carries *inside* the message (`cid:` references)
+**Images are hotlinked**, behind a site-wide `same-origin` referrer policy —
+so image hosts never see this app's origin — and a tracking-pixel scrubber
+that drops any `<img>` declaring a size of 2px or less. Images a newsletter carries *inside* the message (`cid:` references)
 cannot be hotlinked, so those are stored with Active Storage at ingest and
 the references rewritten — Action Mailbox incinerates the raw email after 30
 days, so it is that or lose them.
