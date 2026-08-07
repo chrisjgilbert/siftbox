@@ -10,8 +10,7 @@ class Newsletter::Presenter
     older: :row_date
   }.freeze
 
-  delegate :subject, :snippet, :sender_domain, :body_html, :read?, :to_param,
-    to: :newsletter
+  delegate :subject, :snippet, :body_html, :read?, :to_param, to: :newsletter
 
   def initialize(newsletter)
     @newsletter = newsletter
@@ -21,8 +20,17 @@ class Newsletter::Presenter
     "#{sender} — #{subject}"
   end
 
+  # Mail with no From header at all leaves nothing to show, and a row headed
+  # by a bare em dash reads as a rendering fault rather than as missing data.
   def sender
-    newsletter.sender_name.presence || newsletter.sender_email
+    newsletter.sender_name.presence || newsletter.sender_email.presence ||
+      I18n.t("newsletters.unknown_sender")
+  end
+
+  # Nil rather than "" so the views can drop the em dash with it — the dash
+  # belongs to the domain, not between two halves that might both be absent.
+  def sender_domain
+    newsletter.sender_domain.presence
   end
 
   def timestamp

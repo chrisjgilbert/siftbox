@@ -65,6 +65,25 @@ RSpec.describe "Newsletters" do
     expect(response.body).not_to include("color:red")
   end
 
+  # Without the guard this row reads "—" with nothing either side.
+  it "shows no dangling separator for a newsletter with no sender at all" do
+    sign_in
+    create(:newsletter, sender_name: "", sender_email: "", subject: "No sender")
+
+    get newsletters_path
+
+    expect(response.body).to include("Unknown sender")
+  end
+
+  it "drops the separator along with the missing domain" do
+    sign_in
+    create(:newsletter, sender_name: "", sender_email: "", subject: "No sender")
+
+    get newsletters_path
+
+    expect(response.body).not_to include("row__domain")
+  end
+
   it "links to the newer neighbour from the reader" do
     sign_in
     create(:newsletter, received_at: 2.days.ago)

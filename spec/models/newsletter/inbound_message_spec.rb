@@ -191,6 +191,15 @@ RSpec.describe Newsletter::InboundMessage do
     expect(newsletter.sender_email).to eq("")
   end
 
+  # The address is unrecoverable, but what the sender wrote is not.
+  it "keeps an unparseable From as the sender name" do
+    mail = Mail.read_from_string("From: Ruby Weekly\nSubject: s\n\nhi")
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.sender_name).to eq("Ruby Weekly")
+  end
+
   it "stores a newsletter with no From header at all" do
     mail = Mail.read_from_string("Subject: s\n\nhi")
 

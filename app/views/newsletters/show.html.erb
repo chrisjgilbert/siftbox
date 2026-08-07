@@ -18,7 +18,7 @@
 <article class="article">
   <p class="article__sender">
     <span class="article__sender-name"><%= @newsletter.sender %></span>
-    — <%= @newsletter.sender_domain %>
+    <% if @newsletter.sender_domain %>— <%= @newsletter.sender_domain %><% end %>
   </p>
 
   <h1 class="article__title"><%= @newsletter.subject %></h1>

@@ -9,6 +9,19 @@ RSpec.describe Newsletter::Presenter do
     expect(presenter.sender).to eq("Ruby Weekly")
   end
 
+  # A row headed by a bare em dash reads as a rendering fault.
+  it "names an unknown sender when the newsletter carries neither" do
+    newsletter = build_stubbed(:newsletter, sender_name: "", sender_email: "")
+
+    expect(Newsletter::Presenter.new(newsletter).sender).to eq("Unknown sender")
+  end
+
+  it "has no sender domain when the address is missing" do
+    newsletter = build_stubbed(:newsletter, sender_name: "", sender_email: "")
+
+    expect(Newsletter::Presenter.new(newsletter).sender_domain).to be_nil
+  end
+
   it "falls back to the address when the sender has no display name" do
     newsletter = build_stubbed(
       :newsletter,

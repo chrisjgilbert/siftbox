@@ -8,7 +8,7 @@
 
   <span class="row__body">
     <span class="row__sender">
-      <%= newsletter.sender %><span class="row__domain"> — <%= newsletter.sender_domain %></span>
+      <%= newsletter.sender %><% if newsletter.sender_domain %><span class="row__domain"> — <%= newsletter.sender_domain %></span><% end %>
     </span>
     <span class="row__subject"><%= newsletter.subject %></span>
     <span class="row__snippet"><%= newsletter.snippet %></span>
