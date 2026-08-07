@@ -8,11 +8,26 @@
 # has already run: a 1x1 beacon is gone before the first image is picked, and
 # cannot win the lead.
 class Newsletter::LeadImage
-  # A cid: reference is an inline image Newsletter::InlineImages failed to
-  # rewrite, and means nothing to a browser. A data: URI is a spacer or a
-  # bullet, and storing one would put kilobytes of base64 into a column the
-  # feed reads on every row.
-  UNRESOLVABLE_SCHEMES = %w[cid: data:].freeze
+  # An allowlist rather than a denylist, because the cases worth refusing are
+  # not all obvious. A cid: reference is an inline image Newsletter::InlineImages
+  # failed to rewrite and means nothing to a browser. A data: URI is a spacer
+  # or a bullet, and storing one would put kilobytes of base64 into a column
+  # the feed reads on every row. And a relative URL points back at this app:
+  # a sender who writes `<img src="/newsletters/5">` gets that stored as
+  # lead_image_url and fetched by the reader's own browser, with the session
+  # cookie attached, on every feed load.
+  #
+  # Protocol-relative is kept — plenty of older newsletters still use it, and
+  # it resolves to the sender's own host the same as https.
+  HOSTED_SCHEMES = %w[http:// https:// //].freeze
+
+  # The one relative form this app writes itself: Newsletter::InlineImages
+  # rewrites every cid: reference to this path at ingest, so an inline image
+  # can still lead. A sender can forge the shape, but forging it buys nothing
+  # — Newsletters::ImagesController only ever serves an image, and answers 404
+  # for a blob attached to another newsletter. /newsletters/:id is the route
+  # that writes, and this does not match it.
+  INLINE_IMAGE_PATH = %r{\A/newsletters/\d+/images/[^/?#]+\z}
 
   # Takes a Newsletter::Body rather than a string, so the caller decides what
   # that body knows — the reader hands one built with the stored image sizes,
@@ -49,15 +64,24 @@ class Newsletter::LeadImage
   attr_reader :body
 
   # Memoised before #remainder detaches it, so #url answers the same either
-  # side of the removal and no caller has to know the order.
+  # side of the removal and no caller has to know the order. `defined?` rather
+  # than `||=`, because a body with no hosted image is a legitimate nil and
+  # `||=` would walk the whole tree again on every one of the three calls a
+  # single reader render makes.
   def node
-    @_node ||= document.css("img").detect { |image| hosted?(image) }
+    return @_node if defined?(@_node)
+
+    @_node = document.css("img").detect { |image| hosted?(image) }
   end
 
   def hosted?(image)
     source = image["src"].to_s
 
-    source.present? && UNRESOLVABLE_SCHEMES.none? { |scheme| source.start_with?(scheme) }
+    elsewhere?(source) || source.match?(INLINE_IMAGE_PATH)
+  end
+
+  def elsewhere?(source)
+    HOSTED_SCHEMES.any? { |scheme| source.downcase.start_with?(scheme) }
   end
 
   def document

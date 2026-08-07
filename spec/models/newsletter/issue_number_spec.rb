@@ -37,4 +37,18 @@ RSpec.describe Newsletter::IssueNumber do
   it "has no number for an empty subject" do
     expect(Newsletter::IssueNumber.new("").to_s).to eq("")
   end
+
+  # Both forms in one subject. The issue number is the one the list numbered
+  # its issue with, not the one in a ranked-list hook further along.
+  it "reads the form that comes first in the subject" do
+    result = Newsletter::IssueNumber.new("Issue 612 — the #1 thing to know").to_s
+
+    expect(result).to eq("612")
+  end
+
+  it "still reads a hash number that comes first" do
+    result = Newsletter::IssueNumber.new("#742: issue 3 of a series").to_s
+
+    expect(result).to eq("742")
+  end
 end

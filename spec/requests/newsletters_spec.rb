@@ -280,6 +280,28 @@ RSpec.describe "Newsletters" do
     expect(newsletter.reload).to be_read
   end
 
+  # A newsletter can carry <img src="/newsletters/5"> in its own body. It
+  # survives the scrubber and `sanitize`, and if it is the first image it is
+  # stored as lead_image_url, so the feed fetches it for every row with the
+  # reader's session attached — one sender marking another's issues read.
+  it "ignores a read mark that came from an image request" do
+    sign_in
+    newsletter = create(:newsletter, read_at: nil)
+
+    get newsletter_path(newsletter), headers: { "Sec-Fetch-Dest" => "image" }
+
+    expect(newsletter.reload).not_to be_read
+  end
+
+  it "marks a newsletter read on a Turbo visit" do
+    sign_in
+    newsletter = create(:newsletter, read_at: nil)
+
+    get newsletter_path(newsletter), headers: { "Sec-Fetch-Dest" => "empty" }
+
+    expect(newsletter.reload).to be_read
+  end
+
   # Turbo prefetches on hover. Opening a newsletter writes, so a prefetch
   # would mark a feed row read without the reader opening it.
   it "turns off Turbo's hover prefetching" do

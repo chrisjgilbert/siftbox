@@ -73,6 +73,21 @@ class Newsletter::Presenter
     lead_image.remainder
   end
 
+  # What the reader promotes, read from the body #body actually strips rather
+  # than from the stored lead_image_url column. The feed asks the column,
+  # because a feed row loads no body — but the two can disagree, and when they
+  # do the reader is the screen that loses: #body removes the image while the
+  # figure above it never renders, so the image leaves the page entirely.
+  # Backfilling `lead_images:backfill` is what makes them agree; this makes
+  # the reader correct whether or not that deploy step has run.
+  def promoted_image?
+    promoted_image_url.present?
+  end
+
+  def promoted_image_url
+    lead_image.url
+  end
+
   def lead_image_alt
     lead_image.alt
   end

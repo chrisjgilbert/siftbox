@@ -148,4 +148,27 @@ RSpec.describe Newsletter::LeadImage do
   it "has no alt text when there is no lead image at all" do
     expect(lead_image_for("<p>Morning</p>").alt).to eq("")
   end
+
+  # A sender who writes a relative URL points the reader's own browser back at
+  # this app, with the session cookie attached. /newsletters/:id marks a
+  # newsletter read on GET, so that reference must never reach a src.
+  it "passes over a relative url pointing back at the app" do
+    html = %(<img src="/newsletters/5"><img src="https://cdn.example/hero.png">)
+
+    result = lead_image_for(html).url
+
+    expect(result).to eq("https://cdn.example/hero.png")
+  end
+
+  it "has no url when the only image is a relative path" do
+    result = lead_image_for(%(<img src="hero.png">)).url
+
+    expect(result).to eq("")
+  end
+
+  it "takes a protocol-relative image, which resolves to the sender's host" do
+    result = lead_image_for(%(<img src="//cdn.example/hero.png">)).url
+
+    expect(result).to eq("//cdn.example/hero.png")
+  end
 end

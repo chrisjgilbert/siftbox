@@ -15,9 +15,13 @@ class Newsletter::InlineImages
     DISPLAYABLE_TYPES.include?(blob.content_type)
   end
 
+  # Deduplicated on Content-ID: two parts declaring the same one is malformed
+  # but it happens, and it has to be settled before the parts are uploaded.
+  # A duplicate key collapses in the rewrite map, so the extra blob would be
+  # stored, attached, and referenced by nothing.
   def initialize(newsletter, parts)
     @newsletter = newsletter
-    @parts = parts.select { |part| part.content_id.present? }
+    @parts = parts.select { |part| inline_image?(part) }.uniq(&:cid)
   end
 
   def attach
@@ -31,6 +35,16 @@ class Newsletter::InlineImages
   private
 
   attr_reader :newsletter, :parts
+
+  # The same allowlist the serving controller and Newsletter::Source apply.
+  # Rewriting a cid: reference for a part this app will never serve turns a
+  # missing image into a permanently broken one: the path 404s, and if it is
+  # the first image it is stored as lead_image_url and breaks the feed row
+  # too. Left as cid:, Newsletter::LeadImage passes over it and the row falls
+  # back to "No image in email", which is the truth.
+  def inline_image?(part)
+    part.content_id.present? && DISPLAYABLE_TYPES.include?(part.mime_type)
+  end
 
   def upload(part)
     ActiveStorage::Blob.create_and_upload!(
@@ -56,10 +70,37 @@ class Newsletter::InlineImages
   end
 
   # One pass over the body rather than one full copy per image.
+  #
+  # Longest key first: alternation is leftmost-first, so with "cid:logo" ahead
+  # of "cid:logo2" the shorter one matches inside the longer and leaves the
+  # tail behind — rewriting `cid:logo2` to the wrong blob's path with a stray
+  # "2" on the end, which then 404s forever.
   def rewritten_html(blobs)
-    paths = parts.zip(blobs)
-      .to_h { |part, blob| [ "cid:#{part.cid}", newsletter.inline_image_path(blob) ] }
+    paths = paths_for(blobs)
 
-    newsletter.body_html.gsub(Regexp.union(paths.keys)) { |found| paths.fetch(found) }
+    newsletter.body_html.gsub(longest_first(paths.keys)) { |found| paths.fetch(found) }
+  end
+
+  def paths_for(blobs)
+    parts.zip(blobs).each_with_object({}) do |(part, blob), found|
+      references(part).each { |reference| found[reference] = newsletter.inline_image_path(blob) }
+    end
+  end
+
+  # Both spellings of the reference. `Mail::Message#cid` URI-escapes the
+  # Content-ID — `<a b@x>` reads back as `a%20b@x` — but the sender's src
+  # carries what they wrote, so keying on cid alone misses every Content-ID
+  # with a character worth escaping in it. The blob is stored either way, so
+  # the miss leaves an image on disk that no page can render.
+  def references(part)
+    [ "cid:#{part.cid}", "cid:#{unbracketed(part)}" ].uniq
+  end
+
+  def unbracketed(part)
+    part.content_id.to_s.delete_prefix("<").delete_suffix(">")
+  end
+
+  def longest_first(keys)
+    Regexp.union(keys.sort_by { |key| -key.length })
   end
 end

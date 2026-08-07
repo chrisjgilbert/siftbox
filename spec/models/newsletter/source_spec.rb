@@ -47,4 +47,39 @@ RSpec.describe Newsletter::Source do
 
     expect(Newsletter::Source.new(newsletter).html).to eq("<p>Morning</p>")
   end
+
+  # Regexp.union alternates in the order it is given and Ruby matches
+  # leftmost-first, not longest. A blob id that prefixes another matched
+  # inside it, embedding the wrong bytes and leaving the tail on the end of
+  # the base64.
+  it "embeds each image when one blob id is a prefix of another" do
+    newsletter = create(:newsletter)
+    blobs = %w[one two].map do |name|
+      ActiveStorage::Blob.create_and_upload!(
+        io: StringIO.new(name), filename: "#{name}.png", content_type: "image/png"
+      )
+    end
+    newsletter.inline_images.attach(*blobs)
+    paths = blobs.map { |blob| newsletter.inline_image_path(blob) }
+    newsletter.update!(body_html: paths.map { |path| %(<img src="#{path}">) }.join)
+
+    result = Newsletter::Source.new(newsletter).html
+
+    expect(result).to include(Base64.strict_encode64("one"))
+      .and include(Base64.strict_encode64("two"))
+  end
+
+  it "leaves no path behind when one blob id is a prefix of another" do
+    newsletter = create(:newsletter)
+    blobs = %w[one two].map do |name|
+      ActiveStorage::Blob.create_and_upload!(
+        io: StringIO.new(name), filename: "#{name}.png", content_type: "image/png"
+      )
+    end
+    newsletter.inline_images.attach(*blobs)
+    paths = blobs.map { |blob| newsletter.inline_image_path(blob) }
+    newsletter.update!(body_html: paths.map { |path| %(<img src="#{path}">) }.join)
+
+    expect(Newsletter::Source.new(newsletter).html).not_to include("/images/")
+  end
 end

@@ -11,11 +11,21 @@ class Newsletter::IssueNumber
     @subject = subject
   end
 
+  # Whichever form appears first in the subject, not whichever pattern is
+  # listed first. "Issue 612 — the #1 thing you should know" is issue 612, and
+  # resolving by pattern order would file it as issue 1.
   def to_s
-    PATTERNS.filter_map { |pattern| subject.to_s[pattern, 1] }.first.to_s
+    earliest = matches.min_by { |match| match.begin(0) }
+    return "" if earliest.nil?
+
+    earliest[1]
   end
 
   private
 
   attr_reader :subject
+
+  def matches
+    PATTERNS.filter_map { |pattern| subject.to_s.match(pattern) }
+  end
 end

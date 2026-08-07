@@ -30,12 +30,26 @@ class Newsletter::TrackingPixelScrubber < Loofah::Scrubber
     hidden?(node) || SIZE_ATTRIBUTES.any? { |name| tiny?(dimension(node, name)) }
   end
 
+  # Read up the tree, not just this node. Senders hide the container rather
+  # than the image — `<div style="display:none"><img src="…beacon"></div>` —
+  # and an <img> one node down reads as ordinary. Left in, a beacon that
+  # declares no size wins Newsletter::LeadImage's pick, so it is stored as
+  # lead_image_url and fetched again on every feed load: an open tracker
+  # turned into a repeat one.
   def hidden?(node)
-    style(node).match?(/display\s*:\s*none/i)
+    ancestry(node).any? { |element| style(element).match?(/display\s*:\s*none/i) }
   end
 
+  def ancestry(node)
+    [ node, *node.ancestors ].select(&:element?)
+  end
+
+  # The property has to start a declaration. Without that anchor `height`
+  # matches inside `line-height` and `max-height`, and `width` inside
+  # `max-width` — and `line-height: 0` is on nearly every image in a real
+  # newsletter, so an unanchored read deletes the article's photographs.
   def dimension(node, name)
-    node[name].presence || style(node)[/#{name}\s*:\s*([^;]+)/i, 1]
+    node[name].presence || style(node)[/(?:\A|[;\s])#{name}\s*:\s*([^;]+)/i, 1]
   end
 
   def style(node)

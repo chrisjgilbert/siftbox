@@ -23,6 +23,10 @@ class Newsletter < ApplicationRecord
     order(received_at: :desc, id: :desc)
   end
 
+  def self.oldest_first
+    order(received_at: :asc, id: :asc)
+  end
+
   def self.for_feed
     select(FEED_COLUMNS)
   end
@@ -64,19 +68,28 @@ class Newsletter < ApplicationRecord
     update!(read_at: nil)
   end
 
+  # "" rather than the whole string when there is no @ to split on. Mail
+  # parses "From: newsletter" as a one-address list, so sender_email can be a
+  # bare local part — and splitting that yields the address back, which the
+  # reader's kicker renders as "newsletter / newsletter".
   def sender_domain
+    return "" unless sender_email.include?("@")
+
     sender_email.split("@").last.to_s
   end
 
+  # Ordered through the scopes rather than inline, so the tie-break on id has
+  # one owner. Stated in three places it would drift, and the chain silently
+  # dropping a newsletter is exactly what the tie-break exists to prevent.
   def newer
-    Newsletter.neighbour.where("(received_at, id) > (?, ?)", received_at, id)
-      .order(received_at: :asc, id: :asc)
+    Newsletter.neighbour.oldest_first
+      .where("(received_at, id) > (?, ?)", received_at, id)
       .first
   end
 
   def older
-    Newsletter.neighbour.where("(received_at, id) < (?, ?)", received_at, id)
-      .order(received_at: :desc, id: :desc)
+    Newsletter.neighbour.newest_first
+      .where("(received_at, id) < (?, ?)", received_at, id)
       .first
   end
 
