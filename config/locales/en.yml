@@ -46,6 +46,7 @@ en:
       forgot: Forgot your password?
       password: Password
       submit: Sign in
+      title: Sign in
   time:
     formats:
       received_date: "%-d %B %Y"

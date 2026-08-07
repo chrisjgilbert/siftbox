@@ -133,6 +133,26 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include(%(<meta name="turbo-prefetch" content="false">))
   end
 
+  # The layout no longer emits this unconditionally — the landing page opts
+  # out so it can be found. Everything behind the sign-in gate keeps it.
+  it "keeps the feed out of search indexes" do
+    sign_in
+    create(:newsletter)
+
+    get newsletters_path
+
+    expect(response.body).to include(%(<meta name="robots" content="noindex, nofollow">))
+  end
+
+  it "keeps the reader out of search indexes" do
+    sign_in
+    newsletter = create(:newsletter)
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include(%(<meta name="robots" content="noindex, nofollow">))
+  end
+
   # Hotlinked newsletter images are cross-origin requests, and the browser
   # default sends this app's origin in the Referer header with each one —
   # telling every sender's image host where the archive lives.

@@ -1,8 +1,6 @@
-<header class="header">
-  <p class="header__wordmark"><%= t("layouts.application.wordmark") %></p>
-</header>
-
 <main class="signin">
+  <div class="signin__lockup"><%= render "application/lockup", size: 24 %></div>
+
   <% if flash[:alert] %>
     <p class="signin__alert"><%= flash[:alert] %></p>
   <% end %>
@@ -10,6 +8,8 @@
   <% if flash[:notice] %>
     <p class="signin__alert"><%= flash[:notice] %></p>
   <% end %>
+
+  <h1 class="signin__title"><%= t("sessions.new.title") %></h1>
 
   <%= form_with url: session_path do |form| %>
     <label class="signin__field">

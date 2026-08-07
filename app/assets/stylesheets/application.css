@@ -1,37 +1,40 @@
 /*
- * Siftbox. One hand-written stylesheet: the design is six colours, ten
- * spacing steps, no radius and no shadow, which maps to custom properties
- * far better than to utility classes.
+ * siftbox. One hand-written stylesheet: ten colours, two rule weights, no
+ * radius and no shadow, which maps to custom properties far better than to
+ * utility classes.
+ *
+ * Two typefaces carry the whole system, and one rule decides between them:
+ * Archivo is never uppercase, JetBrains Mono is always uppercase. Anything
+ * set in mono therefore also carries `text-transform: uppercase` — the
+ * locale files hold sentence case, so translations stay readable and dynamic
+ * content (sender names, subjects) obeys the same rule as fixed copy.
+ *
+ * Spacing is deliberately not tokenised. The design specifies seventeen
+ * exact steps used literally per element, and a --space-11 standing for 44px
+ * would help nobody read this file.
  *
  * Breakpoints are 720px and 1024px. Below 720px is the mobile treatment.
  */
 
 :root {
-  --ink: #1a1a1a;
-  --paper: #fafaf7;
-  --mute: #6b6b66;
-  --rule: #e5e3dc;
-  --burgundy: #7a2e2e;
-  --alt-background: #f3f1ea;
+  --ink: #0a0a0a;
+  --paper: #ffffff;
+  --body: #4a4a4a;
+  --mute: #6a6a6a;
+  --read: #9a9a9a;
+  --rule: #e2e2e2;
+  --blue: #1f1fe0;
+  --hover: #f4f4f7;
+  --fallback: #c4c4c4;
+  --landing-paper: #f6f6f3;
 
-  --serif: "Newsreader", "Source Serif 4", Georgia, "Times New Roman", serif;
-  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Helvetica, Arial,
+  --sans: "Archivo", system-ui, -apple-system, "Segoe UI", Helvetica, Arial,
     sans-serif;
-  --mono: ui-monospace, Menlo, monospace;
-
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 64px;
-  --space-9: 96px;
-  --space-10: 128px;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
 
   --gutter: 24px;
-  --measure: 660px;
+  --frame: 1240px;
+  --measure: 680px;
 }
 
 @media (min-width: 720px) {
@@ -52,26 +55,63 @@ body {
   color: var(--ink);
   font-family: var(--sans);
   font-size: 16px;
-  letter-spacing: 0.005em;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Negative tracking scales with size — the bigger the type, the tighter — so
+   each heading sets its own. This is the floor for anything that doesn't. */
 h1,
 h2,
 h3,
 h4 {
-  font-family: var(--serif);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   text-wrap: pretty;
 }
 
 a {
-  color: var(--burgundy);
-  transition: opacity 120ms ease;
+  color: var(--blue);
 }
 
-a:hover {
-  opacity: 0.7;
+/* Mark ------------------------------------------------------------------- */
+
+.mark {
+  display: block;
+  flex: none;
+}
+
+.mark__square {
+  fill: var(--blue);
+}
+
+/* Mark and wordmark on one baseline, at roughly the same optical size. The
+   mark is rendered at its desktop size and scaled by CSS below 720px, so its
+   stroke weight is the one `mark_stroke_width` picked for that size. */
+.lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lockup__wordmark {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+
+@media (max-width: 719px) {
+  .lockup {
+    gap: 10px;
+  }
+
+  .lockup .mark {
+    width: 20px;
+    height: 20px;
+  }
+
+  .lockup__wordmark {
+    font-size: 22px;
+  }
 }
 
 /* Header ------------------------------------------------------------------ */
@@ -86,7 +126,7 @@ a:hover {
 
 .header__wordmark {
   margin: 0;
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 20px;
   font-weight: 500;
   color: var(--ink);
@@ -165,7 +205,7 @@ a:hover {
 
 .feed__group-label {
   margin: 0;
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 18px;
   font-weight: 400;
 }
@@ -178,13 +218,13 @@ a:hover {
 .feed__end {
   border-top: 1px solid var(--rule);
   margin-top: 28px;
-  padding: 22px 0 var(--space-8);
+  padding: 22px 0 64px;
   font-size: 13px;
   color: var(--mute);
 }
 
 .feed__empty {
-  padding: var(--space-8) 0;
+  padding: 64px 0;
   font-size: 14px;
   color: var(--mute);
 }
@@ -194,7 +234,7 @@ a:hover {
     display: flex;
     flex-direction: column;
     gap: 56px;
-    padding: 56px var(--gutter) var(--space-8);
+    padding: 56px var(--gutter) 64px;
   }
 
   .feed__group {
@@ -271,7 +311,7 @@ a:hover {
   display: block;
   width: 5px;
   height: 5px;
-  background: var(--burgundy);
+  background: var(--blue);
 }
 
 .row__body {
@@ -299,7 +339,7 @@ a:hover {
 .row__subject {
   display: block;
   margin-top: 4px;
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 18px;
   font-weight: 400;
   line-height: 1.3;
@@ -324,7 +364,7 @@ a:hover {
   }
 
   .row:hover {
-    background: var(--alt-background);
+    background: var(--hover);
   }
 
   .row__marker {
@@ -370,7 +410,7 @@ a:hover {
 }
 
 .topbar__back {
-  color: var(--burgundy);
+  color: var(--blue);
   text-decoration: none;
 }
 
@@ -483,7 +523,7 @@ a:hover {
 .body h2,
 .body h3,
 .body h4 {
-  font-family: var(--serif);
+  font-family: var(--sans);
 }
 
 .body h2 {
@@ -503,8 +543,8 @@ a:hover {
 .body ul,
 .body ol {
   list-style: none;
-  padding-left: var(--space-5);
-  margin: 0 0 var(--space-5);
+  padding-left: 24px;
+  margin: 0 0 24px;
 }
 
 .body li {
@@ -517,7 +557,7 @@ a:hover {
 .body ul li::before {
   content: "—";
   position: absolute;
-  left: calc(var(--space-5) * -1);
+  left: -24px;
   color: var(--mute);
 }
 
@@ -532,7 +572,7 @@ a:hover {
 .body ol li::before {
   content: counter(item) ".";
   position: absolute;
-  left: calc(var(--space-5) * -1);
+  left: -24px;
   color: var(--mute);
   font-variant-numeric: tabular-nums;
 }
@@ -548,7 +588,7 @@ a:hover {
 
 .body blockquote {
   margin: 36px 0;
-  padding-left: var(--space-5);
+  padding-left: 24px;
   font-style: italic;
   font-size: 19px;
 }
@@ -606,7 +646,7 @@ a:hover {
    would override this file's own heading and code rules. */
 
 .body a {
-  color: var(--burgundy);
+  color: var(--blue);
   text-decoration: underline;
   text-underline-offset: 2px;
   text-decoration-thickness: 1px;
@@ -614,12 +654,12 @@ a:hover {
 
 @media (min-width: 1024px) {
   .body p {
-    margin-bottom: var(--space-5);
+    margin-bottom: 24px;
     font-size: 17px;
   }
 
   .body h2 {
-    margin: 44px 0 var(--space-3);
+    margin: 44px 0 12px;
     font-size: 26px;
   }
 
@@ -639,8 +679,8 @@ a:hover {
   grid-template-columns: 1fr 1fr;
   column-gap: 48px;
   border-top: 1px solid var(--rule);
-  margin-top: var(--space-8);
-  padding: 28px 0 var(--space-8);
+  margin-top: 64px;
+  padding: 28px 0 64px;
 }
 
 .neighbours__label {
@@ -650,7 +690,7 @@ a:hover {
 }
 
 .neighbours__title {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 19px;
   line-height: 1.3;
   color: var(--ink);
@@ -670,7 +710,7 @@ a:hover {
 
 .original__caption {
   max-width: var(--measure);
-  margin: 0 auto var(--space-5);
+  margin: 0 auto 24px;
   font-size: 13px;
   color: var(--mute);
 }
@@ -687,63 +727,96 @@ a:hover {
 
 /* Sign in ----------------------------------------------------------------- */
 
+/* The gate onto the app, on the same system as everything behind it: mono
+   labels, no radius, a 2px rule under each field and a solid black button. */
 .signin {
-  max-width: 320px;
-  margin: var(--space-9) auto;
+  max-width: 380px;
+  margin: 96px auto;
   padding: 0 var(--gutter);
+}
+
+.signin__lockup {
+  margin-bottom: 56px;
+}
+
+.signin__title {
+  margin: 0 0 32px;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
 .signin__field {
   display: block;
-  margin-bottom: var(--space-4);
+  margin-bottom: 28px;
 }
 
 .signin__label {
   display: block;
-  margin-bottom: var(--space-1);
-  font-size: 13px;
+  margin-bottom: 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--mute);
 }
 
 .signin__input {
   width: 100%;
-  padding: 6px 0;
+  padding: 14px 0;
   border: 0;
-  border-bottom: 1px solid var(--rule);
-  background: none;
-  font-family: inherit;
-  font-size: 14px;
+  border-bottom: 2px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 19px;
   color: var(--ink);
 }
 
 .signin__input:focus {
   outline: 0;
-  border-bottom-color: var(--burgundy);
 }
 
 .signin__submit {
   border: 0;
-  background: none;
-  padding: 0;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--burgundy);
+  border-radius: 0;
+  background: var(--ink);
+  padding: 14px 32px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--paper);
   cursor: pointer;
 }
 
+.signin__submit:hover {
+  background: var(--blue);
+}
+
 .signin__alert {
-  margin-bottom: var(--space-5);
-  font-size: 13px;
-  color: var(--burgundy);
+  margin-bottom: 32px;
+  border-top: 2px solid var(--ink);
+  padding-top: 16px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--body);
 }
 
 .signin__forgot {
-  margin-top: var(--space-6);
-  font-size: 13px;
+  margin-top: 44px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.signin__title {
-  margin: 0 0 var(--space-5);
-  font-size: 22px;
-  font-weight: 400;
+.signin__forgot a {
+  text-decoration: none;
+}
+
+.signin__forgot a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
