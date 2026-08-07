@@ -64,9 +64,10 @@ class Newsletter < ApplicationRecord
       .first
   end
 
-  # Where the rewritten cid: references in body_html point. Written by
-  # Newsletter::InlineImages at ingest and read back by Newsletter::Source,
-  # so it has to be built in one place, not two.
+  # Where the rewritten image references in body_html point. Written by
+  # Newsletter::InlineImages at ingest and Newsletter::RemoteImages just
+  # after, then read back by Newsletter::Source — so it has to be built in
+  # one place, not three.
   def inline_image_path(blob)
     Rails.application.routes.url_helpers.newsletter_image_path(self, blob)
   end

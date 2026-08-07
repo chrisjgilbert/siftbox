@@ -15,8 +15,9 @@ Rails.application.configure do
     policy.style_src   :self, "https://fonts.googleapis.com"
     policy.font_src    :self, "https://fonts.gstatic.com"
 
-    # Newsletter images are hotlinked to the sender's CDN, and inline ones
-    # are served from Active Storage.
+    # Newsletter images are served from this app once Newsletter::RemoteImages
+    # has stored them. https: stays because a download that fails leaves the
+    # sender's URL in place, and data: for the "view original" frame.
     policy.img_src     :self, :https, :data
     policy.form_action :self
     policy.frame_ancestors :none

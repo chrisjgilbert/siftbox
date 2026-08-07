@@ -36,12 +36,18 @@ class Newsletter::InboundMessage
     Newsletter.find_by(message_id: message_id)
   end
 
+  # Queued after the transaction commits, not inside it: the worker reads
+  # the newsletter back from the database, and would find nothing there if
+  # it picked the job up first.
   def store
-    Newsletter.transaction do
-      newsletter = Newsletter.create!(attributes)
-      Newsletter::InlineImages.new(newsletter, mail.all_parts).attach
-      newsletter
+    newsletter = Newsletter.transaction do
+      Newsletter.create!(attributes).tap do |stored|
+        Newsletter::InlineImages.new(stored, mail.all_parts).attach
+      end
     end
+
+    Newsletter::RemoteImagesJob.perform_later(newsletter)
+    newsletter
   end
 
   def attributes

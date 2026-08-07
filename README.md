@@ -90,6 +90,28 @@ one path is the whole of this app's state, and backing it up backs up
 everything. The only thing still to decide is the proxy host in
 `config/deploy.yml`.
 
+### Outbound network — a deploy step this app cannot do for itself
+
+Ingest fetches the images newsletters link to, which means URLs written by
+anyone who can email the inbound address decide where this app makes
+requests. `Newsletter::ImageDownload::Destination` refuses anything that
+resolves off the public internet and hands back the address it checked, so
+the connection goes there rather than to whatever a second DNS lookup might
+answer.
+
+**That is the application layer only.** The stronger control is an egress
+rule on the host, blocking outbound traffic from the app container to
+`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8` and
+`169.254.0.0/16` — the last of those being where cloud providers serve
+instance credentials. Kamal does not install one, and nothing in this
+repository will: it is a firewall or Docker network rule on the host, and it
+has to be done by hand when the host is chosen.
+
+It is worth doing even though the code checks already: it holds for any
+outbound request the app ever grows, not only this one fetcher, and it does
+not depend on the checks staying correct through future edits. Until then,
+the code is the only thing enforcing this.
+
 ## Decisions worth knowing
 
 **Sanitizing happens at render, not at ingest.** `NewslettersHelper#newsletter_body`
@@ -98,12 +120,35 @@ already-safe string — so nothing in the app calls `html_safe` or `raw` on
 reader-supplied content. Tuning the allowlist in `Newsletter::Body` applies to
 the whole archive immediately, with no cached column to reprocess.
 
-**Images are hotlinked**, behind a site-wide `same-origin` referrer policy —
-so image hosts never see this app's origin — and a tracking-pixel scrubber
-that drops any `<img>` declaring a size of 2px or less. Images a newsletter carries *inside* the message (`cid:` references)
-cannot be hotlinked, so those are stored with Active Storage at ingest and
-the references rewritten — Action Mailbox incinerates the raw email after 30
-days, so it is that or lose them.
+**Images are self-hosted.** Everything a newsletter carries inside the
+message (`cid:` references) is stored with Active Storage during ingest, and
+everything it hotlinks is fetched by `Newsletter::RemoteImagesJob` just
+after — in both cases the reference in the body is rewritten to a path this
+app serves. So opening a newsletter makes no request to the sender, which is
+the only way to stop an open being tracked: a tracking pixel that declares
+no size is indistinguishable from a real image, and `Newsletter::TrackingPixelScrubber`
+only catches the ones that declare 2px or less. It also means the archive
+keeps its images once senders' CDNs stop serving them.
+
+The sender still learns the message was processed, because the server
+fetches once at delivery. That is what Apple Mail Privacy Protection and
+Gmail's image proxy do too, and delivery is something an ESP already knows.
+
+A download that fails leaves the `src` pointing where it did, so the reader
+still sees the image — which is why the CSP keeps `img-src https:` and the
+`same-origin` referrer policy in the layout still earns its place. The same
+is true of a source past `Newsletter::RemoteImages::MAX_IMAGES`: nothing
+bounds how many `<img>` tags a sender writes, and each one costs a request
+and up to `MAX_BYTES` of disk on a queue three threads wide, so the count is
+capped and the overflow stays hotlinked.
+
+`Newsletter::ImageDownload` is the part to read before changing any of this:
+it fetches attacker-supplied URLs from inside the network, so it checks
+resolved addresses rather than hostnames, re-checks every redirect, and caps
+redirects, bytes and time. Read `Destination` with the IPv6 forms in mind —
+`::ffff:169.254.169.254` is the metadata address wearing a different hat, and
+`IPAddr`'s `loopback?` and `link_local?` do not see through it. That is why
+IPv6 gets an allowlist of global unicast rather than another denied prefix.
 
 **Opening a newsletter marks it read**, which means `GET /newsletters/:id`
 writes. Turbo's hover prefetching is therefore turned off in the layout;
