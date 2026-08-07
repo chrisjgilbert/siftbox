@@ -1,9 +1,10 @@
 require "rails_helper"
 
 RSpec.describe Newsletter::Body do
-  # Also pins the order of the passes: #resize strips every sender-written
-  # width and height, and the scrubber reads exactly those to recognise a
-  # tracker. Strip them first and this goes green while the tracker survives.
+  # Also pins the order of the passes: #strip_sender_sizes takes every
+  # sender-written width and height, and the scrubber reads exactly those to
+  # recognise a tracker. Strip them first and this goes green while the
+  # tracker survives.
   it "removes a one-pixel tracking image" do
     html = %(<p>Hi</p><img src="https://track.example/o.gif" width="1" height="1">)
 
@@ -143,6 +144,16 @@ RSpec.describe Newsletter::Body do
     html = %(<table><tr><td width="600" height="40">Hi</td></tr></table>)
 
     result = Newsletter::Body.new(html).scrubbed
+
+    expect(result).not_to include("width=", "height=")
+  end
+
+  # The browser reserves space from the ratio of the two, so half a pair
+  # reserves nothing and an empty height is markup nothing reads.
+  it "sets neither size when only one of the pair is known" do
+    html = %(<img src="/newsletters/1/images/9">)
+
+    result = Newsletter::Body.new(html, dimensions: { "/newsletters/1/images/9" => [ 69, nil ] }).scrubbed
 
     expect(result).not_to include("width=", "height=")
   end

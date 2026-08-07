@@ -14,13 +14,18 @@ class Newsletter::ImageDimensions
     @newsletter = newsletter
   end
 
+  # Same allowlist Newsletters::ImagesController serves by. Sizing a blob it
+  # refuses would reserve a column-wide gap for an image that 404s, which is
+  # worse than the collapsed box the reader gets today.
   def to_h
-    @_to_h ||= newsletter.inline_images.blobs.each_with_object({}) do |blob, sizes|
-      width, height = blob.metadata.values_at("width", "height")
-      next if width.blank? || height.blank?
+    @_to_h ||= newsletter.inline_images.blobs
+      .select { |blob| Newsletter::InlineImages.displayable?(blob) }
+      .each_with_object({}) do |blob, sizes|
+        width, height = blob.metadata.values_at("width", "height")
+        next if width.blank? || height.blank?
 
-      sizes[newsletter.inline_image_path(blob)] = [ width, height ]
-    end
+        sizes[newsletter.inline_image_path(blob)] = [ width, height ]
+      end
   end
 
   private

@@ -10,9 +10,9 @@ class Newsletter::Body
   ].freeze
 
   # width and height are here for images this app hosts and has measured,
-  # which #document sets from the stored blob. Every size the sender wrote is
-  # stripped first, so nothing reaches the allowlist that this app did not
-  # put there itself.
+  # which #apply_stored_sizes sets from the stored blob. Every size the sender
+  # wrote is stripped first, so nothing reaches the allowlist that this app
+  # did not put there itself.
   ATTRIBUTES = %w[alt height href src title width].freeze
 
   SIZED_ATTRIBUTES = %w[height width].freeze
@@ -27,7 +27,7 @@ class Newsletter::Body
   # unwraps a <script> or <style> tag but keeps the text inside it, which
   # would otherwise land in the reading view as prose.
   def scrubbed
-    document.to_html
+    sized.to_html
   end
 
   def text
@@ -49,24 +49,36 @@ class Newsletter::Body
       .scrub!(Newsletter::TrackingPixelScrubber.new)
       .tap { |fragment| fragment.css("[style]").each { |node| node.remove_attribute("style") } }
       .scrub!(:prune)
-      .tap { |fragment| resize(fragment) }
   end
 
+  # A separate step from #document, because #text is the other caller and a
+  # size attribute cannot change what the text says — so a snippet does not
+  # pay for a walk over every node in the body.
+  #
   # After the scrubber, never before: it reads width and height to recognise
   # a tracking pixel, and stripping them first would blind it to every
   # tracker that declares its size in an attribute rather than in CSS.
-  #
+  def sized
+    @_sized ||= document
+      .tap { |fragment| strip_sender_sizes(fragment) }
+      .tap { |fragment| apply_stored_sizes(fragment) }
+  end
+
   # Every sender-written size goes, including on images this app hosts. The
   # sender's numbers describe some other client's column, and on a table they
   # fight the reading column, which CSS has already unwrapped to block.
-  def resize(fragment)
+  def strip_sender_sizes(fragment)
     fragment.css("*").each do |node|
       SIZED_ATTRIBUTES.each { |name| node.remove_attribute(name) }
     end
+  end
 
+  # Both or neither: a browser reserves space from the ratio of the two, so a
+  # width on its own buys nothing and an empty height is markup for no one.
+  def apply_stored_sizes(fragment)
     fragment.css("img").each do |node|
       width, height = dimensions[node["src"]]
-      next if width.blank?
+      next if width.blank? || height.blank?
 
       node["width"] = width.to_s
       node["height"] = height.to_s

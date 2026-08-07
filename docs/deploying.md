@@ -193,6 +193,24 @@ lock them out. To change an existing password, do it in the console.
 
 There is no sign-up flow, by design. This is the only account.
 
+### Measure the images already stored
+
+Run once, on the first deploy that carries `image_processing`:
+
+```bash
+bin/kamal app exec --reuse "bin/rails images:analyze"
+```
+
+Active Storage measures an image with libvips, which the app had no gem for
+until now, so every blob stored before this deploy is flagged analysed and
+carries no width or height. Rails will not look at an analysed blob again, so
+nothing re-measures them on its own and the reader keeps the shifting text the
+sizes exist to stop. Anything attached after this deploy is measured by its
+own `AnalyzeJob` and needs no task.
+
+Safe to run more than once: a blob that already has a width is skipped, and a
+blob libvips cannot read is reported and left as it is.
+
 ## 7. The egress rule — Hetzner specifics
 
 Ingest fetches the images newsletters link to, so URLs written by anyone who

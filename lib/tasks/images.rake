@@ -9,13 +9,23 @@ namespace :images do
     # inside it takes a LIKE that reads as a guess, and this runs once against
     # an archive small enough that the saving would be theoretical.
     ActiveStorage::Blob.find_each do |blob|
+      # The width, not analyzed?: every stored blob was already analysed
+      # while ruby-vips was absent, so it is flagged analysed and carries no
+      # size, and Active Storage will never look at it again.
       if blob.metadata["width"].present?
         skipped += 1
         next
       end
 
+      # #analyze writes the metadata through update!, so the record in hand
+      # already carries the answer and needs no reload to read it.
       blob.analyze
-      blob.reload.metadata["width"].present? ? measured += 1 : failed += 1
+
+      if blob.metadata["width"].present?
+        measured += 1
+      else
+        failed += 1
+      end
     rescue StandardError => error
       # One image vips cannot open should not stop the rest being measured,
       # but it is worth naming — a blob with no size renders as it does today.

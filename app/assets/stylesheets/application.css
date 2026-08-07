@@ -562,11 +562,15 @@ a:hover {
 /* Render at the image's own size, capped at the column. `width: 100%` used to
    force every image to the full column, which upscaled a 40px logo or social
    icon into a blurred band — senders put far more small images in a
-   newsletter than large ones. Nothing else knows how big an image is: the
-   sender's width and height attributes do not survive
-   Newsletter::Body::ATTRIBUTES, and no blob carries intrinsic dimensions
-   while image_processing stays commented out in the Gemfile. The browser's
-   own reading of the file is the only size available, so let it win.
+   newsletter than large ones.
+
+   `height: auto` deliberately overrides the height attribute Newsletter::Body
+   writes. The pair is there for its ratio, which the browser reads off the
+   two attributes to reserve space before the file arrives; the height itself
+   would fight max-width on anything wider than the column. An image with no
+   stored size carries neither attribute and falls back to the browser's own
+   reading of the file, which is what every image did before the blobs were
+   measured.
 
    The rules above and below went with the full-width assumption. On an image
    that is now only as wide as it is, they read as an underline on an icon

@@ -33,11 +33,12 @@ RSpec.describe NewslettersHelper do
   end
 
   # The size has to survive the allowlist as well as be set, and those are two
-  # different files — ATTRIBUTES here, Newsletter::Body#resize there.
+  # different files — ATTRIBUTES here, Newsletter::Body#apply_stored_sizes
+  # there.
   it "keeps the stored size on an image this app hosts" do
     newsletter = create(:newsletter)
     blob = ActiveStorage::Blob.create_and_upload!(
-      io: File.open(Rails.root.join("spec/fixtures/files/logo.png")),
+      io: StringIO.new(Rails.root.join("spec/fixtures/files/logo.png").binread),
       filename: "logo.png",
       content_type: "image/png"
     )
