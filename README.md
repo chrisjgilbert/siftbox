@@ -75,14 +75,16 @@ variables, because every one of them fails quietly rather than loudly:
 |---|---|
 | `RAILS_INBOUND_EMAIL_PASSWORD` | Every Postmark webhook 500s; newsletters are lost once Postmark stops retrying |
 | `NEWSBOX_INBOUND_ADDRESS` | The feed tells the reader to subscribe to `example.com` |
-| `NEWSBOX_DATABASE_PASSWORD` | Connects with no password |
 | `POSTMARK_SMTP_TOKEN` | Password reset silently fails — the only way back in |
 | `NEWSBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
 | `NEWSBOX_HOST` | Reset links point at localhost |
 | `NEWSBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
 
-Still to decide before a first deploy: where Postgres lives (`DB_HOST`, or the
-commented `accessories.db` block), and the proxy host in `config/deploy.yml`.
+There is no database server to run. The four databases are SQLite files under
+`storage/`, on the same mounted volume as the Active Storage blobs — so that
+one path is the whole of this app's state, and backing it up backs up
+everything. The only thing still to decide is the proxy host in
+`config/deploy.yml`.
 
 ## Decisions worth knowing
 

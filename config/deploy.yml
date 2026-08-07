@@ -38,7 +38,6 @@ env:
     # Action Mailbox rejects every Postmark webhook without this, so inbound
     # newsletters are lost after Postmark gives up retrying.
     - RAILS_INBOUND_EMAIL_PASSWORD
-    - NEWSBOX_DATABASE_PASSWORD
     # Outbound mail, for password reset. The only account-recovery path.
     - POSTMARK_SMTP_TOKEN
   clear:
@@ -67,9 +66,8 @@ env:
     # Set number of cores available to the application on each server (default: 1).
     # WEB_CONCURRENCY: 2
 
-    # Match this to any external database server to configure Active Record correctly
-    # Use newsbox-db for a db accessory server on same machine via local kamal docker network.
-    # DB_HOST: 192.168.0.2
+    # No DB_HOST and no db accessory: the databases are SQLite files on the
+    # volume below, alongside the Active Storage blobs.
 
     # Log everything from Rails
     # RAILS_LOG_LEVEL: debug
@@ -83,8 +81,8 @@ aliases:
   dbc: app exec --interactive --reuse "bin/rails dbconsole"
 
 
-# Local Active Storage files: the images newsletters carry inside the message.
-# Recommended to change this to a mounted volume path that is backed up off server.
+# The whole of this app's state: the SQLite databases and the Active Storage
+# blobs. Back this path up and you have backed up newsbox.
 volumes:
   - "newsbox_storage:/rails/storage"
 
