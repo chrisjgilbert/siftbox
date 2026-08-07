@@ -25,24 +25,33 @@ class Newsletter::RemoteImages
 
   attr_reader :newsletter, :download
 
-  # Each source fetched once, however often the body repeats it. A source
-  # the download refuses is absent from here, so the body keeps the sender's
-  # URL and the reader still sees the image.
+  # Each source fetched once, however often the body repeats it. Keyed on
+  # the source as the sender wrote it, because that is what the rewrite
+  # below has to find. A source the download refuses is absent from here, so
+  # the body keeps the sender's URL and the reader still sees the image.
   def stored
-    @_stored ||= sources.filter_map { |url| upload(url) }.to_h
+    @_stored ||= sources.filter_map { |source| upload(source) }.to_h
   end
 
-  def upload(url)
-    image = download.call(url)
+  def upload(source)
+    image = download.call(fetchable(source))
     return if image.nil?
 
-    [ url, blob_for(url, image) ]
+    [ source, blob_for(source, image) ]
   end
 
-  def blob_for(url, image)
+  # A protocol-relative source takes its scheme from the page, which for
+  # this app is always https. Older newsletter templates still write them.
+  def fetchable(source)
+    return "https:#{source}" if source.start_with?("//")
+
+    source
+  end
+
+  def blob_for(source, image)
     ActiveStorage::Blob.create_and_upload!(
       io: StringIO.new(image.bytes),
-      filename: filename_for(url, image),
+      filename: filename_for(source, image),
       content_type: image.content_type
     )
   end
@@ -50,8 +59,8 @@ class Newsletter::RemoteImages
   # Active Storage will not accept a blank filename, and the last path
   # segment of a CDN URL is often not one. The extension then follows the
   # type the sender served, which is what the blob is stored as anyway.
-  def filename_for(url, image)
-    name = File.basename(url.split(/[?#]/).first.to_s)
+  def filename_for(source, image)
+    name = File.basename(source.split(/[?#]/).first.to_s)
     return name if File.extname(name).present?
 
     "image.#{extension_for(image)}"
@@ -76,15 +85,21 @@ class Newsletter::RemoteImages
   # Newsletter::InlineImages rewrote the cid: references into — and images
   # the message embedded as data URIs.
   def remote?(source)
-    source.start_with?("http://", "https://")
+    source.start_with?("http://", "https://", "//")
   end
 
   # One pass over the body, as in Newsletter::InlineImages: a gsub per image
   # would copy the whole markup again each time.
   def rewritten_html
-    newsletter.body_html.gsub(Regexp.union(replacements.keys)) do |found|
-      replacements.fetch(found)
-    end
+    newsletter.body_html.gsub(pattern) { |found| replacements.fetch(found) }
+  end
+
+  # The lookbehind is what keeps a protocol-relative spelling inside its own
+  # attribute: //host/x.png is the tail of https://host/x.png, so without it
+  # a link to the same image anywhere else in the body comes out as
+  # "https:" glued to a path this app serves.
+  def pattern
+    /(?<!:)#{Regexp.union(replacements.keys)}/
   end
 
   # Longest first, so a URL that is a prefix of another cannot claim its

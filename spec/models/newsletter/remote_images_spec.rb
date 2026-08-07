@@ -177,6 +177,49 @@ RSpec.describe Newsletter::RemoteImages do
       .and include("https://cdn.example.com/dead.png")
   end
 
+  # Older newsletter templates still carry these. A browser resolves the
+  # scheme from the page, and this app is served over https.
+  it "fetches a protocol-relative source over https" do
+    seen = []
+    newsletter = newsletter_with(%(<img src="//cdn.example.com/a.png">))
+    download = download_answering(
+      { "https://cdn.example.com/a.png" => stored_image }, seen: seen
+    )
+
+    Newsletter::RemoteImages.new(newsletter, download: download).attach
+
+    expect(seen).to eq([ "https://cdn.example.com/a.png" ])
+  end
+
+  it "rewrites a protocol-relative source" do
+    newsletter = newsletter_with(%(<img src="//cdn.example.com/a.png">))
+    download = download_answering(
+      { "https://cdn.example.com/a.png" => stored_image }
+    )
+
+    Newsletter::RemoteImages.new(newsletter, download: download).attach
+
+    expect(newsletter.reload.body_html).not_to include("cdn.example.com")
+  end
+
+  # A protocol-relative source is the tail of the absolute URL, so an
+  # unguarded rewrite reaches inside a link elsewhere in the body and leaves
+  # "https:" glued to a path this app serves.
+  it "leaves alone an absolute URL the source is only the tail of" do
+    newsletter = newsletter_with(
+      %(<a href="https://cdn.example.com/a.png">) +
+      %(<img src="//cdn.example.com/a.png"></a>)
+    )
+    download = download_answering(
+      { "https://cdn.example.com/a.png" => stored_image }
+    )
+
+    Newsletter::RemoteImages.new(newsletter, download: download).attach
+
+    expect(newsletter.reload.body_html)
+      .to include(%(href="https://cdn.example.com/a.png"))
+  end
+
   it "fetches nothing for an image this app already serves" do
     seen = []
     newsletter = newsletter_with(%(<img src="/newsletters/1/images/2">))
