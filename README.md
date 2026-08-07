@@ -136,11 +136,19 @@ Gmail's image proxy do too, and delivery is something an ESP already knows.
 
 A download that fails leaves the `src` pointing where it did, so the reader
 still sees the image — which is why the CSP keeps `img-src https:` and the
-`same-origin` referrer policy in the layout still earns its place.
+`same-origin` referrer policy in the layout still earns its place. The same
+is true of a source past `Newsletter::RemoteImages::MAX_IMAGES`: nothing
+bounds how many `<img>` tags a sender writes, and each one costs a request
+and up to `MAX_BYTES` of disk on a queue three threads wide, so the count is
+capped and the overflow stays hotlinked.
+
 `Newsletter::ImageDownload` is the part to read before changing any of this:
 it fetches attacker-supplied URLs from inside the network, so it checks
 resolved addresses rather than hostnames, re-checks every redirect, and caps
-redirects, bytes and time.
+redirects, bytes and time. Read `Destination` with the IPv6 forms in mind —
+`::ffff:169.254.169.254` is the metadata address wearing a different hat, and
+`IPAddr`'s `loopback?` and `link_local?` do not see through it. That is why
+IPv6 gets an allowlist of global unicast rather than another denied prefix.
 
 **Opening a newsletter marks it read**, which means `GET /newsletters/:id`
 writes. Turbo's hover prefetching is therefore turned off in the layout;

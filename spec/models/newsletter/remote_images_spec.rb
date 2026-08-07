@@ -12,7 +12,7 @@ RSpec.describe Newsletter::RemoteImages do
   end
 
   def stored_image
-    Data.define(:bytes, :content_type)
+    Newsletter::ImageDownload::Image
       .new(bytes: "png-bytes", content_type: "image/png")
   end
 
@@ -247,5 +247,39 @@ RSpec.describe Newsletter::RemoteImages do
     Newsletter::RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.reload.body_html).to eq("<p>Morning</p>")
+  end
+
+  # Nothing about an inbound message bounds how many <img> tags it carries,
+  # and each one costs a request with its own timeouts and up to MAX_BYTES of
+  # disk. Without a ceiling one sender decides how long this app's queue is
+  # busy for. Past the cap a source keeps the sender's URL, which is what a
+  # failed download does anyway.
+  it "fetches no more sources than the cap allows" do
+    seen = []
+    sources = (1..Newsletter::RemoteImages::MAX_IMAGES + 5).map do |number|
+      %(<img src="https://cdn.example.com/#{number}.png">)
+    end
+    newsletter = newsletter_with(sources.join)
+    download = download_answering({}, seen: seen)
+
+    Newsletter::RemoteImages.new(newsletter, download: download).attach
+
+    expect(seen.length).to eq(Newsletter::RemoteImages::MAX_IMAGES)
+  end
+
+  # The blobs and the body are one write: a newsletter carrying images whose
+  # paths its body never mentions is a leak nothing later cleans up.
+  it "attaches nothing when the body cannot be rewritten" do
+    newsletter = newsletter_with(%(<img src="https://cdn.example.com/a.png">))
+    download = download_answering(
+      { "https://cdn.example.com/a.png" => stored_image }
+    )
+    allow(newsletter).to receive(:update!).and_raise(ActiveRecord::RecordInvalid)
+
+    expect {
+      Newsletter::RemoteImages.new(newsletter, download: download).attach
+    }.to raise_error(ActiveRecord::RecordInvalid)
+
+    expect(newsletter.reload.inline_images).not_to be_attached
   end
 end

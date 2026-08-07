@@ -21,6 +21,28 @@ RSpec.describe Newsletter::ImageDownload do
     Newsletter::ImageDownload.new(url, resolver: resolver).image
   end
 
+  # How many connections stand open at once while the block runs. #get
+  # returns from inside the request block, so the tally only comes back down
+  # in an ensure.
+  def peak_open_connections
+    open = 0
+    peak = 0
+    allow(Net::HTTP).to receive(:start).and_wrap_original do |start, *arguments, **options, &block|
+      start.call(*arguments, **options) do |http|
+        open += 1
+        peak = [ peak, open ].max
+        begin
+          block.call(http)
+        ensure
+          open -= 1
+        end
+      end
+    end
+
+    yield
+    peak
+  end
+
   it "downloads an image and reports the sender's content type" do
     stub_image("https://cdn.example.com/hero.png")
 
@@ -160,5 +182,33 @@ RSpec.describe Newsletter::ImageDownload do
     image = image_from("https://cdn.example.com/dead.png")
 
     expect(image).to be_nil
+  end
+
+  # Net::HTTP asks for gzip on every request and inflates the body itself, so
+  # a sender who serves a Content-Encoding it then contradicts raises from
+  # inside #read_body. Uncaught, that takes down the whole job — and with it
+  # every image on the newsletter after this one, not just this one.
+  it "returns nothing when the response body will not decompress" do
+    stub_request(:get, "https://cdn.example.com/bomb.png")
+      .to_raise(Zlib::DataError)
+
+    image = image_from("https://cdn.example.com/bomb.png")
+
+    expect(image).to be_nil
+  end
+
+  # The redirect is answered from the hop that reported it, not from inside
+  # its still-open connection: a chain otherwise holds one socket per hop
+  # open at once, each with a body nothing ever reads.
+  it "closes each hop before dialling the next" do
+    stub_redirect(
+      "https://cdn.example.com/hero.png",
+      "https://images.example.com/hero.png"
+    )
+    stub_image("https://images.example.com/hero.png")
+
+    peak = peak_open_connections { image_from("https://cdn.example.com/hero.png") }
+
+    expect(peak).to eq(1)
   end
 end

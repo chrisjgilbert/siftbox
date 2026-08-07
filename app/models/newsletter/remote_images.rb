@@ -7,6 +7,14 @@
 # fails costs the reader nothing, because the src is left pointing where it
 # already pointed.
 class Newsletter::RemoteImages
+  # Nothing about an inbound message bounds how many <img> tags it carries,
+  # and each one costs a request with its own timeouts and up to MAX_BYTES of
+  # disk — fetched one after another, on a queue three threads wide. Without
+  # a ceiling the sender decides how long this app's worker is busy for.
+  # Past it a source keeps the sender's URL, which is what a download that
+  # fails does anyway.
+  MAX_IMAGES = 100
+
   DOWNLOAD = ->(url) { Newsletter::ImageDownload.new(url).image }
 
   def initialize(newsletter, download: DOWNLOAD)
@@ -14,11 +22,17 @@ class Newsletter::RemoteImages
     @download = download
   end
 
+  # The attachments and the body are one write: a newsletter carrying images
+  # its body never mentions is a leak nothing later cleans up. The downloads
+  # themselves stay outside, because holding a transaction open across a
+  # hundred requests to the public internet is worse than either failure.
   def attach
     return if stored.empty?
 
-    newsletter.inline_images.attach(*stored.values)
-    newsletter.update!(body_html: rewritten_html)
+    newsletter.transaction do
+      newsletter.inline_images.attach(*stored.values)
+      newsletter.update!(body_html: rewritten_html)
+    end
   end
 
   private
@@ -74,7 +88,8 @@ class Newsletter::RemoteImages
   # markup is what the view-original screen renders, so the body is edited
   # as text below.
   def sources
-    document.css("img[src]").map { |node| node["src"] }.uniq.select { |src| remote?(src) }
+    document.css("img[src]").map { |node| node["src"] }
+      .uniq.select { |source| remote?(source) }.first(MAX_IMAGES)
   end
 
   def document
