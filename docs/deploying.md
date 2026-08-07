@@ -14,14 +14,42 @@ Two records, on purpose:
 
 | Record | Name | Value | Why |
 |---|---|---|---|
-| A | `app.siftbox.co` | the VM's IPv4 | Where the app is served |
+| A | `siftbox.co` | `46.224.179.132` | Where the app is served |
 | MX | `news.siftbox.co` | `inbound.postmarkapp.com`, priority `10` | Where newsletters arrive |
 
-Inbound mail goes to a **subdomain**, so ordinary mail to `siftbox.co` is
-unaffected. Adding an MX to the root would route all of it to Postmark.
+The two are unrelated lookups. A browser asks for the A record; a mail
+server delivering to `newsletters@news.siftbox.co` asks for the MX and never
+sees the A record at all.
+
+Inbound mail goes to a **subdomain** so that the MX does not claim every
+address at `siftbox.co` — an MX on the root would send `chris@siftbox.co`
+into the newsletter feed too. The web app on the root carries no such
+consequence, which is why the app is at `siftbox.co` and the mail at
+`news.siftbox.co`. Serving the app from `app.siftbox.co` instead works
+equally well; it is `proxy.host`, `NEWSBOX_HOST` and the webhook URL that
+have to agree, and the MX is unaffected either way.
 
 If the VM has an IPv6 address, add the AAAA record too — but see step 7
 first, because IPv6 changes what the egress rule has to cover.
+
+### Behind Cloudflare
+
+Cloudflare can proxy the A record (it also removes the usual "no CNAME at
+the apex" limitation via CNAME flattening). Three things to get right:
+
+- **SSL/TLS mode must be Full or Full (strict).** `production.rb` sets
+  `force_ssl`, so "Flexible" — where Cloudflare talks plain HTTP to the
+  origin — redirects forever. It looks like the site hanging, not an error.
+- **Deploy once DNS-only (grey cloud) first**, so Let's Encrypt can answer
+  its own challenge and Kamal gets a certificate. Turn proxying on after.
+- **Watch the webhook.** Postmark's POST is an automated request from a
+  machine, and Cloudflare's bot or WAF rules can block it. The only symptom
+  is newsletters silently not arriving, so if Postmark's Activity view shows
+  failures the app never logged, add a skip rule for
+  `/rails/action_mailbox/`.
+
+MX records cannot be proxied — Cloudflare only proxies A, AAAA and CNAME —
+so inbound mail bypasses all of this.
 
 ## 2. Postmark
 
@@ -31,7 +59,7 @@ first, because IPv6 changes what the egress rule has to cover.
 3. Set the inbound webhook to:
 
    ```
-   https://actionmailbox:PASSWORD@app.siftbox.co/rails/action_mailbox/postmark/inbound_emails
+   https://actionmailbox:PASSWORD@siftbox.co/rails/action_mailbox/postmark/inbound_emails
    ```
 
 4. **Tick "Include raw email content in JSON payload."** Action Mailbox
@@ -58,21 +86,14 @@ That writes `config/master.key`, which `.kamal/secrets` reads as
 
 ## 4. config/deploy.yml
 
-| Setting | Value |
-|---|---|
-| `image` | `your-registry-user/newsbox` |
-| `registry.username` | your registry user (use an access token, not a password) |
-| `servers.web` | the VM's IP |
-| `proxy.host` | `app.siftbox.co` |
+Already filled in: the host, `cjgilbert/newsbox` on Docker Hub, `siftbox.co`
+as `proxy.host`, and the four `NEWSBOX_*` variables. `NEWSBOX_MAIL_FROM` is
+the one to check against reality — it has to match the sender signature you
+verified in step 2, or every password reset is rejected.
 
-Then uncomment and fill the `env.clear` block:
-
-```yaml
-NEWSBOX_INBOUND_ADDRESS: newsletters@news.siftbox.co
-NEWSBOX_HOST: app.siftbox.co
-NEWSBOX_MAIL_FROM: newsbox@siftbox.co     # must match the sender signature
-NEWSBOX_TIME_ZONE: London
-```
+`service: newsbox` and the volume `newsbox_storage` are what keep this app
+apart from the others on the box, so leave both alone unless something else
+there already claims those names.
 
 Secrets come from your shell via `.kamal/secrets`, so export them before
 deploying (or wire the file up to a password manager):
@@ -146,7 +167,7 @@ Today the app talks to Postmark and to senders' image CDNs, both public.
 
 ## 8. Smoke test
 
-1. Sign in at `https://app.siftbox.co`.
+1. Sign in at `https://siftbox.co`.
 2. Subscribe to something with the address in the feed header, or forward a
    real newsletter to it.
 3. Open it and confirm the images have `src="/newsletters/…/images/…"` rather
