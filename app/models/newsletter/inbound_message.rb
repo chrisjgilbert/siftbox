@@ -67,8 +67,12 @@ class Newsletter::InboundMessage
     mail[:from]
   end
 
+  # An unparseable From still carries what the sender wrote — "From: Ruby
+  # Weekly" reads back as "Ruby Weekly" — so keep it as the name rather than
+  # storing nothing and rendering a nameless row.
   def sender_name
-    return "" unless from_field.respond_to?(:display_names)
+    return "" if from_field.nil?
+    return from_field.to_s unless from_field.respond_to?(:display_names)
 
     from_field.display_names.first.to_s
   end

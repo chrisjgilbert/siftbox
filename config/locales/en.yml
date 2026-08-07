@@ -29,6 +29,7 @@ en:
       older: Older
       received: Received %{date} at %{time}
       view_original: View original
+    unknown_sender: Unknown sender
   passwords:
     edit:
       confirmation: Repeat new password
