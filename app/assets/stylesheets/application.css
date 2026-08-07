@@ -559,13 +559,22 @@ a:hover {
   margin: 40px 0;
 }
 
+/* Render at the image's own size, capped at the column. `width: 100%` used to
+   force every image to the full column, which upscaled a 40px logo or social
+   icon into a blurred band — senders put far more small images in a
+   newsletter than large ones. Nothing else knows how big an image is: the
+   sender's width and height attributes do not survive
+   Newsletter::Body::ATTRIBUTES, and no blob carries intrinsic dimensions
+   while image_processing stays commented out in the Gemfile. The browser's
+   own reading of the file is the only size available, so let it win.
+
+   The rules above and below went with the full-width assumption. On an image
+   that is now only as wide as it is, they read as an underline on an icon
+   rather than as a plate, so separation is left to the margin. */
 .body img {
   display: block;
-  width: 100%;
-  max-width: 100% !important;
+  max-width: 100%;
   height: auto;
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
   margin: 28px 0;
 }
 
