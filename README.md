@@ -12,14 +12,29 @@ sender's HTML in a sandboxed iframe.
 
 ```bash
 bin/setup
-NEWSBOX_EMAIL=you@example.com NEWSBOX_PASSWORD=... bin/rails db:seed
+bin/rails credentials:edit   # add the reader block below
+bin/rails db:seed
 bin/rails sample_data:load   # development only, gives the feed something to show
 bin/dev
 ```
 
 The authentication generator deliberately ships no sign-up flow, so `db:seed`
-creates the only account. See `CLAUDE.md` and `.claude/rules` for the
-conventions this codebase follows, and `bin/ci` for what has to pass.
+creates the only account, from credentials:
+
+```yaml
+reader:
+  email_address: you@example.com
+  password: ...
+```
+
+Credentials rather than the environment, so a rebuilt volume gets the account
+back on its own — `db:prepare` loads the seeds whenever it creates the
+database. Seeds create the account and never update it, so changing the
+password here does nothing to an account that already exists; that is
+deliberate, since the reader may have changed it through the reset flow.
+
+See `CLAUDE.md` and `.claude/rules` for the conventions this codebase
+follows, and `bin/ci` for what has to pass.
 
 ## Receiving mail
 
@@ -43,14 +58,23 @@ until the inbound domain is settled.
 4. **Tick "Include raw email content in JSON payload."** Action Mailbox needs
    the raw message, and without this the ingress fails with no obvious cause.
 
-`PASSWORD` is `action_mailbox.ingress_password` in credentials, or the
-`RAILS_INBOUND_EMAIL_PASSWORD` environment variable. Generate a long random
-one; Action Mailbox compares it in constant time.
+`PASSWORD` is `action_mailbox.ingress_password` in credentials. Generate a
+long random one; Action Mailbox compares it in constant time.
 
-This repository carries no `config/credentials.yml.enc`. Run
-`bin/rails credentials:edit` once to generate your own along with a master
-key — committing an encrypted file whose key lives on someone else's machine
-would just leave you something you cannot open.
+Action Mailbox also reads a `RAILS_INBOUND_EMAIL_PASSWORD` variable, but only
+as a fallback — the credential wins whenever it is set:
+
+```ruby
+Rails.application.credentials.dig(:action_mailbox, :ingress_password) || ENV["RAILS_INBOUND_EMAIL_PASSWORD"]
+```
+
+Setting both is how you end up debugging a 401 against a password the app
+never reads, so this app uses the credential only and names the variable
+nowhere. Change the password with `bin/rails credentials:edit`, and update
+the Postmark webhook URL to match in the same sitting.
+
+`config/master.key` is not in the repository — it is gitignored, and
+`.kamal/secrets` reads it from disk. Anyone deploying needs a copy.
 
 Postmark retries a failed inbound webhook 10 times over intervals growing
 from 1 minute to 6 hours, so ingestion has to be idempotent — a partial
@@ -75,24 +99,31 @@ mailbox against real newsletter MIME, which is where the surprises are.
 each other, worked through against a Hetzner host. What follows here is the
 part worth understanding before running any of it.
 
-The Kamal files declare what the app needs but not where it runs — no host,
-no database accessory. Those are still open. What is wired up is the list of
-variables, because every one of them fails quietly rather than loudly:
+The Kamal files declare what the app needs and, since the first deploy, where
+it runs: `siftbox.co` on a Hetzner host. Every one of these variables fails
+quietly rather than loudly:
 
 | Variable | Missing means |
 |---|---|
-| `RAILS_INBOUND_EMAIL_PASSWORD` | Every Postmark webhook 500s; newsletters are lost once Postmark stops retrying |
+| `RAILS_MASTER_KEY` | Credentials will not decrypt, so the ingress password is unreadable and every Postmark webhook 500s |
 | `NEWSBOX_INBOUND_ADDRESS` | The feed tells the reader to subscribe to `example.com` |
 | `POSTMARK_SMTP_TOKEN` | Password reset silently fails — the only way back in |
 | `NEWSBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
 | `NEWSBOX_HOST` | Reset links point at localhost |
 | `NEWSBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
 
+The two secrets that are neither in credentials nor on disk —
+`KAMAL_REGISTRY_PASSWORD` and `POSTMARK_SMTP_TOKEN` — go in
+`.kamal/secrets-common`, which is gitignored. Kamal reads that file before
+`.kamal/secrets` with no flags, so `bin/kamal deploy` picks them up without
+anything being exported into the shell first. Note the merge order: Kamal
+applies `.kamal/secrets` over the top, so naming a variable in both takes the
+value from the committed file, not the real one.
+
 There is no database server to run. The four databases are SQLite files under
 `storage/`, on the same mounted volume as the Active Storage blobs — so that
 one path is the whole of this app's state, and backing it up backs up
-everything. The only thing still to decide is the proxy host in
-`config/deploy.yml`.
+everything.
 
 ### Outbound network — a deploy step this app cannot do for itself
 

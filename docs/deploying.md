@@ -14,14 +14,26 @@ Two records, on purpose:
 
 | Record | Name | Value | Why |
 |---|---|---|---|
-| A | `app.siftbox.co` | the VM's IPv4 | Where the app is served |
+| A | `siftbox.co` | the VM's IPv4 | Where the app is served |
 | MX | `news.siftbox.co` | `inbound.postmarkapp.com`, priority `10` | Where newsletters arrive |
 
 Inbound mail goes to a **subdomain**, so ordinary mail to `siftbox.co` is
-unaffected. Adding an MX to the root would route all of it to Postmark.
+unaffected. Adding an MX to the root would route all of it to Postmark. The
+app itself is on the apex, which is fine alongside that MX, and Rails sets
+its session cookie host-only so nothing is shared with `news.`.
 
-If the VM has an IPv6 address, add the AAAA record too — but see step 7
-first, because IPv6 changes what the egress rule has to cover.
+**Behind Cloudflare, the A record has to be DNS-only — grey cloud.** Kamal
+gets its certificate over an HTTP-01 challenge, which has to reach
+kamal-proxy on the VM. Proxied, the apex answers `525` instead: Cloudflare
+reaches the VM, kamal-proxy has no route for that hostname yet, the TLS
+handshake fails, and Cloudflare reports it as an origin SSL error rather than
+a missing route.
+
+If the VM has an IPv6 address you can add an AAAA record — kamal-proxy
+already listens on `[::]:443` — but see step 7 first, because IPv6 changes
+what the egress rule has to cover. What you must not do is leave a stale
+AAAA pointing somewhere else while the A record points at the VM: clients
+that prefer IPv6 will all take the wrong path.
 
 ## 2. Postmark
 
@@ -31,7 +43,7 @@ first, because IPv6 changes what the egress rule has to cover.
 3. Set the inbound webhook to:
 
    ```
-   https://actionmailbox:PASSWORD@app.siftbox.co/rails/action_mailbox/postmark/inbound_emails
+   https://actionmailbox:PASSWORD@siftbox.co/rails/action_mailbox/postmark/inbound_emails
    ```
 
 4. **Tick "Include raw email content in JSON payload."** Action Mailbox
@@ -41,20 +53,30 @@ first, because IPv6 changes what the egress rule has to cover.
    Postmark rejects sends from anything else, and reset mail is the only way
    back into the account.
 
-Generate `PASSWORD` as a long random string. It becomes
-`RAILS_INBOUND_EMAIL_PASSWORD` in step 4.
+Generate `PASSWORD` as a long random string. It goes in credentials in step 3,
+and the same value goes in this webhook URL.
 
 ## 3. Credentials
 
-This repository carries no `config/credentials.yml.enc`. Generate your own,
-once, on the machine you deploy from:
+The ingress password lives in credentials, under `action_mailbox`:
 
 ```bash
 bin/rails credentials:edit
 ```
 
-That writes `config/master.key`, which `.kamal/secrets` reads as
-`RAILS_MASTER_KEY`. Never commit it.
+```yaml
+action_mailbox:
+  ingress_password: the PASSWORD from step 2
+```
+
+Action Mailbox does read a `RAILS_INBOUND_EMAIL_PASSWORD` variable, but only
+when the credential is unset — so do not set both. With the credential
+present the variable is ignored, and a mismatch shows up as a 401 on every
+webhook with nothing to say why.
+
+`config/credentials.yml.enc` is committed; `config/master.key` is not. Kamal
+reads the key off disk as `RAILS_MASTER_KEY`, so the machine you deploy from
+needs a copy. Never commit it.
 
 ## 4. config/deploy.yml
 
@@ -63,24 +85,42 @@ That writes `config/master.key`, which `.kamal/secrets` reads as
 | `image` | `your-registry-user/newsbox` |
 | `registry.username` | your registry user (use an access token, not a password) |
 | `servers.web` | the VM's IP |
-| `proxy.host` | `app.siftbox.co` |
+| `proxy.host` | `siftbox.co` |
+
+Kamal prefixes `registry.server` onto `image`, so `image` is the path within
+the registry rather than the full reference. Naming the registry in both
+gives you `ghcr.io/ghcr.io/user/newsbox`.
 
 Then uncomment and fill the `env.clear` block:
 
 ```yaml
 NEWSBOX_INBOUND_ADDRESS: newsletters@news.siftbox.co
-NEWSBOX_HOST: app.siftbox.co
+NEWSBOX_HOST: siftbox.co
 NEWSBOX_MAIL_FROM: newsbox@siftbox.co     # must match the sender signature
 NEWSBOX_TIME_ZONE: London
 ```
 
-Secrets come from your shell via `.kamal/secrets`, so export them before
-deploying (or wire the file up to a password manager):
+The two secrets that live neither in credentials nor on disk go in
+`.kamal/secrets-common`, which is gitignored. Kamal reads it before
+`.kamal/secrets` with no flags, so nothing needs exporting into the shell:
 
 ```bash
-export KAMAL_REGISTRY_PASSWORD=...
-export RAILS_INBOUND_EMAIL_PASSWORD=...   # the PASSWORD from step 2
-export POSTMARK_SMTP_TOKEN=...
+KAMAL_REGISTRY_PASSWORD=...
+POSTMARK_SMTP_TOKEN=...
+```
+
+Do not restate those two in `.kamal/secrets`. That file is merged over the
+top, so a `KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD` passthrough
+resolves against an unset shell variable and overwrites the real value with
+an empty string.
+
+If the host is arm64 and the target is amd64, set `builder.remote` to the
+target host rather than building through emulation:
+
+```yaml
+builder:
+  arch: amd64
+  remote: ssh://root@the-vm
 ```
 
 `proxy.ssl: true` is already set, so Kamal gets a Let's Encrypt certificate
@@ -103,14 +143,30 @@ four SQLite databases are created on the volume without a separate step.
 
 ## 6. Create the reader account
 
-`db:prepare` loads `db/seeds.rb`, which creates nothing unless it is given an
-email and password — so the first boot logs `No reader account created` and
-carries on. Create the account after the deploy, rather than putting a
-password in `deploy.yml`:
+Put the account in credentials, back in step 3:
+
+```yaml
+reader:
+  email_address: you@example.com
+  password: ...
+```
+
+`db:prepare` loads `db/seeds.rb` whenever it creates the database, so with
+that block present the first container boot creates the account by itself and
+a rebuilt volume gets it back the same way. Without it, boot logs
+`No reader account created` and carries on rather than failing.
+
+If the databases already exist — the credential was added after the first
+deploy, say — seeds will not have run. Do it once by hand:
 
 ```bash
-bin/kamal app exec "env NEWSBOX_EMAIL=you@example.com NEWSBOX_PASSWORD='...' bin/rails db:seed"
+bin/kamal app exec --reuse "bin/rails db:seed"
 ```
+
+Seeds create the account and never update it. Changing the password in
+credentials does nothing to an account that already exists, because the
+reader may have changed it through the reset flow and rewriting it here would
+lock them out. To change an existing password, do it in the console.
 
 There is no sign-up flow, by design. This is the only account.
 
@@ -144,9 +200,21 @@ just as easy to publish as an A record.
 Leave the private ranges your own infrastructure needs reachable, if any.
 Today the app talks to Postmark and to senders' image CDNs, both public.
 
+**On a shared host, do not apply these ranges host-wide.** Docker bridge
+networks sit inside `172.16.0.0/12` — `172.17.0.0/16` for the default bridge
+and a `172.18.0.0/16`-and-up per user-defined network — so a blanket rule cuts
+every container on the box off from its database. The rule has to match on
+newsbox's own container or network as the source, not on the host's whole
+`FORWARD` chain. Check what else is running first:
+
+```bash
+docker ps --format "{{.Names}}"
+ip -4 addr show | grep -E "docker0|br-"
+```
+
 ## 8. Smoke test
 
-1. Sign in at `https://app.siftbox.co`.
+1. Sign in at `https://siftbox.co`.
 2. Subscribe to something with the address in the feed header, or forward a
    real newsletter to it.
 3. Open it and confirm the images have `src="/newsletters/…/images/…"` rather
