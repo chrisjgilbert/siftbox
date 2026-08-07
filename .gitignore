@@ -33,3 +33,7 @@
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
+
+# Ignore the raw deploy secrets. /.kamal/secrets itself is safe for git and
+# stays committed; this is the file that holds actual values.
+/.kamal/secrets-common
