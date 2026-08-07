@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_06_153607) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_07_113939) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.integer "status", default: 0, null: false
     t.string "message_id", null: false
@@ -59,6 +59,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_06_153607) do
     t.datetime "read_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "lead_image_url", default: "", null: false
     t.index ["message_id"], name: "index_newsletters_on_present_message_id", unique: true, where: "message_id <> ''"
     t.index ["read_at"], name: "index_newsletters_on_read_at"
     t.index ["received_at"], name: "index_newsletters_on_received_at"

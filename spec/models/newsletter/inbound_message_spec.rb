@@ -225,4 +225,37 @@ RSpec.describe Newsletter::InboundMessage do
 
     expect(newsletter).to be_persisted
   end
+
+  it "stores the first image in the body as the lead image" do
+    mail = inbound_mail(html: %(<p>Hi</p><img src="https://cdn.example/hero.png">))
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.lead_image_url).to eq("https://cdn.example/hero.png")
+  end
+
+  it "stores no lead image for a newsletter that carries none" do
+    newsletter = Newsletter::InboundMessage.new(mail: inbound_mail).save
+
+    expect(newsletter.lead_image_url).to eq("")
+  end
+
+  # Extraction runs after Newsletter::InlineImages, which rewrites cid:
+  # references to app paths. Run it first and the column holds a cid: URL
+  # that no browser can resolve.
+  it "stores an inline image as the lead once its reference is rewritten" do
+    mail = Mail.new(from: "peter@rubyweekly.com", subject: "Issue 742") do
+      html_part do
+        content_type "text/html; charset=UTF-8"
+        body %(<img src="cid:hero@rubyweekly">)
+      end
+
+      add_file(filename: "hero.png", content: "png-bytes")
+    end
+    mail.parts.last.content_id = "<hero@rubyweekly>"
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.lead_image_url).to start_with("/newsletters/")
+  end
 end

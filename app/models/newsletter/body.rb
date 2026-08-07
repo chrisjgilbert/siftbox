@@ -34,10 +34,12 @@ class Newsletter::Body
     document.text.squish
   end
 
-  private
-
-  attr_reader :html, :dimensions
-
+  # Public so Newsletter::LeadImage can find and remove the lead image in the
+  # same tree #sized then walks. The reader promotes that image above the
+  # article, so it has to leave the body before the sizes go on — and
+  # re-parsing #scrubbed's output to do it would cost a second Loofah pass
+  # over a body that runs to hundreds of kilobytes.
+  #
   # The order is load-bearing. TrackingPixelScrubber is the only pass that
   # reads a style attribute, so it runs first; the styles are then dropped
   # before :prune, whose html5lib sanitizer CSS-parses every one of them —
@@ -50,6 +52,10 @@ class Newsletter::Body
       .tap { |fragment| fragment.css("[style]").each { |node| node.remove_attribute("style") } }
       .scrub!(:prune)
   end
+
+  private
+
+  attr_reader :html, :dimensions
 
   # A separate step from #document, because #text is the other caller and a
   # size attribute cannot change what the text says — so a snippet does not

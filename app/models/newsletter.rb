@@ -34,8 +34,23 @@ class Newsletter < ApplicationRecord
     where(read_at: nil)
   end
 
+  def self.without_lead_image
+    where(lead_image_url: "")
+  end
+
   def read?
     read_at.present?
+  end
+
+  def lead_image?
+    lead_image_url.present?
+  end
+
+  # Read out of the stored body rather than the raw email, so it works both
+  # at ingest and for newsletters stored before the column existed. Safe to
+  # run again: the same body gives the same answer.
+  def capture_lead_image
+    update!(lead_image_url: Newsletter::LeadImage.new(body_html).url)
   end
 
   def mark_read
