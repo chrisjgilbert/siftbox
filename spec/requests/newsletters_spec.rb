@@ -136,6 +136,24 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("End of feed — 2 issues")
   end
 
+  # With nothing to show there is no end-of-feed note, so this is the only
+  # place left that says where to point a subscription.
+  it "tells a reader with an empty feed where to point a subscription" do
+    sign_in
+
+    get newsletters_path
+
+    expect(response.body).to include("Point a subscription at newsletters@example.com")
+  end
+
+  it "shows no end-of-feed note when there is no feed" do
+    sign_in
+
+    get newsletters_path
+
+    expect(response.body).not_to include("End of feed")
+  end
+
   # The address used to sit in the header. The redesign puts the brand there
   # instead, so the end-of-feed note is where a subscription gets pointed.
   it "names the inbound address at the end of the feed" do
