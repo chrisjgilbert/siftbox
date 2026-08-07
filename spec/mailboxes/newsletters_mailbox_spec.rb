@@ -27,38 +27,39 @@ RSpec.describe NewslettersMailbox, type: :mailbox do
   end
 
   it "discards mail Postmark scored as spam" do
-    mail = newsletter_mail
-    mail["X-Spam-Score"] = "9.4"
-
-    receive_inbound_email_from_source(mail.to_s)
+    receive_inbound_email_from_source(newsletter_mail("X-Spam-Score" => "9.4").to_s)
 
     expect(Newsletter.count).to eq(0)
   end
 
   it "keeps mail scoring below the spam threshold" do
-    mail = newsletter_mail
-    mail["X-Spam-Score"] = "0.4"
-
-    receive_inbound_email_from_source(mail.to_s)
+    receive_inbound_email_from_source(newsletter_mail("X-Spam-Score" => "0.4").to_s)
 
     expect(Newsletter.count).to eq(1)
   end
 
-  it "does not bounce discarded spam back to its forged sender" do
-    mail = newsletter_mail
-    mail["X-Spam-Score"] = "9.4"
+  it "records discarded spam as bounced rather than delivered" do
+    source = newsletter_mail("X-Spam-Score" => "9.4").to_s
 
-    inbound_email = receive_inbound_email_from_source(mail.to_s)
+    inbound_email = receive_inbound_email_from_source(source)
 
-    expect(inbound_email).not_to be_bounced
+    expect(inbound_email).to be_bounced
+  end
+
+  # Asserts on the enqueued mail, not ActionMailer::Base.deliveries:
+  # `bounce_with` sends through `deliver_later`, which the test queue adapter
+  # enqueues and never performs, so deliveries would stay empty either way.
+  it "sends nothing back to the forged sender of discarded spam" do
+    expect {
+      receive_inbound_email_from_source(newsletter_mail("X-Spam-Score" => "9.4").to_s)
+    }.not_to have_enqueued_mail
   end
 
   # Anything raised in processing loses the newsletter, and a header that
   # repeats is ordinary in mail forwarded through another spam filter.
   it "stores mail carrying the spam score header twice" do
-    mail = newsletter_mail
-    mail.header["X-Spam-Score"] = "0.1"
-    mail.header["X-Spam-Score"] = "0.2"
+    mail = newsletter_mail("X-Spam-Score" => "0.1")
+    mail["X-Spam-Score"] = "0.2"
 
     receive_inbound_email_from_source(mail.to_s)
 

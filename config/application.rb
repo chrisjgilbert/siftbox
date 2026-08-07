@@ -38,8 +38,6 @@ module Newsbox
     # wrong heading and shows every timestamp in the wrong zone.
     config.time_zone = ENV.fetch("NEWSBOX_TIME_ZONE", "London")
 
-    config.action_mailbox.ingress = :postmark
-
     # The address subscriptions are pointed at. Shown in the feed header and
     # the empty state. Placeholder until the inbound domain is decided.
     config.x.inbound_address =

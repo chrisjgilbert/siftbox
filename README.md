@@ -59,11 +59,15 @@ permanently, which is the way to reject mail you never want.
 
 ### Locally
 
+The ingress is armed in production only, so the webhook endpoint answers 404
+everywhere else.
+
 Use the conductor at `/rails/conductor/action_mailbox/inbound_emails` rather
-than a tunnel. The highest-fidelity test is to forward a real newsletter from
-your mail client *as an attachment* to get the `.eml`, then paste its raw
-source into the conductor — that exercises the mailbox against real
-newsletter MIME, which is where the surprises are.
+than a tunnel — it creates inbound emails directly and routes them through
+the real mailbox, so it needs no ingress. The highest-fidelity test is to
+forward a real newsletter from your mail client *as an attachment* to get the
+`.eml`, then paste its raw source into the conductor — that exercises the
+mailbox against real newsletter MIME, which is where the surprises are.
 
 ## Deploying
 

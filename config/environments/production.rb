@@ -1,8 +1,10 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
-  # Prepare the ingress controller used to receive mail
-  # config.action_mailbox.ingress = :relay
+  # The route is drawn in every environment; leaving this unset elsewhere is
+  # what makes ActionMailbox::BaseController#ensure_configured answer 404
+  # there, so the endpoint cannot go live over plaintext.
+  config.action_mailbox.ingress = :postmark
 
   # Settings specified here will take precedence over those in config/application.rb.
 
