@@ -83,6 +83,64 @@ RSpec.describe Newsletter::RemoteImages do
     expect(served.length).to eq(2)
   end
 
+  # The parser answers a decoded src, the body holds what the sender wrote,
+  # and CDN URLs carry query strings — so the two disagree on most real
+  # newsletters, and a rewrite keyed on the decoded form finds nothing.
+  it "rewrites a source the sender wrote with an escaped ampersand" do
+    newsletter = newsletter_with(
+      %(<img src="https://cdn.example.com/a.png?w=1&amp;h=2">)
+    )
+    download = download_answering(
+      { "https://cdn.example.com/a.png?w=1&h=2" => stored_image }
+    )
+
+    Newsletter::RemoteImages.new(newsletter, download: download).attach
+
+    expect(newsletter.reload.body_html).not_to include("cdn.example.com")
+  end
+
+  # Alternation takes the first branch that fits, so without the longest
+  # spelling first the bare URL matches inside the longer one and leaves its
+  # query string dangling off the end of the rewritten path.
+  it "replaces the whole of a source another source is a prefix of" do
+    newsletter = newsletter_with(
+      %(<img src="https://cdn.example.com/a.png">) +
+      %(<img src="https://cdn.example.com/a.png?size=2">)
+    )
+    download = download_answering(
+      { "https://cdn.example.com/a.png" => stored_image,
+        "https://cdn.example.com/a.png?size=2" => stored_image }
+    )
+
+    Newsletter::RemoteImages.new(newsletter, download: download).attach
+
+    expect(newsletter.reload.body_html).not_to include("?size=2")
+  end
+
+  it "names the blob after the file the URL ends in" do
+    newsletter = newsletter_with(%(<img src="https://cdn.example.com/hero.png">))
+    download = download_answering(
+      { "https://cdn.example.com/hero.png" => stored_image }
+    )
+
+    Newsletter::RemoteImages.new(newsletter, download: download).attach
+
+    expect(newsletter.inline_images.blobs.first.filename.to_s).to eq("hero.png")
+  end
+
+  # Plenty of CDN URLs end in an opaque path segment, and Active Storage
+  # will not accept a blank filename.
+  it "names a blob after its type when the URL ends in no file" do
+    newsletter = newsletter_with(%(<img src="https://cdn.example.com/render/9f2">))
+    download = download_answering(
+      { "https://cdn.example.com/render/9f2" => stored_image }
+    )
+
+    Newsletter::RemoteImages.new(newsletter, download: download).attach
+
+    expect(newsletter.inline_images.blobs.first.filename.to_s).to eq("image.png")
+  end
+
   it "leaves the src alone when the download comes back empty" do
     newsletter = newsletter_with(%(<img src="https://cdn.example.com/a.png">))
     download = download_answering({})

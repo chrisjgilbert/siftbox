@@ -98,12 +98,27 @@ already-safe string — so nothing in the app calls `html_safe` or `raw` on
 reader-supplied content. Tuning the allowlist in `Newsletter::Body` applies to
 the whole archive immediately, with no cached column to reprocess.
 
-**Images are hotlinked**, behind a site-wide `same-origin` referrer policy —
-so image hosts never see this app's origin — and a tracking-pixel scrubber
-that drops any `<img>` declaring a size of 2px or less. Images a newsletter carries *inside* the message (`cid:` references)
-cannot be hotlinked, so those are stored with Active Storage at ingest and
-the references rewritten — Action Mailbox incinerates the raw email after 30
-days, so it is that or lose them.
+**Images are self-hosted.** Everything a newsletter carries inside the
+message (`cid:` references) is stored with Active Storage during ingest, and
+everything it hotlinks is fetched by `Newsletter::RemoteImagesJob` just
+after — in both cases the reference in the body is rewritten to a path this
+app serves. So opening a newsletter makes no request to the sender, which is
+the only way to stop an open being tracked: a tracking pixel that declares
+no size is indistinguishable from a real image, and `Newsletter::TrackingPixelScrubber`
+only catches the ones that declare 2px or less. It also means the archive
+keeps its images once senders' CDNs stop serving them.
+
+The sender still learns the message was processed, because the server
+fetches once at delivery. That is what Apple Mail Privacy Protection and
+Gmail's image proxy do too, and delivery is something an ESP already knows.
+
+A download that fails leaves the `src` pointing where it did, so the reader
+still sees the image — which is why the CSP keeps `img-src https:` and the
+`same-origin` referrer policy in the layout still earns its place.
+`Newsletter::ImageDownload` is the part to read before changing any of this:
+it fetches attacker-supplied URLs from inside the network, so it checks
+resolved addresses rather than hostnames, re-checks every redirect, and caps
+redirects, bytes and time.
 
 **Opening a newsletter marks it read**, which means `GET /newsletters/:id`
 writes. Turbo's hover prefetching is therefore turned off in the layout;
