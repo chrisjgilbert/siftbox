@@ -1,13 +1,9 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
-  # Prepare the ingress controller used to receive mail
-  # Set here rather than in application.rb, matching Rails' own generated
-  # config. The route is drawn in every environment either way — what this
-  # changes is that ActionMailbox::BaseController#ensure_configured answers
-  # 404 everywhere else, so the endpoint cannot go live over plaintext if an
-  # ingress password is ever set locally. Development uses the conductor at
-  # /rails/conductor/action_mailbox/inbound_emails, which needs no ingress.
+  # The route is drawn in every environment; leaving this unset elsewhere is
+  # what makes ActionMailbox::BaseController#ensure_configured answer 404
+  # there, so the endpoint cannot go live over plaintext.
   config.action_mailbox.ingress = :postmark
 
   # Settings specified here will take precedence over those in config/application.rb.

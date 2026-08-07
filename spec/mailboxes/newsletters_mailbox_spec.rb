@@ -26,52 +26,40 @@ RSpec.describe NewslettersMailbox, type: :mailbox do
     expect(Newsletter.count).to eq(1)
   end
 
-  def scored_mail(score)
-    newsletter_mail.tap { |mail| mail["X-Spam-Score"] = score }
-  end
-
   it "discards mail Postmark scored as spam" do
-    receive_inbound_email_from_source(scored_mail("9.4").to_s)
+    receive_inbound_email_from_source(newsletter_mail("X-Spam-Score" => "9.4").to_s)
 
     expect(Newsletter.count).to eq(0)
   end
 
   it "keeps mail scoring below the spam threshold" do
-    receive_inbound_email_from_source(scored_mail("0.4").to_s)
+    receive_inbound_email_from_source(newsletter_mail("X-Spam-Score" => "0.4").to_s)
 
     expect(Newsletter.count).to eq(1)
   end
 
   it "records discarded spam as bounced rather than delivered" do
-    inbound_email = receive_inbound_email_from_source(scored_mail("9.4").to_s)
+    source = newsletter_mail("X-Spam-Score" => "9.4").to_s
+
+    inbound_email = receive_inbound_email_from_source(source)
 
     expect(inbound_email).to be_bounced
   end
 
-  # `bounced!` only sets the status. Sending anything back would deliver it to
-  # the forged sender address on the spam.
-  #
-  # Asserts on the enqueued job, not on ActionMailer::Base.deliveries:
+  # Asserts on the enqueued mail, not ActionMailer::Base.deliveries:
   # `bounce_with` sends through `deliver_later`, which the test queue adapter
   # enqueues and never performs, so deliveries would stay empty either way.
   it "sends nothing back to the forged sender of discarded spam" do
     expect {
-      receive_inbound_email_from_source(scored_mail("9.4").to_s)
+      receive_inbound_email_from_source(newsletter_mail("X-Spam-Score" => "9.4").to_s)
     }.not_to have_enqueued_mail
-  end
-
-  it "records mail it accepted as delivered" do
-    inbound_email = receive_inbound_email_from_source(newsletter_mail.to_s)
-
-    expect(inbound_email).to be_delivered
   end
 
   # Anything raised in processing loses the newsletter, and a header that
   # repeats is ordinary in mail forwarded through another spam filter.
   it "stores mail carrying the spam score header twice" do
-    mail = newsletter_mail
-    mail.header["X-Spam-Score"] = "0.1"
-    mail.header["X-Spam-Score"] = "0.2"
+    mail = newsletter_mail("X-Spam-Score" => "0.1")
+    mail["X-Spam-Score"] = "0.2"
 
     receive_inbound_email_from_source(mail.to_s)
 

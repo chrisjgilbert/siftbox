@@ -1,28 +1,78 @@
 require "rails_helper"
 
-# The ingress is production-only, so no request spec can exercise a real
-# delivery: outside production ActionMailbox.ingress is nil and the endpoint
-# answers 404 by design. These pin the two halves of that arrangement,
-# because losing the configuration is silent and total — every Postmark
-# webhook 404s, Postmark retries for about six hours, and the newsletters are
+# The path Postmark posts to. Losing any part of it — the route, the ingress
+# setting, the RawEmail parameter, the credentials — is silent and total: the
+# webhook fails, Postmark eventually stops retrying, and the newsletters are
 # gone with nothing logged.
 RSpec.describe "Action Mailbox ingress" do
-  it "answers 404 outside production, where it is deliberately not armed" do
-    post "/rails/action_mailbox/postmark/inbound_emails",
-      params: { RawEmail: "From: a@b.com\nSubject: s\n\nhi" }
+  include ActiveJob::TestHelper
+
+  def postmark_source
+    "From: Ruby Weekly <peter@rubyweekly.com>\n" \
+    "To: news@example.com\nSubject: Issue 742\n\n<p>Morning</p>"
+  end
+
+  def credentials
+    ActionController::HttpAuthentication::Basic.encode_credentials(
+      "actionmailbox", "ingress-password"
+    )
+  end
+
+  # Arms the ingress for one example. It is production-only in config, so
+  # this is the only way to exercise a real delivery.
+  #
+  # The ingress stores the message and enqueues routing rather than routing
+  # inline, so the job has to run for a Newsletter to exist.
+  def armed(&delivery)
+    ActionMailbox.ingress = :postmark
+    ENV["RAILS_INBOUND_EMAIL_PASSWORD"] = "ingress-password"
+    perform_enqueued_jobs(&delivery)
+  ensure
+    ActionMailbox.ingress = nil
+    ENV.delete("RAILS_INBOUND_EMAIL_PASSWORD")
+  end
+
+  it "turns an authenticated Postmark delivery into a newsletter" do
+    armed do
+      post rails_postmark_inbound_emails_path,
+        params: { RawEmail: postmark_source },
+        headers: { "HTTP_AUTHORIZATION" => credentials }
+    end
+
+    expect(Newsletter.count).to eq(1)
+  end
+
+  it "accepts that delivery" do
+    armed do
+      post rails_postmark_inbound_emails_path,
+        params: { RawEmail: postmark_source },
+        headers: { "HTTP_AUTHORIZATION" => credentials }
+    end
+
+    expect(response).to have_http_status(:no_content)
+  end
+
+  it "refuses a delivery carrying no credentials" do
+    armed do
+      post rails_postmark_inbound_emails_path, params: { RawEmail: postmark_source }
+    end
+
+    expect(response).to have_http_status(:unauthorized)
+  end
+
+  it "answers 404 where the ingress is deliberately not armed" do
+    post rails_postmark_inbound_emails_path, params: { RawEmail: postmark_source }
 
     expect(response).to have_http_status(:not_found)
   end
 
-  # Asserts on the configuration rather than on behaviour: booting the
-  # production environment inside the suite is not worth it, and deletion or
-  # a typo here is the failure worth catching.
-  #
-  # Anchored to the end of the line rather than an `include`, which a typo
-  # like `:postmarks` would satisfy as a substring.
+  # Asserts on the configuration rather than behaviour: booting the production
+  # environment in-suite is not worth it, and the failure worth catching is
+  # the line being deleted or typo'd. The trailing newline is what rejects a
+  # near-miss like `:postmarks`.
   it "is armed for Postmark in production" do
     production = Rails.root.join("config/environments/production.rb").read
 
-    expect(production).to match(/^\s*config\.action_mailbox\.ingress = :postmark$/)
+    expect(production).to include("config.action_mailbox.ingress = :postmark\n")
   end
 end

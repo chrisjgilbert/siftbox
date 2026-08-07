@@ -9,13 +9,9 @@ class NewslettersMailbox < ApplicationMailbox
 
   private
 
-  # `bounced!`, which ActionMailbox::Base documents as the way to halt
-  # processing, records the rejection without sending anything — only
-  # `bounce_with` delivers a message, and bouncing to the forged sender on
-  # spam would make this app a backscatter source.
-  #
-  # It also keeps spam distinguishable in the conductor: discarded mail reads
-  # as bounced rather than sitting among the newsletters marked delivered.
+  # `bounced!` only records the status. Never `bounce_with` — the sender
+  # address on spam is forged, so replying would make this a backscatter
+  # source.
   def discard_spam
     bounced! if spam?
   end
@@ -24,15 +20,10 @@ class NewslettersMailbox < ApplicationMailbox
     spam_score >= SPAM_THRESHOLD
   end
 
-  # Postmark stamps this on inbound mail. Absent, `to_f` reads 0.0.
-  #
-  # Mail::Header#[] returns an Array when a header repeats, which it does on
-  # anything forwarded through a mailbox that already ran a spam filter — so
-  # `&.value` on the result would raise and lose the newsletter.
+  # Postmark stamps this on inbound mail; absent, `to_f` reads 0.0. Wrapped
+  # because the header repeats on anything forwarded through a filter that
+  # already ran, and Mail::Header#[] answers an Array when it does.
   def spam_score
-    field = mail["X-Spam-Score"]
-    field = field.first if field.is_a?(Array)
-
-    field&.value.to_f
+    Array.wrap(mail["X-Spam-Score"]).first&.value.to_f
   end
 end
