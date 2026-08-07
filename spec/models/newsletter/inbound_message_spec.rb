@@ -142,6 +142,24 @@ RSpec.describe Newsletter::InboundMessage do
     expect(Newsletter.count).to eq(2)
   end
 
+  it "queues the remote image download after storing" do
+    message = Newsletter::InboundMessage.new(mail: inbound_mail)
+
+    expect { message.save }
+      .to have_enqueued_job(Newsletter::RemoteImagesJob)
+  end
+
+  it "queues no download again for a redelivery" do
+    identifier = "<issue-742@rubyweekly.com>"
+    Newsletter::InboundMessage.new(mail: inbound_mail(message_id: identifier)).save
+
+    expect {
+      Newsletter::InboundMessage.new(
+        mail: inbound_mail(message_id: identifier)
+      ).save
+    }.not_to have_enqueued_job(Newsletter::RemoteImagesJob)
+  end
+
   it "renders a plain-text newsletter as paragraphs" do
     mail = Mail.read_from_string(
       "From: a@b.com\nSubject: s\nContent-Type: text/plain\n\nFirst para\n\nSecond para"
