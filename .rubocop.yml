@@ -25,5 +25,12 @@ RSpec/DescribedClass:
 RSpec/ExampleLength:
   Max: 12
 
+# The cop exempts spec/requests and the other Rails spec directories by path,
+# but db/seeds.rb is a script rather than a class, so its spec has no constant
+# to name either.
+RSpec/DescribeClass:
+  Exclude:
+    - spec/db/**/*
+
 RSpec/MultipleExpectations:
   Max: 2
