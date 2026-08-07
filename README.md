@@ -90,6 +90,28 @@ one path is the whole of this app's state, and backing it up backs up
 everything. The only thing still to decide is the proxy host in
 `config/deploy.yml`.
 
+### Outbound network — a deploy step this app cannot do for itself
+
+Ingest fetches the images newsletters link to, which means URLs written by
+anyone who can email the inbound address decide where this app makes
+requests. `Newsletter::ImageDownload::Destination` refuses anything that
+resolves off the public internet and hands back the address it checked, so
+the connection goes there rather than to whatever a second DNS lookup might
+answer.
+
+**That is the application layer only.** The stronger control is an egress
+rule on the host, blocking outbound traffic from the app container to
+`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8` and
+`169.254.0.0/16` — the last of those being where cloud providers serve
+instance credentials. Kamal does not install one, and nothing in this
+repository will: it is a firewall or Docker network rule on the host, and it
+has to be done by hand when the host is chosen.
+
+It is worth doing even though the code checks already: it holds for any
+outbound request the app ever grows, not only this one fetcher, and it does
+not depend on the checks staying correct through future edits. Until then,
+the code is the only thing enforcing this.
+
 ## Decisions worth knowing
 
 **Sanitizing happens at render, not at ingest.** `NewslettersHelper#newsletter_body`

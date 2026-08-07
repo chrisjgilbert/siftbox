@@ -31,26 +31,10 @@ RSpec.describe Newsletter::ImageDownload do
     )
   end
 
-  it "refuses a URL that is not http or https" do
-    image = image_from("ftp://cdn.example.com/hero.png")
-
-    expect(image).to be_nil
-  end
-
-  # The URL arrives in hostile email HTML and is fetched from inside the
-  # network — the textbook server-side request forgery target. No loopback,
-  # private, or link-local address may ever be fetched, whatever hostname the
-  # sender hides it behind. The resolver is injected because the check has to
-  # run on what the name resolves to, not on how it is spelled.
-  it "refuses a host that resolves to a loopback address" do
-    resolver = ->(_host) { [ "127.0.0.1" ] }
-
-    image = image_from("https://cdn.example.com/hero.png", resolver: resolver)
-
-    expect(image).to be_nil
-  end
-
-  it "refuses a host that resolves to a private address" do
+  # Which addresses are refused is Destination's own spec. This is the one
+  # case kept here, so that removing the check from the fetch fails a spec
+  # rather than passing quietly on the strength of the other file.
+  it "fetches nothing when the destination refuses the host" do
     resolver = ->(_host) { [ "10.0.0.5" ] }
 
     image = image_from("https://cdn.example.com/hero.png", resolver: resolver)
@@ -58,12 +42,31 @@ RSpec.describe Newsletter::ImageDownload do
     expect(image).to be_nil
   end
 
-  it "refuses a host that resolves to the cloud metadata address" do
-    resolver = ->(_host) { [ "169.254.169.254" ] }
+  # Net::HTTP resolves the host itself, so passing it the name would mean a
+  # second lookup — and a record on a short TTL can answer differently the
+  # second time, after every check above has passed. Pinning the address
+  # that was checked closes that window. Asserted at the seam because the
+  # lookup Net::HTTP would make happens below anything a spec can observe.
+  it "connects to the address it checked rather than resolving a second time" do
+    stub_image("https://cdn.example.com/hero.png")
+    allow(Net::HTTP).to receive(:start).and_call_original
 
-    image = image_from("https://cdn.example.com/hero.png", resolver: resolver)
+    image_from("https://cdn.example.com/hero.png")
 
-    expect(image).to be_nil
+    expect(Net::HTTP).to have_received(:start)
+      .with("cdn.example.com", 443, hash_including(ipaddr: "203.0.113.9"))
+  end
+
+  # The name still has to reach Net::HTTP, or SNI, certificate verification
+  # and the Host header all end up pointed at a bare address — which is what
+  # rewriting the URL to the address instead of pinning would have done.
+  it "keeps the hostname as the address Net::HTTP verifies against" do
+    stub_image("https://cdn.example.com/hero.png")
+    allow(Net::HTTP).to receive(:start).and_call_original
+
+    image_from("https://cdn.example.com/hero.png")
+
+    expect(Net::HTTP).to have_received(:start).with("cdn.example.com", anything, anything)
   end
 
   it "follows a redirect to another public host" do

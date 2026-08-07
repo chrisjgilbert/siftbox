@@ -5,6 +5,12 @@ service: newsbox
 image: your-user/newsbox
 
 # Deploy to these servers.
+#
+# Whichever host this lands on needs an egress rule blocking outbound
+# traffic from the app container to private, loopback and link-local
+# addresses. Ingest fetches newsletter images, so senders choose the URLs
+# this app requests. Kamal will not install the rule and nothing here can —
+# see "Outbound network" in README.md.
 servers:
   web:
     - 192.168.0.1
