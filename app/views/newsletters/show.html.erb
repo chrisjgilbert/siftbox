@@ -7,8 +7,8 @@
     <%= button_to t("newsletters.show.mark_unread"),
           newsletter_read_path(@newsletter),
           method: :delete,
-          class: "topbar__action",
-          form_class: "topbar__form" %>
+          class: "topbar__action topbar__action--secondary",
+          form_class: "topbar__form topbar__form--secondary" %>
     <%= link_to t("newsletters.show.view_original"),
           newsletter_original_path(@newsletter),
           class: "topbar__action" %>
@@ -16,27 +16,41 @@
 </header>
 
 <article class="article">
-  <p class="article__sender">
-    <span class="article__sender-name"><%= @newsletter.sender %></span>
-    <% if @newsletter.sender_domain %>— <%= @newsletter.sender_domain %><% end %>
-  </p>
+  <div class="masthead-block">
+    <p class="masthead-block__kicker"><%= @newsletter.kicker %></p>
 
-  <h1 class="article__title"><%= @newsletter.subject %></h1>
+    <h1 class="masthead-block__title"><%= @newsletter.subject %></h1>
 
-  <p class="article__received"><%= @newsletter.received_line %></p>
+    <p class="masthead-block__standfirst"><%= @newsletter.snippet %></p>
 
-  <hr class="article__rule">
+    <div class="datastrip">
+      <span class="datastrip__field"><%= @newsletter.received_line %></span>
+      <% if @newsletter.issue %>
+        <span class="datastrip__field datastrip__field--issue"><%= @newsletter.issue %></span>
+      <% end %>
+      <span class="datastrip__field"><%= @newsletter.reading_time %></span>
+    </div>
+  </div>
+
+  <% if @newsletter.promoted_image? %>
+    <figure class="leadshot">
+      <img class="leadshot__image"
+           src="<%= @newsletter.promoted_image_url %>"
+           alt="<%= @newsletter.lead_image_alt %>">
+      <figcaption class="leadshot__caption"><%= @newsletter.lead_image_alt %></figcaption>
+    </figure>
+  <% end %>
 
   <div class="body"><%= newsletter_body(@newsletter) %></div>
-
-  <nav class="neighbours">
-    <%= render "newsletters/neighbour",
-          newsletter: @newsletter.newer,
-          label: t("newsletters.show.newer"),
-          class_name: nil %>
-    <%= render "newsletters/neighbour",
-          newsletter: @newsletter.older,
-          label: t("newsletters.show.older"),
-          class_name: "neighbours__cell--older" %>
-  </nav>
 </article>
+
+<nav class="neighbours">
+  <%= render "newsletters/neighbour",
+        newsletter: @newsletter.newer,
+        label: t("newsletters.show.newer"),
+        class_name: "neighbours__cell--newer" %>
+  <%= render "newsletters/neighbour",
+        newsletter: @newsletter.older,
+        label: t("newsletters.show.older"),
+        class_name: "neighbours__cell--older" %>
+</nav>

@@ -43,6 +43,15 @@ class Newsletter::InboundMessage
     newsletter = Newsletter.transaction do
       Newsletter.create!(attributes).tap do |stored|
         Newsletter::InlineImages.new(stored, mail.all_parts).attach
+
+        # After InlineImages rather than before: attach rewrites the body's
+        # cid: references to app paths, and reading the lead first would
+        # store a URL no browser can resolve.
+        #
+        # Newsletter::RemoteImagesJob captures it again once it has rewritten
+        # the hotlinked images too. This one is what the feed shows until
+        # then — the sender's own URL, which is where the body still points.
+        stored.capture_lead_image
       end
     end
 

@@ -27,6 +27,11 @@ RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
   config.include ActionMailbox::TestHelper, type: :mailbox
   config.include ActiveSupport::Testing::TimeHelpers
+
+  # The waitlist's rate limit counts in Rails.cache, which the test
+  # environment keeps in memory for the whole run. Without this, one example
+  # exhausting the limit answers 429 to every example after it.
+  config.before { Rails.cache.clear }
 end
 
 Shoulda::Matchers.configure do |config|

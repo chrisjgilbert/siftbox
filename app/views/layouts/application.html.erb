@@ -3,7 +3,12 @@
   <head>
     <title><%= content_for(:title) || t("layouts.application.title") %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="robots" content="noindex, nofollow">
+
+    <%# Every screen behind the sign-in gate stays out of the index. Only the
+        landing page opts in, because it is the one page meant to be found. %>
+    <% unless content_for?(:indexable) %>
+      <meta name="robots" content="noindex, nofollow">
+    <% end %>
 
     <%# Keeps this app's origin out of the Referer on hotlinked newsletter
         images. same-origin rather than no-referrer: no-referrer also nulls
@@ -26,7 +31,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Inter:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>

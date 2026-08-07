@@ -1,0 +1,30 @@
+<%# Fixed sample content, not the reader's own feed. The design handoff asks
+    for a live feed here; this page is unauthenticated, so that would publish
+    real subjects and senders to anyone who loads it. The row spec, scale and
+    caption bar are the handoff's. %>
+<section class="landing__frame landing__shot">
+  <div class="shot">
+    <div class="shot__caption">
+      <span><%= t("waitlist_signups.shot.caption") %></span>
+      <span class="shot__subcaption"><%= t("waitlist_signups.shot.subcaption") %></span>
+    </div>
+
+    <div class="shot__body">
+      <div class="shot__group">
+        <span><%= t("waitlist_signups.shot.day") %></span>
+        <span class="shot__date"><%= t("waitlist_signups.shot.date") %></span>
+      </div>
+
+      <% t("waitlist_signups.shot.rows").each do |row| %>
+        <%= tag.div(class: class_names("shot__row", "shot__row--read" => row[:read])) do %>
+          <span class="shot__number"><%= row[:number] %></span>
+          <span class="shot__text">
+            <span class="shot__sender"><%= row[:sender] %></span>
+            <span class="shot__subject"><%= row[:subject] %></span>
+          </span>
+          <span class="shot__time"><%= row[:time] %></span>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>

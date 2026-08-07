@@ -1,12 +1,14 @@
-# newsbox
+# siftbox
 
 Receives newsletter emails at one dedicated address via Action Mailbox and
 Postmark, and presents them as a clean reading feed for a single reader.
 
-Two screens: a feed grouped by the day mail arrived, and a reader that strips
-the sender's styling and re-renders the newsletter in the app's own
-typography. There is an escape hatch — "View original" — that shows the
-sender's HTML in a sandboxed iframe.
+Three screens. A public landing page with a waitlist, which is what `/` serves
+a signed-out visitor. A feed grouped by the day mail arrived, numbered
+continuously so it reads as an index, with a thumbnail pulled from each email.
+And a reader that strips the sender's styling and re-renders the newsletter in
+the app's own typography. There is an escape hatch — "View original" — that
+shows the sender's HTML in a sandboxed iframe.
 
 ## Getting started
 
@@ -38,9 +40,9 @@ follows, and `bin/ci` for what has to pass.
 
 ## Receiving mail
 
-`NEWSBOX_INBOUND_ADDRESS` is the address subscriptions get pointed at. It is
-shown in the feed header and the empty state, and defaults to a placeholder
-until the inbound domain is settled.
+`SIFTBOX_INBOUND_ADDRESS` is the address subscriptions get pointed at. It is
+shown in the end-of-feed note and the empty state, and defaults to a
+placeholder until the inbound domain is settled.
 
 ### Postmark
 
@@ -106,11 +108,11 @@ quietly rather than loudly:
 | Variable | Missing means |
 |---|---|
 | `RAILS_MASTER_KEY` | Credentials will not decrypt, so the ingress password is unreadable and every Postmark webhook 500s |
-| `NEWSBOX_INBOUND_ADDRESS` | The feed tells the reader to subscribe to `example.com` |
+| `SIFTBOX_INBOUND_ADDRESS` | The feed tells the reader to subscribe to `example.com` |
 | `POSTMARK_SMTP_TOKEN` | Password reset silently fails — the only way back in |
-| `NEWSBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
-| `NEWSBOX_HOST` | Reset links point at localhost |
-| `NEWSBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
+| `SIFTBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
+| `SIFTBOX_HOST` | Reset links point at localhost |
+| `SIFTBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
 
 The two secrets that are neither in credentials nor on disk —
 `KAMAL_REGISTRY_PASSWORD` and `POSTMARK_SMTP_TOKEN` — go in
@@ -149,6 +151,23 @@ the code is the only thing enforcing this.
 
 `docs/deploying.md` has the ranges to block, and what is particular about
 doing it on a Hetzner host.
+
+### Deploy steps
+
+One-off steps that do not install themselves:
+
+```bash
+bin/rails lead_images:backfill
+```
+
+Reads the lead image out of every newsletter stored before the column
+existed. Without it the whole archive renders the feed's "no image in email"
+box. Idempotent, so it is safe to run again.
+
+The app was called `newsbox` until recently. If you are upgrading a running
+deployment, rename its `NEWSBOX_*` variables to `SIFTBOX_*` in the same
+release as the code, or the app boots on placeholder values. The Kamal
+storage volume was renamed with them.
 
 ## Decisions worth knowing
 
@@ -192,14 +211,42 @@ IPv6 gets an allowlist of global unicast rather than another denied prefix.
 writes. Turbo's hover prefetching is therefore turned off in the layout;
 without that, hovering a feed row marks it read without opening it.
 
-**The feed is bounded to seven days**, which is what its end-of-list copy
+**The feed is bounded to seven days**, which is what its end-of-feed copy
 claims. Showing more history needs a pagination design first.
+
+**Each newsletter's lead image is captured at ingest**, into
+`newsletters.lead_image_url`, so the feed can render a thumbnail per row
+without loading a `body_html` to find one — `Newsletter::FEED_COLUMNS` exists
+precisely to keep the index off that column. Extraction runs *after*
+`Newsletter::InlineImages`, which rewrites `cid:` references to app paths;
+reading the lead first would store a URL no browser can resolve. The reader
+promotes the same image above the article and takes it out of the body, or it
+would appear twice.
+
+**The landing page is the only public write path.** It is guarded four ways:
+an off-screen honeypot answered exactly like a real signup, a rate limit
+counting in `Rails.cache`, strong parameters, and treating a duplicate address
+as success — the unique index raises and `WaitlistSignup#join` rescues, rather
+than a uniqueness validation reporting a clash and answering a question about
+someone else's address. Nothing is emailed: the copy promises exactly one
+message, and a confirmation would break that on day one.
+
+**`noindex, nofollow` is not site-wide.** The layout emits it unless a
+template sets `content_for :indexable`, which only the landing page does.
 
 ## Deferred
 
-Archiving, search and tagging are all deliberately out of v1. Archiving and
-search are roughly a migration and thirty lines each — the filter bar is a
-flex row, so it degrades cleanly with them absent.
+Archiving, search and tagging are all deliberately out of v1. The design
+handoff shows `ARCHIVED` in the feed header, `ARCHIVE` in the reader top bar
+and a search icon; none of them are built. Both bars are flex rows, so they
+degrade cleanly with the controls absent. Archiving and search are roughly a
+migration and thirty lines each — with one note for whoever adds search: this
+app is SQLite, so `LIKE`, which is already case-insensitive for ASCII, not the
+`ILIKE` the handoff assumes.
+
+The handoff's sponsor block (its §5.4) is not built and is not planned. There
+is no way to identify a sponsor section in arbitrary newsletter HTML without a
+heuristic per sender.
 
 Multiple readers would take three steps: a wildcard inbound domain
 (`*.your-domain`), a token address per user, and resolving the `To:` address

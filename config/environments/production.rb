@@ -69,7 +69,7 @@ Rails.application.configure do
   # sign-up flow, so outbound mail has to work. Postmark is already the
   # inbound provider; this sends through the same account.
   config.action_mailer.default_url_options = {
-    host: ENV.fetch("NEWSBOX_HOST", "localhost"),
+    host: ENV.fetch("SIFTBOX_HOST", "localhost"),
     protocol: "https"
   }
   # Postmark takes the same server token as both username and password. It

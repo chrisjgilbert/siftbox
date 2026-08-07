@@ -35,6 +35,9 @@ RSpec.describe NewslettersHelper do
   # The size has to survive the allowlist as well as be set, and those are two
   # different files — ATTRIBUTES here, Newsletter::Body#apply_stored_sizes
   # there.
+  #
+  # Two images, because the reader promotes the first one out of the body
+  # entirely. The sizes are for the ones that stay.
   it "keeps the stored size on an image this app hosts" do
     newsletter = create(:newsletter)
     blob = ActiveStorage::Blob.create_and_upload!(
@@ -44,7 +47,8 @@ RSpec.describe NewslettersHelper do
     )
     newsletter.inline_images.attach(blob)
     blob.analyze
-    newsletter.update!(body_html: %(<img src="#{newsletter.inline_image_path(blob)}">))
+    newsletter.update!(body_html: %(<img src="https://cdn.example/hero.png">) +
+      %(<img src="#{newsletter.inline_image_path(blob)}">))
 
     expect(body_for(newsletter)).to include(%(width="8"), %(height="4"))
   end
@@ -72,6 +76,22 @@ RSpec.describe NewslettersHelper do
     newsletter = build_stubbed(:newsletter, body_html: body)
 
     expect(body_for(newsletter)).not_to include("track.example")
+  end
+
+  # The reader shows this image above the article, wider than the text
+  # column. Leaving it in the body would render it a second time.
+  it "leaves out the image the reader promotes above the article" do
+    body = %(<img src="https://cdn.example/hero.png"><p>Hi</p>)
+    newsletter = build_stubbed(:newsletter, body_html: body)
+
+    expect(body_for(newsletter)).not_to include("hero.png")
+  end
+
+  it "keeps later images in the body" do
+    body = %(<img src="https://cdn.example/hero.png"><img src="https://cdn.example/two.png">)
+    newsletter = build_stubbed(:newsletter, body_html: body)
+
+    expect(body_for(newsletter)).to include("two.png")
   end
 
   it "returns output marked safe so the view needs no html_safe call" do

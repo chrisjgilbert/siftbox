@@ -1,0 +1,9 @@
+<%= tag.div(id: id, class: class_names("joined", "joined--inverted" => inverted)) do %>
+  <p class="joined__label"><%= t("waitlist_signups.joined.label") %></p>
+  <p class="joined__email"><%= signup.email %></p>
+  <p class="joined__note">
+    <%= t("waitlist_signups.joined.note") %>
+    <%# The dark band is a closing note, not the place to invite a reply. %>
+    <% unless inverted %><%= t("waitlist_signups.joined.reply") %><% end %>
+  </p>
+<% end %>

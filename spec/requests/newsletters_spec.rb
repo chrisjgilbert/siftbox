@@ -24,7 +24,7 @@ RSpec.describe "Newsletters" do
 
     get newsletters_path
 
-    expect(response.body).to include("Unread (1)")
+    expect(response.body).to include("Unread [1]")
   end
 
   it "hides read newsletters when filtered to unread" do
@@ -75,13 +75,94 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("Unknown sender")
   end
 
-  it "drops the separator along with the missing domain" do
+  # The feed row carries the sender alone. The domain moved to the reader's
+  # kicker, which has the room for it.
+  it "leaves the sender domain off the feed row" do
     sign_in
-    create(:newsletter, sender_name: "", sender_email: "", subject: "No sender")
+    create(:newsletter, sender_name: "Ruby Weekly", sender_email: "peter@rubyweekly.com")
 
     get newsletters_path
 
-    expect(response.body).not_to include("row__domain")
+    expect(response.body).not_to include("rubyweekly.com")
+  end
+
+  it "numbers the feed rows" do
+    sign_in
+    create(:newsletter, received_at: 1.hour.ago)
+    create(:newsletter, received_at: 2.hours.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include(">01<").and include(">02<")
+  end
+
+  it "leads the feed with the newest newsletter when it has an image" do
+    sign_in
+    create(:newsletter, lead_image_url: "https://cdn.example/hero.png")
+
+    get newsletters_path
+
+    expect(response.body).to include("lead__image")
+  end
+
+  it "falls back to a standard row when the newest newsletter has no image" do
+    sign_in
+    create(:newsletter, lead_image_url: "")
+
+    get newsletters_path
+
+    expect(response.body).not_to include("lead__image")
+  end
+
+  # The dashed box keeps the right edge aligned when a newsletter carries no
+  # image, so the rows around it do not go ragged.
+  it "shows the fallback box for a row with no image" do
+    sign_in
+    create(:newsletter, lead_image_url: "https://cdn.example/hero.png")
+    create(:newsletter, lead_image_url: "", received_at: 2.hours.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include("No image in email")
+  end
+
+  it "counts the issues at the end of the feed" do
+    sign_in
+    create(:newsletter)
+    create(:newsletter, received_at: 2.hours.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include("End of feed — 2 issues")
+  end
+
+  # With nothing to show there is no end-of-feed note, so this is the only
+  # place left that says where to point a subscription.
+  it "tells a reader with an empty feed where to point a subscription" do
+    sign_in
+
+    get newsletters_path
+
+    expect(response.body).to include("Point a subscription at newsletters@example.com")
+  end
+
+  it "shows no end-of-feed note when there is no feed" do
+    sign_in
+
+    get newsletters_path
+
+    expect(response.body).not_to include("End of feed")
+  end
+
+  # The address used to sit in the header. The redesign puts the brand there
+  # instead, so the end-of-feed note is where a subscription gets pointed.
+  it "names the inbound address at the end of the feed" do
+    sign_in
+    create(:newsletter)
+
+    get newsletters_path
+
+    expect(response.body).to include("Subscribe with newsletters@example.com")
   end
 
   it "links to the newer neighbour from the reader" do
@@ -110,7 +191,84 @@ RSpec.describe "Newsletters" do
 
     get newsletter_path(newsletter)
 
-    expect(response.body).not_to include("neighbours__title")
+    expect(response.body).not_to include("neighbours__subject")
+  end
+
+  it "heads the reader with the sender and the source domain" do
+    sign_in
+    newsletter = create(:newsletter, sender_name: "Ruby Weekly",
+      sender_email: "peter@rubyweekly.com")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("Ruby Weekly / rubyweekly.com")
+  end
+
+  it "stamps the received time in the reader's data strip" do
+    sign_in
+    newsletter = create(:newsletter, received_at: Time.zone.parse("2026-08-05 09:02"))
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("Received 2026.08.05 09:02")
+  end
+
+  it "shows the issue number when the subject carries one" do
+    sign_in
+    newsletter = create(:newsletter, subject: "#742: A faster CSV parser")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("Issue 742")
+  end
+
+  it "leaves the issue field out when the subject carries no number" do
+    sign_in
+    newsletter = create(:newsletter, subject: "Five articles worth your evening")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).not_to include("Issue ")
+  end
+
+  it "estimates the reading time in the data strip" do
+    sign_in
+    newsletter = create(:newsletter, body_html: "<p>#{Array.new(600, 'word').join(' ')}</p>")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("3 min")
+  end
+
+  it "promotes the first image above the article" do
+    sign_in
+    newsletter = create(:newsletter, lead_image_url: "https://cdn.example/hero.png",
+      body_html: %(<img src="https://cdn.example/hero.png"><p>Morning</p>))
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("leadshot__image")
+  end
+
+  # Promoting it means taking it out of the body. Rendering both is the bug
+  # this guards.
+  it "renders the promoted image once rather than twice" do
+    sign_in
+    newsletter = create(:newsletter, lead_image_url: "https://cdn.example/hero.png",
+      body_html: %(<img src="https://cdn.example/hero.png"><p>Morning</p>))
+
+    get newsletter_path(newsletter)
+
+    expect(response.body.scan("cdn.example/hero.png").length).to eq(1)
+  end
+
+  it "omits the lead image block for a newsletter with no images" do
+    sign_in
+    newsletter = create(:newsletter, lead_image_url: "", body_html: "<p>Morning</p>")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).not_to include("leadshot__image")
   end
 
   it "marks a newsletter read when it is opened" do
@@ -118,6 +276,28 @@ RSpec.describe "Newsletters" do
     newsletter = create(:newsletter, read_at: nil)
 
     get newsletter_path(newsletter)
+
+    expect(newsletter.reload).to be_read
+  end
+
+  # A newsletter can carry <img src="/newsletters/5"> in its own body. It
+  # survives the scrubber and `sanitize`, and if it is the first image it is
+  # stored as lead_image_url, so the feed fetches it for every row with the
+  # reader's session attached — one sender marking another's issues read.
+  it "ignores a read mark that came from an image request" do
+    sign_in
+    newsletter = create(:newsletter, read_at: nil)
+
+    get newsletter_path(newsletter), headers: { "Sec-Fetch-Dest" => "image" }
+
+    expect(newsletter.reload).not_to be_read
+  end
+
+  it "marks a newsletter read on a Turbo visit" do
+    sign_in
+    newsletter = create(:newsletter, read_at: nil)
+
+    get newsletter_path(newsletter), headers: { "Sec-Fetch-Dest" => "empty" }
 
     expect(newsletter.reload).to be_read
   end
@@ -131,6 +311,26 @@ RSpec.describe "Newsletters" do
     get newsletters_path
 
     expect(response.body).to include(%(<meta name="turbo-prefetch" content="false">))
+  end
+
+  # The layout no longer emits this unconditionally — the landing page opts
+  # out so it can be found. Everything behind the sign-in gate keeps it.
+  it "keeps the feed out of search indexes" do
+    sign_in
+    create(:newsletter)
+
+    get newsletters_path
+
+    expect(response.body).to include(%(<meta name="robots" content="noindex, nofollow">))
+  end
+
+  it "keeps the reader out of search indexes" do
+    sign_in
+    newsletter = create(:newsletter)
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include(%(<meta name="robots" content="noindex, nofollow">))
   end
 
   # Hotlinked newsletter images are cross-origin requests, and the browser

@@ -17,15 +17,29 @@ class Feed
   # Memoised because the view asks twice: once to render, once to decide
   # between the end-of-list line and the empty state.
   def groups
-    @_groups ||= grouped.filter_map { |name, found| group(name, found) }
+    @_groups ||= numbered(grouped)
   end
 
+  def issue_count
+    newsletters.length
+  end
+
+  # Counted off the rows already loaded rather than a second query, so the
+  # figure in the filter link cannot disagree with the list beside it. Under
+  # the unread filter the loaded set is the unread set; without it, the whole
+  # window — read? is right either way, and read_at is in FEED_COLUMNS.
   def unread_count
-    within_window.unread.count
+    newsletters.reject(&:read?).length
   end
 
   def unread_only?
     filter == UNREAD
+  end
+
+  # Named here rather than reached for as Feed::UNREAD from the template.
+  # See .claude/rules/views.md on a view referencing a model class.
+  def unread_filter
+    UNREAD
   end
 
   def everything?
@@ -40,13 +54,36 @@ class Feed
   # overlap: inclusive ranges that met at midnight put a newsletter into the
   # feed twice.
   def grouped
-    found = newsletters.group_by { |newsletter| Newsletter::Age.new(newsletter.received_at).bucket }
+    found = newsletters.group_by { |newsletter| bucket_for(newsletter) }
 
     [ :today, :yesterday, :earlier ].filter_map { |name| [ name, found[name] ] if found[name] }
   end
 
-  def group(name, found)
-    Group.new(label_for(name), sublabel_for(name), present(found))
+  # Everything the query returned is inside the window by definition. A row
+  # can still bucket :older, because Age reads the clock again a moment after
+  # the query did, and the filter_map above would then drop it from the page
+  # while #issue_count still counts it — an end-of-feed line claiming more
+  # issues than it shows, or an empty state with a newsletter behind it.
+  def bucket_for(newsletter)
+    bucket = Newsletter::Age.new(newsletter.received_at).bucket
+    return :earlier if bucket == :older
+
+    bucket
+  end
+
+  # Rows are numbered continuously across the whole feed rather than
+  # restarting per group, so the feed reads as an index. The groups are
+  # disjoint and already in order, which makes a running offset enough.
+  def numbered(found)
+    offset = 0
+
+    found.map do |name, newsletters|
+      group(name, newsletters, offset).tap { offset += newsletters.length }
+    end
+  end
+
+  def group(name, found, offset)
+    Group.new(label_for(name), sublabel_for(name), present(found, offset))
   end
 
   def label_for(name)
@@ -60,8 +97,10 @@ class Feed
     I18n.l(Date.yesterday, format: :feed_group)
   end
 
-  def present(found)
-    found.map { |newsletter| Newsletter::Presenter.new(newsletter) }
+  def present(found, offset)
+    found.each_with_index.map do |newsletter, index|
+      Feed::Row.new(Newsletter::Presenter.new(newsletter), offset + index + 1)
+    end
   end
 
   # Loaded once and partitioned in Ruby: three date groups off one query.

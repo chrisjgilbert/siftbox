@@ -10,4 +10,8 @@ FactoryBot.define do
     email_address { "reader@example.com" }
     password { "a-long-enough-password" }
   end
+
+  factory :waitlist_signup do
+    email { "reader@example.com" }
+  end
 end

@@ -26,7 +26,7 @@ address at `siftbox.co` — an MX on the root would send `chris@siftbox.co`
 into the newsletter feed too. The web app on the root carries no such
 consequence, which is why the app is at `siftbox.co` and the mail at
 `news.siftbox.co`. Serving the app from `app.siftbox.co` instead works
-equally well; it is `proxy.host`, `NEWSBOX_HOST` and the webhook URL that
+equally well; it is `proxy.host`, `SIFTBOX_HOST` and the webhook URL that
 have to agree, and the MX is unaffected either way. Rails sets its session
 cookie host-only, so nothing is shared with `news.` either way.
 
@@ -109,19 +109,19 @@ needs a copy. Never commit it.
 
 ## 4. config/deploy.yml
 
-Already filled in: the host, `cjgilbert/newsbox` on Docker Hub, `siftbox.co`
-as `proxy.host`, and the four `NEWSBOX_*` variables. `NEWSBOX_MAIL_FROM` is
+Already filled in: the host, `cjgilbert/siftbox` on Docker Hub, `siftbox.co`
+as `proxy.host`, and the four `SIFTBOX_*` variables. `SIFTBOX_MAIL_FROM` is
 the one to check against reality — it has to match the sender signature you
 verified in step 2, or every password reset is rejected.
 
-`service: newsbox` and the volume `newsbox_storage` are what keep this app
+`service: siftbox` and the volume `siftbox_storage` are what keep this app
 apart from the others on the box, so leave both alone unless something else
 there already claims those names.
 
 Pointing `image` at a different registry: Kamal prefixes `registry.server`
 onto it, so `image` is the path within the registry rather than the full
 reference. Naming the registry in both gives you
-`ghcr.io/ghcr.io/user/newsbox`.
+`ghcr.io/ghcr.io/user/siftbox`.
 
 The two secrets that live neither in credentials nor on disk go in
 `.kamal/secrets-common`, which is gitignored. Kamal reads it before
@@ -151,7 +151,7 @@ for `proxy.host` on the first deploy. That is also why step 1 comes first —
 the certificate cannot be issued before the A record resolves.
 
 Nothing to change for storage or the queue: the volume
-`newsbox_storage:/rails/storage` is already declared, and
+`siftbox_storage:/rails/storage` is already declared, and
 `SOLID_QUEUE_IN_PUMA: true` runs the worker inside Puma, which is what
 fetches newsletter images.
 
@@ -245,7 +245,7 @@ Today the app talks to Postmark and to senders' image CDNs, both public.
 networks sit inside `172.16.0.0/12` — `172.17.0.0/16` for the default bridge
 and a `172.18.0.0/16`-and-up per user-defined network — so a blanket rule cuts
 every container on the box off from its database. The rule has to match on
-newsbox's own container or network as the source, not on the host's whole
+siftbox's own container or network as the source, not on the host's whole
 `FORWARD` chain. Check what else is running first:
 
 ```bash
@@ -271,7 +271,7 @@ in development by design. Locally, use the conductor at
 ## Backups
 
 Everything is one path. The four SQLite databases and every stored image sit
-under `storage/` on the `newsbox_storage` volume, so backing that up backs up
+under `storage/` on the `siftbox_storage` volume, so backing that up backs up
 the whole app, and nothing outside it needs backing up at all.
 
 Worth knowing that it now grows: self-hosting images means a heavily

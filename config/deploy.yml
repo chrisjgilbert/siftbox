@@ -3,10 +3,10 @@
 # Shares a host with other apps, so this name and the volume below both have
 # to stay unique on it — they are what keep one app's containers and state
 # from colliding with another's.
-service: newsbox
+service: siftbox
 
 # Name of the container image.
-image: cjgilbert/newsbox
+image: cjgilbert/siftbox
 
 # Deploy to these servers.
 #
@@ -73,25 +73,25 @@ env:
     - RAILS_MASTER_KEY
   clear:
     # The address subscriptions are pointed at, shown in the feed header and
-    # the empty state. Without it, a deployed newsbox tells the reader to
+    # the empty state. Without it, a deployed siftbox tells the reader to
     # subscribe to example.com.
     #
     # A subdomain, so the MX record that sends mail here does not also claim
     # every address at siftbox.co. Any local part reaches the app —
     # ApplicationMailbox routes all — so this only decides what the reader is
     # told to subscribe with, and it should be what they actually use.
-    NEWSBOX_INBOUND_ADDRESS: news@news.siftbox.co
+    SIFTBOX_INBOUND_ADDRESS: news@news.siftbox.co
 
     # The feed groups by calendar day, so this decides where the day breaks.
-    NEWSBOX_TIME_ZONE: London
+    SIFTBOX_TIME_ZONE: London
 
     # The host password-reset links are built against. The app's own host,
     # not the inbound one — it has to match proxy.host above.
-    NEWSBOX_HOST: siftbox.co
+    SIFTBOX_HOST: siftbox.co
 
     # The From address on password-reset mail. Must be a Postmark sender
     # signature, or Postmark rejects the send.
-    NEWSBOX_MAIL_FROM: newsbox@siftbox.co
+    SIFTBOX_MAIL_FROM: siftbox@siftbox.co
 
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
@@ -119,9 +119,9 @@ aliases:
 
 
 # The whole of this app's state: the SQLite databases and the Active Storage
-# blobs. Back this path up and you have backed up newsbox.
+# blobs. Back this path up and you have backed up siftbox.
 volumes:
-  - "newsbox_storage:/rails/storage"
+  - "siftbox_storage:/rails/storage"
 
 
 # Bridge fingerprinted assets, like JS and CSS, between versions to avoid

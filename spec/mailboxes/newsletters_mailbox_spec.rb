@@ -66,6 +66,17 @@ RSpec.describe NewslettersMailbox, type: :mailbox do
     expect(Newsletter.count).to eq(1)
   end
 
+  # A relay that scored the mail clean before the spam filter ran leaves its
+  # verdict in the first header. Reading that one lets the spam through.
+  it "discards mail whose worst spam score is over the threshold" do
+    mail = newsletter_mail("X-Spam-Score" => "0.1")
+    mail["X-Spam-Score"] = "9.9"
+
+    receive_inbound_email_from_source(mail.to_s)
+
+    expect(Newsletter.count).to eq(0)
+  end
+
   it "stores mail whose From header is not a parseable address" do
     receive_inbound_email_from_source(
       "From: Ruby Weekly\nTo: news@example.com\nSubject: Issue 742\n\nMorning"

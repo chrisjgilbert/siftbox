@@ -114,4 +114,41 @@ RSpec.describe Newsletter do
   it "requires a received time" do
     expect(build(:newsletter)).to validate_presence_of(:received_at)
   end
+
+  it "captures the first body image as the lead image" do
+    newsletter = create(:newsletter, body_html: %(<img src="https://cdn.example/hero.png">))
+
+    newsletter.capture_lead_image
+
+    expect(newsletter.reload.lead_image_url).to eq("https://cdn.example/hero.png")
+  end
+
+  it "captures no lead image for a newsletter whose body has none" do
+    newsletter = create(:newsletter, body_html: "<p>Morning</p>", lead_image_url: "")
+
+    newsletter.capture_lead_image
+
+    expect(newsletter.reload.lead_image_url).to eq("")
+  end
+
+  it "has a lead image once one is captured" do
+    newsletter = build_stubbed(:newsletter, lead_image_url: "https://cdn.example/hero.png")
+
+    expect(newsletter).to be_lead_image
+  end
+
+  it "has no lead image while the column is blank" do
+    newsletter = build_stubbed(:newsletter, lead_image_url: "")
+
+    expect(newsletter).not_to be_lead_image
+  end
+
+  # What the backfill walks. Newsletters stored before the column existed all
+  # sit at "", and so do newsletters that genuinely carry no image.
+  it "finds the newsletters with no lead image captured" do
+    without = create(:newsletter, lead_image_url: "")
+    create(:newsletter, lead_image_url: "https://cdn.example/hero.png")
+
+    expect(Newsletter.without_lead_image).to eq([ without ])
+  end
 end

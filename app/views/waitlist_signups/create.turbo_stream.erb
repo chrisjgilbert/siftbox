@@ -1,0 +1,11 @@
+<%# Both instances switch together, or the page shows a form and a
+    confirmation for the same address at once. %>
+<%= turbo_stream.replace "waitlist-hero" do %>
+  <%= render "waitlist_signups/joined",
+        signup: @waitlist_signup, id: "waitlist-hero", inverted: false %>
+<% end %>
+
+<%= turbo_stream.replace "waitlist-band" do %>
+  <%= render "waitlist_signups/joined",
+        signup: @waitlist_signup, id: "waitlist-band", inverted: true %>
+<% end %>

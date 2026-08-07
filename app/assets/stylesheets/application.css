@@ -1,37 +1,40 @@
 /*
- * Newsbox. One hand-written stylesheet: the design is six colours, ten
- * spacing steps, no radius and no shadow, which maps to custom properties
- * far better than to utility classes.
+ * siftbox. One hand-written stylesheet: ten colours, two rule weights, no
+ * radius and no shadow, which maps to custom properties far better than to
+ * utility classes.
+ *
+ * Two typefaces carry the whole system, and one rule decides between them:
+ * Archivo is never uppercase, JetBrains Mono is always uppercase. Anything
+ * set in mono therefore also carries `text-transform: uppercase` — the
+ * locale files hold sentence case, so translations stay readable and dynamic
+ * content (sender names, subjects) obeys the same rule as fixed copy.
+ *
+ * Spacing is deliberately not tokenised. The design specifies seventeen
+ * exact steps used literally per element, and a --space-11 standing for 44px
+ * would help nobody read this file.
  *
  * Breakpoints are 720px and 1024px. Below 720px is the mobile treatment.
  */
 
 :root {
-  --ink: #1a1a1a;
-  --paper: #fafaf7;
-  --mute: #6b6b66;
-  --rule: #e5e3dc;
-  --burgundy: #7a2e2e;
-  --alt-background: #f3f1ea;
+  --ink: #0a0a0a;
+  --paper: #ffffff;
+  --body: #4a4a4a;
+  --mute: #6a6a6a;
+  --read: #9a9a9a;
+  --rule: #e2e2e2;
+  --blue: #1f1fe0;
+  --hover: #f4f4f7;
+  --fallback: #c4c4c4;
+  --landing-paper: #f6f6f3;
 
-  --serif: "Newsreader", "Source Serif 4", Georgia, "Times New Roman", serif;
-  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Helvetica, Arial,
+  --sans: "Archivo", system-ui, -apple-system, "Segoe UI", Helvetica, Arial,
     sans-serif;
-  --mono: ui-monospace, Menlo, monospace;
-
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 64px;
-  --space-9: 96px;
-  --space-10: 128px;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
 
   --gutter: 24px;
-  --measure: 660px;
+  --frame: 1240px;
+  --measure: 680px;
 }
 
 @media (min-width: 720px) {
@@ -52,73 +55,84 @@ body {
   color: var(--ink);
   font-family: var(--sans);
   font-size: 16px;
-  letter-spacing: 0.005em;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Negative tracking scales with size — the bigger the type, the tighter — so
+   each heading sets its own. This is the floor for anything that doesn't. */
 h1,
 h2,
 h3,
 h4 {
-  font-family: var(--serif);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   text-wrap: pretty;
 }
 
 a {
-  color: var(--burgundy);
-  transition: opacity 120ms ease;
+  color: var(--blue);
 }
 
-a:hover {
-  opacity: 0.7;
+/* Mark ------------------------------------------------------------------- */
+
+.mark {
+  display: block;
+  flex: none;
 }
 
-/* Header ------------------------------------------------------------------ */
+.mark__square {
+  fill: var(--blue);
+}
 
-.header {
+/* Mark and wordmark on one baseline, at roughly the same optical size. The
+   mark is rendered at its desktop size and scaled by CSS below 720px, so its
+   stroke weight is the one `mark_stroke_width` picked for that size. */
+.lockup {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 22px var(--gutter) 18px;
-  border-bottom: 1px solid var(--rule);
+  align-items: center;
+  gap: 12px;
 }
 
-.header__wordmark {
-  margin: 0;
-  font-family: var(--serif);
-  font-size: 20px;
-  font-weight: 500;
+.lockup__wordmark {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
   color: var(--ink);
 }
 
-.header__address {
-  font-size: 12px;
-  color: var(--mute);
-}
-
-@media (min-width: 720px) {
-  .header {
-    padding: 28px var(--gutter);
+@media (max-width: 719px) {
+  .lockup {
+    gap: 10px;
   }
 
-  .header__wordmark {
+  .lockup .mark {
+    width: 20px;
+    height: 20px;
+  }
+
+  .lockup__wordmark {
     font-size: 22px;
   }
-
-  .header__address {
-    font-size: 13px;
-  }
 }
 
-/* Filter bar -------------------------------------------------------------- */
+/* Feed masthead ----------------------------------------------------------- */
+
+/* Below 720px the brand and the filters are two stacked bands with their own
+   rules; from 720px they sit on one line under a single 2px rule. */
+.masthead__brand {
+  padding: 24px var(--gutter) 20px;
+  border-bottom: 2px solid var(--ink);
+}
 
 .filters {
   display: flex;
-  align-items: baseline;
-  gap: 18px;
+  align-items: center;
+  gap: 14px;
   padding: 14px var(--gutter);
-  font-size: 13px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .filters__link {
@@ -128,233 +142,441 @@ a:hover {
 
 .filters__link:hover {
   color: var(--ink);
-  opacity: 1;
 }
 
+/* The number is the unread marker in the feed, so the active filter is the
+   only place blue fills a shape rather than colouring type. */
 .filters__link--active {
-  color: var(--ink);
-  border-bottom: 1px solid var(--ink);
-  padding-bottom: 2px;
+  background: var(--blue);
+  color: var(--paper);
+  padding: 4px 7px;
+}
+
+.filters__link--active:hover {
+  color: var(--paper);
 }
 
 @media (min-width: 720px) {
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px var(--gutter);
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .masthead__brand {
+    padding: 0;
+    border-bottom: 0;
+  }
+
   .filters {
-    gap: 20px;
-    padding: 18px var(--gutter);
-    border-bottom: 1px solid var(--rule);
-    font-size: 14px;
+    gap: 26px;
+    padding: 0;
+    border-bottom: 0;
+    font-size: 11px;
+  }
+
+  .filters__link--active {
+    padding: 4px 8px;
   }
 }
 
 /* Feed -------------------------------------------------------------------- */
 
 .feed {
-  padding: 8px var(--gutter) 0;
+  padding: 0 var(--gutter) 48px;
 }
 
 .feed__group {
-  padding-top: 28px;
+  padding-top: 24px;
 }
 
 .feed__group-header {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding-bottom: 6px;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .feed__group-label {
   margin: 0;
-  font-family: var(--serif);
-  font-size: 18px;
-  font-weight: 400;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
+  letter-spacing: inherit;
 }
 
 .feed__group-sublabel {
-  font-size: 12px;
   color: var(--mute);
 }
 
 .feed__end {
-  border-top: 1px solid var(--rule);
-  margin-top: 28px;
-  padding: 22px 0 var(--space-8);
-  font-size: 13px;
+  padding-top: 28px;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.9;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--mute);
 }
 
+.feed__end-line {
+  margin: 0;
+}
+
 .feed__empty {
-  padding: var(--space-8) 0;
-  font-size: 14px;
-  color: var(--mute);
+  padding: 48px 0;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--body);
+  text-wrap: pretty;
 }
 
 @media (min-width: 720px) {
   .feed {
-    display: flex;
-    flex-direction: column;
-    gap: 56px;
-    padding: 56px var(--gutter) var(--space-8);
+    padding: 0 var(--gutter) 72px;
   }
 
   .feed__group {
-    display: grid;
-    grid-template-columns: 150px 1fr;
-    column-gap: 48px;
-    align-items: start;
-    padding-top: 0;
+    padding-top: 48px;
   }
 
   .feed__group-header {
-    display: block;
-    text-align: right;
-    padding-top: 24px;
-  }
-
-  .feed__group-label {
-    font-size: 20px;
-  }
-
-  .feed__group-sublabel {
-    display: block;
-    margin-top: 4px;
-    font-size: 13px;
+    padding-bottom: 10px;
+    font-size: 11px;
   }
 
   .feed__end {
-    display: grid;
-    grid-template-columns: 150px 1fr;
-    column-gap: 48px;
-    border-top: 0;
-    margin-top: 0;
-    padding: 0;
+    font-size: 11px;
   }
 
-  .feed__end-text {
-    grid-column: 2;
-    border-top: 1px solid var(--rule);
-    padding-top: 22px;
+  .feed__empty {
+    padding: 72px 0;
+    max-width: var(--measure);
+  }
+}
+
+/* Lead item --------------------------------------------------------------- */
+
+/* The newest item in the feed, when it has an image. Grid areas rather than
+   nested markup so the number, sender and time collapse onto one mono line
+   below 720px and split into their own columns above it. */
+.lead {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  column-gap: 0;
+  grid-template-areas:
+    "image   image   image"
+    "number  sender  time"
+    "subject subject subject"
+    "snippet snippet snippet";
+  padding: 20px 0 24px;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  color: inherit;
+}
+
+.lead--read {
+  opacity: 0.66;
+}
+
+.lead__image {
+  grid-area: image;
+  display: block;
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  margin-bottom: 14px;
+  background: var(--hover);
+}
+
+.lead__number,
+.lead__sender,
+.lead__timestamp {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.lead__number {
+  grid-area: number;
+  color: var(--blue);
+}
+
+.lead--read .lead__number {
+  color: var(--read);
+}
+
+/* The mono line reads "01 / RUBY WEEKLY / 06:12" on mobile. The separators
+   belong to the layout, not to the copy, so they are drawn rather than
+   translated — and they go away when the three split into columns. */
+.lead__number::after,
+.lead__sender::after {
+  content: "\00a0/\00a0";
+}
+
+.lead__sender {
+  grid-area: sender;
+}
+
+.lead__subject {
+  grid-area: subject;
+  margin-top: 8px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  text-wrap: pretty;
+}
+
+.lead__snippet {
+  display: none;
+}
+
+.lead__timestamp {
+  grid-area: time;
+  justify-self: start;
+}
+
+@media (min-width: 720px) {
+  .lead {
+    grid-template-columns: 44px 1fr 96px;
+    column-gap: 24px;
+    grid-template-areas:
+      "image  image   image"
+      "number sender  time"
+      "number subject time"
+      "number snippet time";
+    padding: 32px 0 36px;
+  }
+
+  .lead__image {
+    height: 360px;
+    margin-bottom: 28px;
+  }
+
+  .lead__number,
+  .lead__timestamp {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .lead__sender {
+    font-size: 11px;
+  }
+
+  .lead__number::after,
+  .lead__sender::after {
+    content: none;
+  }
+
+  .lead__subject {
+    margin-top: 12px;
+    max-width: 900px;
+    font-size: 40px;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+
+  .lead__snippet {
+    grid-area: snippet;
+    display: block;
+    margin-top: 14px;
+    max-width: 640px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--mute);
+    text-wrap: pretty;
+  }
+
+  .lead__timestamp {
+    justify-self: end;
   }
 }
 
 /* Feed row ---------------------------------------------------------------- */
 
-/* One three-column grid at both widths. The design describes the mobile row
-   as a flex meta line with the timestamp pushed right; a grid column lands in
-   the same place and keeps the timestamp a direct child, which the desktop
-   layout needs. */
 .row {
   display: grid;
-  grid-template-columns: 12px 1fr auto;
-  column-gap: 12px;
+  grid-template-columns: auto auto 1fr 92px;
+  column-gap: 0;
+  grid-template-areas:
+    "number  sender  time    thumb"
+    "subject subject subject thumb"
+    "snippet snippet snippet thumb";
   align-items: start;
-  padding: 16px 0;
-  border-top: 1px solid var(--rule);
+  padding: 20px 0;
+  border-bottom: 1px solid var(--rule);
   text-decoration: none;
   color: inherit;
 }
 
-.row:hover {
-  opacity: 1;
-}
-
 .row--read {
-  opacity: 0.72;
+  opacity: 0.66;
 }
 
-.row__marker {
-  display: block;
-  padding-top: 10px;
+.row__number,
+.row__sender,
+.row__timestamp {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
 }
 
-.row__marker-dot {
-  display: block;
-  width: 5px;
-  height: 5px;
-  background: var(--burgundy);
+/* The number replaces the unread dot: blue while unread, grey once read. */
+.row__number {
+  grid-area: number;
+  color: var(--blue);
 }
 
-.row__body {
-  display: block;
-  min-width: 0;
+.row--read .row__number {
+  color: var(--read);
+}
+
+.row__number::after {
+  content: "\00a0/\00a0";
 }
 
 .row__sender {
-  display: block;
-  font-size: 12px;
-  color: var(--mute);
-  letter-spacing: 0.01em;
-}
-
-.row__timestamp {
-  font-size: 12px;
-  color: var(--mute);
-  font-variant-numeric: tabular-nums;
-}
-
-.row__domain {
-  display: none;
+  grid-area: sender;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .row__subject {
-  display: block;
-  margin-top: 4px;
-  font-family: var(--serif);
+  grid-area: subject;
+  margin-top: 6px;
   font-size: 18px;
-  font-weight: 400;
-  line-height: 1.3;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
   color: var(--ink);
+  text-wrap: pretty;
 }
 
 .row__snippet {
+  display: none;
+}
+
+.row__timestamp {
+  grid-area: time;
+  justify-self: end;
+}
+
+.row__thumbnail {
+  grid-area: thumb;
   display: block;
-  margin-top: 5px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--mute);
-  text-wrap: pretty;
+  margin-left: 16px;
+  width: 92px;
+  height: 68px;
+  object-fit: cover;
+  background: var(--hover);
+}
+
+/* The dashed box keeps the right edge aligned. Without it every row with no
+   image pulls its text wider than the rows around it. */
+.row__thumbnail--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--rule);
+  padding: 0 8px;
+  background: none;
+}
+
+.row__fallback {
+  display: none;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--fallback);
+}
+
+.row__fallback--compact {
+  display: block;
 }
 
 @media (min-width: 720px) {
   .row {
-    grid-template-columns: 14px 1fr 78px;
-    column-gap: 16px;
-    padding: 22px 14px;
+    grid-template-columns: 44px 1fr 200px 96px;
+    column-gap: 24px;
+    grid-template-areas:
+      "number sender  thumb time"
+      "number subject thumb time"
+      "number snippet thumb time";
+    padding: 24px 14px;
     margin: 0 -14px;
   }
 
   .row:hover {
-    background: var(--alt-background);
+    background: var(--hover);
   }
 
-  .row__marker {
-    padding-top: 12px;
+  .row__number,
+  .row__timestamp {
+    padding-top: 4px;
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .row__number::after {
+    content: none;
   }
 
   .row__sender {
-    font-size: 13px;
-  }
-
-  .row__domain {
-    display: inline;
-  }
-
-  .row__timestamp {
-    text-align: right;
-    padding-top: 2px;
-    font-size: 13px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
   }
 
   .row__subject {
-    margin-top: 5px;
-    font-size: 21px;
+    margin-top: 7px;
+    font-size: 23px;
   }
 
   .row__snippet {
-    margin-top: 7px;
-    max-width: 600px;
+    grid-area: snippet;
+    display: block;
+    margin-top: 8px;
+    max-width: 520px;
     font-size: 14px;
-    line-height: 1.55;
+    line-height: 1.6;
+    color: var(--mute);
+    text-wrap: pretty;
+  }
+
+  .row__thumbnail {
+    margin-left: 0;
+    width: 200px;
+    height: 132px;
+  }
+
+  .row__thumbnail--empty {
+    padding: 0 12px;
+  }
+
+  .row__fallback {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  .row__fallback--compact {
+    display: none;
   }
 }
 
@@ -362,22 +584,32 @@ a:hover {
 
 .topbar {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  padding: 22px var(--gutter) 16px;
-  border-bottom: 1px solid var(--rule);
-  font-size: 13px;
+  gap: 16px;
+  padding: 22px var(--gutter);
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .topbar__back {
-  color: var(--burgundy);
+  color: var(--blue);
   text-decoration: none;
+}
+
+/* The arrow points the way back; it is direction, not copy, so it is drawn
+   here rather than translated. */
+.topbar__back::before {
+  content: "←\00a0\00a0";
 }
 
 .topbar__actions {
   display: flex;
-  align-items: baseline;
-  gap: var(--gutter);
+  align-items: center;
+  gap: 20px;
 }
 
 .topbar__action {
@@ -385,6 +617,8 @@ a:hover {
   text-decoration: none;
   font-family: inherit;
   font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
   background: none;
   border: 0;
   padding: 0;
@@ -393,148 +627,221 @@ a:hover {
 
 .topbar__action:hover {
   color: var(--ink);
-  opacity: 1;
 }
 
 .topbar__form {
   display: inline;
 }
 
+/* Below 720px the bar keeps the way back and one action, so the labels never
+   collapse into an unreadable row. View original is the one that stays: it is
+   the escape hatch when the rebuilt reading view loses too much, where
+   marking unread again is housekeeping that can wait for a wider screen. */
+@media (max-width: 719px) {
+  .topbar__form--secondary {
+    display: none;
+  }
+}
+
 @media (min-width: 720px) {
   .topbar {
-    padding: 24px var(--gutter);
-    font-size: 14px;
+    font-size: 11px;
+  }
+
+  .topbar__actions {
+    gap: 26px;
   }
 }
 
-/* Article ----------------------------------------------------------------- */
+/* Reader masthead --------------------------------------------------------- */
 
 .article {
-  padding: 32px var(--gutter) 0;
+  padding: 40px var(--gutter) 0;
 }
 
-.article__sender {
-  margin-bottom: 14px;
-  font-size: 13px;
-  color: var(--mute);
+.masthead-block {
+  max-width: var(--measure);
+  margin: 0 auto;
 }
 
-.article__sender-name {
-  color: var(--ink);
-  font-weight: 500;
+.masthead-block__kicker {
+  margin: 0 0 20px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
 }
 
-.article__title {
+.masthead-block__title {
   margin: 0;
-  font-size: 29px;
-  font-weight: 400;
-  line-height: 1.18;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
-.article__received {
-  margin-top: 12px;
-  font-size: 12px;
+.masthead-block__standfirst {
+  margin: 20px 0 0;
+  max-width: 620px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+/* Two fields below 720px, three above it: the issue number is the one the
+   narrow strip can do without. */
+.datastrip__field--issue {
+  display: none;
+}
+
+.datastrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0;
+  margin-top: 32px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--mute);
 }
 
-.article__rule {
-  border: 0;
-  border-top: 1px solid var(--rule);
-  margin: 28px 0;
+@media (min-width: 720px) {
+  .article {
+    padding: 80px 0 0;
+  }
+
+  .masthead-block__kicker {
+    margin-bottom: 24px;
+    font-size: 11px;
+  }
+
+  .masthead-block__title {
+    font-size: 56px;
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+  }
+
+  .masthead-block__standfirst {
+    margin-top: 28px;
+    font-size: 21px;
+  }
+
+  .datastrip {
+    gap: 40px;
+    margin-top: 44px;
+    font-size: 11px;
+  }
+
+  .datastrip__field--issue {
+    display: inline;
+  }
 }
 
-@media (min-width: 1024px) {
-  .article {
-    max-width: var(--measure);
-    margin: 0 auto;
-    padding: 72px 0 80px;
+/* Lead image -------------------------------------------------------------- */
+
+/* The one element that breaks the measure: wider than the text column, with
+   its caption sitting back inside it. */
+.leadshot {
+  margin: 0;
+  padding: 32px 0 0;
+}
+
+.leadshot__image {
+  display: block;
+  width: 100%;
+  max-width: var(--frame);
+  height: 240px;
+  object-fit: cover;
+  margin: 0 auto;
+  background: var(--hover);
+}
+
+.leadshot__caption:empty {
+  display: none;
+}
+
+.leadshot__caption {
+  max-width: var(--measure);
+  margin: 14px auto 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+@media (min-width: 720px) {
+  .leadshot {
+    padding: 48px var(--gutter) 0;
   }
 
-  .article__sender {
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-
-  .article__title {
-    font-size: 40px;
-    line-height: 1.15;
-  }
-
-  .article__received {
-    margin-top: 16px;
-    font-size: 13px;
-  }
-
-  .article__rule {
-    margin: 40px 0;
+  .leadshot__image {
+    height: 440px;
   }
 }
 
 /* Sanitized newsletter body ----------------------------------------------- */
 
+.body {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 40px 0 72px;
+}
+
 .body p {
-  margin: 0 0 20px;
+  margin: 0 0 22px;
   font-size: 16px;
-  line-height: 1.7;
+  line-height: 1.75;
   text-wrap: pretty;
 }
 
-.body h1,
-.body h2,
-.body h3,
-.body h4 {
-  font-family: var(--serif);
-}
-
 .body h2 {
-  margin: 32px 0 10px;
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1.25;
+  margin: 32px 0 12px;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
 }
 
 .body h3 {
-  margin: 36px 0 10px;
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1.3;
+  margin: 32px 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 .body ul,
 .body ol {
   list-style: none;
-  padding-left: var(--space-5);
-  margin: 0 0 var(--space-5);
+  padding-left: 32px;
+  margin: 0 0 24px;
+  counter-reset: item;
 }
 
 .body li {
   position: relative;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   font-size: 16px;
   line-height: 1.7;
-}
-
-.body ul li::before {
-  content: "—";
-  position: absolute;
-  left: calc(var(--space-5) * -1);
-  color: var(--mute);
-}
-
-.body ol {
-  counter-reset: item;
-}
-
-.body ol li {
   counter-increment: item;
 }
 
-.body ol li::before {
-  content: counter(item) ".";
+/* Zero-padded mono counters, the same index the feed uses. The em-dash
+   bullets of the old design are gone; a list here reads as a numbered list
+   whether or not the sender marked one up. */
+.body li::before {
+  content: counter(item, decimal-leading-zero);
   position: absolute;
-  left: calc(var(--space-5) * -1);
-  color: var(--mute);
-  font-variant-numeric: tabular-nums;
+  left: -32px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--blue);
 }
 
 .body code {
@@ -548,9 +855,10 @@ a:hover {
 
 .body blockquote {
   margin: 36px 0;
-  padding-left: var(--space-5);
-  font-style: italic;
+  padding-left: 24px;
+  border-left: 2px solid var(--ink);
   font-size: 19px;
+  line-height: 1.6;
 }
 
 .body hr {
@@ -582,6 +890,15 @@ a:hover {
   margin: 28px 0;
 }
 
+.body figcaption {
+  margin-top: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
 /* Newsletter tables are layout, not data. Unwrapped in CSS rather than by a
    scrubber, so the markup stays reversible if a real data table turns up. */
 .body table,
@@ -606,29 +923,34 @@ a:hover {
    would override this file's own heading and code rules. */
 
 .body a {
-  color: var(--burgundy);
+  color: var(--blue);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
   text-decoration-thickness: 1px;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 720px) {
+  .body {
+    padding: 56px 0 96px;
+  }
+
   .body p {
-    margin-bottom: var(--space-5);
+    margin-bottom: 28px;
     font-size: 17px;
   }
 
   .body h2 {
-    margin: 44px 0 var(--space-3);
-    font-size: 26px;
+    margin: 52px 0 14px;
+    font-size: 28px;
+  }
+
+  .body h3 {
+    margin: 40px 0 12px;
+    font-size: 22px;
   }
 
   .body li {
     font-size: 17px;
-  }
-
-  .body img {
-    margin: 36px 0;
   }
 }
 
@@ -636,30 +958,74 @@ a:hover {
 
 .neighbours {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 48px;
-  border-top: 1px solid var(--rule);
-  margin-top: var(--space-8);
-  padding: 28px 0 var(--space-8);
+  grid-template-columns: 1fr;
+  border-top: 2px solid var(--ink);
+  padding: 24px var(--gutter) 48px;
+}
+
+.neighbours__link {
+  display: block;
+  text-decoration: none;
 }
 
 .neighbours__label {
-  margin-bottom: 6px;
-  font-size: 13px;
-  color: var(--mute);
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
 }
 
-.neighbours__title {
-  font-family: var(--serif);
+/* The arrows carry the direction, so they sit outside the label the same way
+   the feed's slashes sit outside the sender. */
+.neighbours__cell--newer .neighbours__direction::before {
+  content: "←\00a0";
+}
+
+.neighbours__cell--older .neighbours__sender::after {
+  content: "\00a0→";
+}
+
+.neighbours__direction::after {
+  content: "\00a0/\00a0";
+}
+
+.neighbours__subject {
+  display: block;
   font-size: 19px;
-  line-height: 1.3;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
   color: var(--ink);
-  text-decoration: none;
   text-wrap: pretty;
 }
 
-.neighbours__cell--older {
-  text-align: right;
+@media (min-width: 720px) {
+  .neighbours {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 56px;
+    padding: 28px var(--gutter) 72px;
+  }
+
+  /* The cell stays in the grid when there is no newer newsletter, so the
+     older one keeps the right-hand column. Only its divider goes. */
+  .neighbours__cell--newer {
+    border-right: 1px solid var(--rule);
+  }
+
+  .neighbours__cell--newer:empty {
+    border-right: 0;
+  }
+
+  .neighbours__cell--older {
+    text-align: right;
+  }
+
+  .neighbours__subject {
+    font-size: 21px;
+  }
 }
 
 /* View original ----------------------------------------------------------- */
@@ -670,7 +1036,7 @@ a:hover {
 
 .original__caption {
   max-width: var(--measure);
-  margin: 0 auto var(--space-5);
+  margin: 0 auto 24px;
   font-size: 13px;
   color: var(--mute);
 }
@@ -687,63 +1053,648 @@ a:hover {
 
 /* Sign in ----------------------------------------------------------------- */
 
+/* The gate onto the app, on the same system as everything behind it: mono
+   labels, no radius, a 2px rule under each field and a solid black button. */
 .signin {
-  max-width: 320px;
-  margin: var(--space-9) auto;
+  max-width: 380px;
+  margin: 96px auto;
   padding: 0 var(--gutter);
+}
+
+.signin__lockup {
+  margin-bottom: 56px;
+}
+
+.signin__title {
+  margin: 0 0 32px;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
 .signin__field {
   display: block;
-  margin-bottom: var(--space-4);
+  margin-bottom: 28px;
 }
 
 .signin__label {
   display: block;
-  margin-bottom: var(--space-1);
-  font-size: 13px;
+  margin-bottom: 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--mute);
 }
 
 .signin__input {
   width: 100%;
-  padding: 6px 0;
+  padding: 14px 0;
   border: 0;
-  border-bottom: 1px solid var(--rule);
-  background: none;
-  font-family: inherit;
-  font-size: 14px;
+  border-bottom: 2px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 19px;
   color: var(--ink);
 }
 
 .signin__input:focus {
   outline: 0;
-  border-bottom-color: var(--burgundy);
 }
 
 .signin__submit {
   border: 0;
-  background: none;
-  padding: 0;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--burgundy);
+  border-radius: 0;
+  background: var(--ink);
+  padding: 14px 32px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--paper);
   cursor: pointer;
 }
 
+.signin__submit:hover {
+  background: var(--blue);
+}
+
 .signin__alert {
-  margin-bottom: var(--space-5);
-  font-size: 13px;
-  color: var(--burgundy);
+  margin-bottom: 32px;
+  border-top: 2px solid var(--ink);
+  padding-top: 16px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--body);
 }
 
 .signin__forgot {
-  margin-top: var(--space-6);
-  font-size: 13px;
+  margin-top: 44px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.signin__title {
-  margin: 0 0 var(--space-5);
-  font-size: 22px;
-  font-weight: 400;
+.signin__forgot a {
+  text-decoration: none;
 }
+
+.signin__forgot a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Landing page ------------------------------------------------------------ */
+
+/* The only textured surface in the system, and the only page a signed-out
+   visitor can reach. */
+.landing {
+  min-height: 100vh;
+  background-color: var(--landing-paper);
+  background-image: radial-gradient(rgba(10, 10, 10, 0.13) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
+}
+
+.landing__frame {
+  max-width: var(--frame);
+  margin: 0 auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+.landing__nav {
+  border-bottom: 2px solid var(--ink);
+}
+
+.landing__nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 22px;
+  padding-bottom: 22px;
+}
+
+.landing__nav-link {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.landing__nav-link::after {
+  content: "\00a0→";
+}
+
+.landing__hero {
+  padding-top: 64px;
+}
+
+.landing__eyebrow {
+  margin: 0 0 24px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+.landing__title {
+  margin: 0;
+  max-width: 1000px;
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.landing__standfirst {
+  margin: 24px 0 0;
+  max-width: var(--measure);
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+.landing__hero .waitlist,
+.landing__hero .joined {
+  margin-top: 40px;
+}
+
+.landing__shot {
+  padding-top: 64px;
+}
+
+.landing__points {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 48px;
+  padding-top: 72px;
+}
+
+.landing__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 32px;
+  padding-bottom: 48px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.landing__footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+}
+
+@media (min-width: 720px) {
+  .landing__hero {
+    padding-top: 96px;
+  }
+
+  .landing__nav-link,
+  .landing__eyebrow {
+    font-size: 11px;
+  }
+
+  .landing__title {
+    font-size: 88px;
+    letter-spacing: -0.045em;
+  }
+
+  .landing__standfirst {
+    margin-top: 32px;
+    font-size: 23px;
+  }
+
+  .landing__hero .waitlist,
+  .landing__hero .joined {
+    margin-top: 56px;
+  }
+
+  .landing__shot {
+    padding-top: 96px;
+  }
+
+  .landing__points {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 80px;
+    padding-top: 120px;
+  }
+
+  .landing__footer {
+    padding-bottom: 56px;
+  }
+}
+
+/* Waitlist form ----------------------------------------------------------- */
+
+.waitlist {
+  max-width: 620px;
+}
+
+.waitlist__label {
+  display: block;
+  margin-bottom: 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* Stacked below 720px: "Join the waitlist" set in mono at 10px is wider than
+   the room a 390px screen leaves beside an input, and squeezing both onto one
+   line pushed the button off the page. */
+.waitlist__controls {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.waitlist__input {
+  border: 0;
+  border-bottom: 2px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  padding: 14px 0;
+  font-family: var(--sans);
+  font-size: 19px;
+  color: var(--ink);
+}
+
+.waitlist__input::placeholder {
+  color: var(--read);
+}
+
+.waitlist__input:focus {
+  outline: 0;
+}
+
+.waitlist__submit {
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 16px 24px;
+  margin-top: 20px;
+  justify-self: start;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.waitlist__submit:hover {
+  background: var(--blue);
+}
+
+/* Off-screen rather than display:none or type="hidden", both of which a bot
+   filling the form knows to skip. aria-hidden and tabindex keep it away from
+   anyone using the page properly. */
+.waitlist__honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.waitlist__error {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.waitlist__note {
+  margin: 16px 0 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.waitlist--inverted .waitlist__label {
+  color: var(--read);
+}
+
+.waitlist--inverted .waitlist__input {
+  border-bottom-color: var(--paper);
+  color: var(--paper);
+}
+
+.waitlist--inverted .waitlist__submit {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.waitlist--inverted .waitlist__submit:hover {
+  background: var(--blue);
+  color: var(--paper);
+}
+
+.waitlist--inverted .waitlist__error {
+  color: var(--paper);
+}
+
+/* The handoff keeps this note at --mute in the dark band, which is 2.5:1 on
+   ink and fails AA. --read is the grey the band already uses for its own
+   paragraph, and clears 5:1. */
+.waitlist--inverted .waitlist__note {
+  color: var(--read);
+}
+
+@media (min-width: 720px) {
+  .waitlist__controls {
+    grid-template-columns: 1fr auto;
+    align-items: stretch;
+  }
+
+  .waitlist__submit {
+    padding: 0 32px;
+    margin-top: 0;
+    margin-left: 20px;
+    font-size: 11px;
+  }
+
+  .waitlist__note {
+    font-size: 11px;
+  }
+}
+
+/* Waitlist success -------------------------------------------------------- */
+
+.joined {
+  max-width: 620px;
+  border-top: 2px solid var(--ink);
+  padding-top: 24px;
+}
+
+.joined__label {
+  margin: 0 0 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+.joined__email {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.joined__note {
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--mute);
+  text-wrap: pretty;
+}
+
+.joined--inverted {
+  border-top-color: var(--paper);
+}
+
+.joined--inverted .joined__label {
+  color: var(--paper);
+}
+
+.joined--inverted .joined__note {
+  color: var(--read);
+}
+
+/* Two points -------------------------------------------------------------- */
+
+.point {
+  border-top: 2px solid var(--ink);
+  padding-top: 20px;
+}
+
+.point__kicker {
+  margin: 0 0 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+.point__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+}
+
+.point__body {
+  margin: 16px 0 0;
+  max-width: 460px;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .point__title {
+    font-size: 32px;
+  }
+}
+
+/* Closing band ------------------------------------------------------------ */
+
+.closing {
+  background: var(--ink);
+  color: var(--paper);
+  margin-top: 72px;
+}
+
+.closing__inner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 48px;
+  align-items: start;
+  padding-top: 64px;
+  padding-bottom: 64px;
+}
+
+.closing__title {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.closing__body {
+  margin: 20px 0 0;
+  max-width: 420px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--read);
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .closing {
+    margin-top: 120px;
+  }
+
+  .closing__inner {
+    grid-template-columns: 1fr 620px;
+    column-gap: 80px;
+    padding-top: 96px;
+    padding-bottom: 96px;
+  }
+
+  .closing__title {
+    font-size: 52px;
+  }
+}
+
+/* Product shot ------------------------------------------------------------ */
+
+/* Fixed sample content, at the feed's row spec and reduced scale. Not the
+   reader's own feed: this page is unauthenticated. */
+.shot {
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.shot__caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.shot__subcaption {
+  color: var(--mute);
+}
+
+.shot__body {
+  padding: 0 20px 24px;
+}
+
+.shot__group {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 2px solid var(--ink);
+  padding: 24px 0 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.shot__date {
+  color: var(--mute);
+}
+
+.shot__row {
+  display: grid;
+  grid-template-columns: 28px 1fr 60px;
+  column-gap: 12px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.shot__row--read {
+  opacity: 0.66;
+}
+
+.shot__number,
+.shot__time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--blue);
+}
+
+.shot__row--read .shot__number {
+  color: var(--read);
+}
+
+.shot__time {
+  color: var(--mute);
+  text-align: right;
+}
+
+.shot__text {
+  display: block;
+  min-width: 0;
+}
+
+.shot__sender {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.shot__subject {
+  display: block;
+  margin-top: 6px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .shot__caption,
+  .shot__body {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .shot__group {
+    padding-top: 32px;
+  }
+
+  .shot__body {
+    padding-bottom: 36px;
+  }
+
+  .shot__row {
+    grid-template-columns: 36px 1fr 80px;
+    column-gap: 20px;
+    padding: 18px 0;
+  }
+
+  .shot__subject {
+    font-size: 20px;
+  }
+}
+

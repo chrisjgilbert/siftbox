@@ -1,0 +1,11 @@
+<%# Two brackets enclosing a solid square: array notation, reading as code
+    before it reads as a container. Drawn on a 64x64 viewBox with a 4-unit
+    safe area, stroke set on the <svg> rather than per path so one attribute
+    carries the size compensation. %>
+<svg class="mark" width="<%= size %>" height="<%= size %>" viewBox="0 0 64 64"
+     fill="none" stroke="currentColor" stroke-width="<%= mark_stroke_width(size) %>"
+     aria-hidden="true" focusable="false">
+  <path d="M24 6H8v52h16"></path>
+  <path d="M40 6h16v52H40"></path>
+  <rect class="mark__square" x="26" y="26" width="12" height="12" stroke="none"></rect>
+</svg>

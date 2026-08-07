@@ -1,8 +1,6 @@
-<header class="header">
-  <p class="header__wordmark"><%= t("layouts.application.wordmark") %></p>
-</header>
-
 <main class="signin">
+  <div class="signin__lockup"><%= render "application/lockup", size: 24 %></div>
+
   <% if flash[:alert] %>
     <p class="signin__alert"><%= flash[:alert] %></p>
   <% end %>
