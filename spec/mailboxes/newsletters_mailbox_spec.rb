@@ -44,13 +44,30 @@ RSpec.describe NewslettersMailbox, type: :mailbox do
     expect(Newsletter.count).to eq(1)
   end
 
-  it "does not bounce discarded spam back to its forged sender" do
+  it "records discarded spam as bounced rather than delivered" do
     mail = newsletter_mail
     mail["X-Spam-Score"] = "9.4"
 
     inbound_email = receive_inbound_email_from_source(mail.to_s)
 
-    expect(inbound_email).not_to be_bounced
+    expect(inbound_email).to be_bounced
+  end
+
+  # `bounced!` only sets the status. Sending anything back would deliver it to
+  # the forged sender address on the spam.
+  it "sends nothing back to the forged sender of discarded spam" do
+    mail = newsletter_mail
+    mail["X-Spam-Score"] = "9.4"
+
+    expect {
+      receive_inbound_email_from_source(mail.to_s)
+    }.not_to change { ActionMailer::Base.deliveries.size }
+  end
+
+  it "records mail it accepted as delivered" do
+    inbound_email = receive_inbound_email_from_source(newsletter_mail.to_s)
+
+    expect(inbound_email).to be_delivered
   end
 
   # Anything raised in processing loses the newsletter, and a header that

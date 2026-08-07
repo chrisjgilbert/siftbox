@@ -2,7 +2,11 @@ require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
   # Prepare the ingress controller used to receive mail
-  # config.action_mailbox.ingress = :relay
+  # Only in production: in development the ingress is unused (the conductor at
+  # /rails/conductor/action_mailbox/inbound_emails creates inbound emails
+  # directly), and arming it there would accept its HTTP Basic credentials
+  # over plaintext, since force_ssl is off.
+  config.action_mailbox.ingress = :postmark
 
   # Settings specified here will take precedence over those in config/application.rb.
 

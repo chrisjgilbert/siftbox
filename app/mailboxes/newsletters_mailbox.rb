@@ -9,11 +9,15 @@ class NewslettersMailbox < ApplicationMailbox
 
   private
 
-  # Marked delivered rather than bounced: a bounce would be sent to the forged
-  # sender address on the spam, making this app a backscatter source. Setting
-  # the status is what halts the callback chain — see ActionMailbox::Base.
+  # `bounced!`, which ActionMailbox::Base documents as the way to halt
+  # processing, records the rejection without sending anything — only
+  # `bounce_with` delivers a message, and bouncing to the forged sender on
+  # spam would make this app a backscatter source.
+  #
+  # It also keeps spam distinguishable in the conductor: discarded mail reads
+  # as bounced rather than sitting among the newsletters marked delivered.
   def discard_spam
-    delivered! if spam?
+    bounced! if spam?
   end
 
   def spam?

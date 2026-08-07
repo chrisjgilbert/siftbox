@@ -59,9 +59,16 @@ permanently, which is the way to reject mail you never want.
 
 ### Locally
 
+`config.action_mailbox.ingress` is set in `production.rb` only. Development
+has no ingress at all, deliberately: nothing needs it, and arming it would
+accept the webhook's HTTP Basic credentials over plaintext, since `force_ssl`
+is off there.
+
 Use the conductor at `/rails/conductor/action_mailbox/inbound_emails` rather
-than a tunnel. The highest-fidelity test is to forward a real newsletter from
-your mail client *as an attachment* to get the `.eml`, then paste its raw
+than a tunnel — it creates inbound emails directly and routes them through
+the real mailbox, so it works without an ingress. The highest-fidelity test
+is to forward a real newsletter from your mail client *as an attachment* to
+get the `.eml`, then paste its raw
 source into the conductor — that exercises the mailbox against real
 newsletter MIME, which is where the surprises are.
 
