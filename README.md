@@ -71,6 +71,10 @@ mailbox against real newsletter MIME, which is where the surprises are.
 
 ## Deploying
 
+`docs/deploying.md` is the runbook — the steps in the order they depend on
+each other, worked through against a Hetzner host. What follows here is the
+part worth understanding before running any of it.
+
 The Kamal files declare what the app needs but not where it runs — no host,
 no database accessory. Those are still open. What is wired up is the list of
 variables, because every one of them fails quietly rather than loudly:
@@ -111,6 +115,9 @@ It is worth doing even though the code checks already: it holds for any
 outbound request the app ever grows, not only this one fetcher, and it does
 not depend on the checks staying correct through future edits. Until then,
 the code is the only thing enforcing this.
+
+`docs/deploying.md` has the ranges to block, and what is particular about
+doing it on a Hetzner host.
 
 ## Decisions worth knowing
 
