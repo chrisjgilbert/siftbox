@@ -14,26 +14,55 @@ Two records, on purpose:
 
 | Record | Name | Value | Why |
 |---|---|---|---|
-| A | `siftbox.co` | the VM's IPv4 | Where the app is served |
+| A | `siftbox.co` | `46.224.179.132` | Where the app is served |
 | MX | `news.siftbox.co` | `inbound.postmarkapp.com`, priority `10` | Where newsletters arrive |
 
-Inbound mail goes to a **subdomain**, so ordinary mail to `siftbox.co` is
-unaffected. Adding an MX to the root would route all of it to Postmark. The
-app itself is on the apex, which is fine alongside that MX, and Rails sets
-its session cookie host-only so nothing is shared with `news.`.
+The two are unrelated lookups. A browser asks for the A record; a mail
+server delivering to `news@news.siftbox.co` asks for the MX and never sees
+the A record at all.
 
-**Behind Cloudflare, the A record has to be DNS-only — grey cloud.** Kamal
-gets its certificate over an HTTP-01 challenge, which has to reach
-kamal-proxy on the VM. Proxied, the apex answers `525` instead: Cloudflare
-reaches the VM, kamal-proxy has no route for that hostname yet, the TLS
-handshake fails, and Cloudflare reports it as an origin SSL error rather than
-a missing route.
+Inbound mail goes to a **subdomain** so that the MX does not claim every
+address at `siftbox.co` — an MX on the root would send `chris@siftbox.co`
+into the newsletter feed too. The web app on the root carries no such
+consequence, which is why the app is at `siftbox.co` and the mail at
+`news.siftbox.co`. Serving the app from `app.siftbox.co` instead works
+equally well; it is `proxy.host`, `NEWSBOX_HOST` and the webhook URL that
+have to agree, and the MX is unaffected either way. Rails sets its session
+cookie host-only, so nothing is shared with `news.` either way.
 
 If the VM has an IPv6 address you can add an AAAA record — kamal-proxy
 already listens on `[::]:443` — but see step 7 first, because IPv6 changes
 what the egress rule has to cover. What you must not do is leave a stale
 AAAA pointing somewhere else while the A record points at the VM: clients
 that prefer IPv6 will all take the wrong path.
+
+### Behind Cloudflare
+
+Cloudflare can proxy the A record (it also removes the usual "no CNAME at
+the apex" limitation via CNAME flattening). Three things to get right:
+
+- **SSL/TLS mode must be Full or Full (strict).** `production.rb` sets
+  `force_ssl`, so "Flexible" — where Cloudflare talks plain HTTP to the
+  origin — redirects forever. It looks like the site hanging, not an error.
+- **Deploy once DNS-only (grey cloud) first**, so Let's Encrypt can answer
+  its own challenge and Kamal gets a certificate. Turn proxying on after.
+  Proxied before that certificate exists, the host answers `525`: Cloudflare
+  reaches the VM, kamal-proxy has no route for the hostname yet, the TLS
+  handshake fails, and Cloudflare reports it as an origin SSL error rather
+  than as the missing route it is.
+- **Watch the webhook.** Postmark's POST is an automated request from a
+  machine, and Cloudflare's bot or WAF rules can block it. The only symptom
+  is newsletters silently not arriving, so if Postmark's Activity view shows
+  failures the app never logged, add a skip rule for
+  `/rails/action_mailbox/`.
+
+MX records cannot be proxied — Cloudflare only proxies A, AAAA and CNAME —
+so inbound mail bypasses all of this.
+
+A cost of staying DNS-only: the origin IP is public, and scanners find it
+within minutes — `/.env`, `/config.json` and the like. Rails answers 404 and
+there is nothing to take, but the log noise is the trade for Let's Encrypt
+renewing itself without a proxy in the way.
 
 ## 2. Postmark
 
@@ -80,25 +109,19 @@ needs a copy. Never commit it.
 
 ## 4. config/deploy.yml
 
-| Setting | Value |
-|---|---|
-| `image` | `your-registry-user/newsbox` |
-| `registry.username` | your registry user (use an access token, not a password) |
-| `servers.web` | the VM's IP |
-| `proxy.host` | `siftbox.co` |
+Already filled in: the host, `cjgilbert/newsbox` on Docker Hub, `siftbox.co`
+as `proxy.host`, and the four `NEWSBOX_*` variables. `NEWSBOX_MAIL_FROM` is
+the one to check against reality — it has to match the sender signature you
+verified in step 2, or every password reset is rejected.
 
-Kamal prefixes `registry.server` onto `image`, so `image` is the path within
-the registry rather than the full reference. Naming the registry in both
-gives you `ghcr.io/ghcr.io/user/newsbox`.
+`service: newsbox` and the volume `newsbox_storage` are what keep this app
+apart from the others on the box, so leave both alone unless something else
+there already claims those names.
 
-Then uncomment and fill the `env.clear` block:
-
-```yaml
-NEWSBOX_INBOUND_ADDRESS: news@news.siftbox.co
-NEWSBOX_HOST: siftbox.co
-NEWSBOX_MAIL_FROM: newsbox@siftbox.co     # must match the sender signature
-NEWSBOX_TIME_ZONE: London
-```
+Pointing `image` at a different registry: Kamal prefixes `registry.server`
+onto it, so `image` is the path within the registry rather than the full
+reference. Naming the registry in both gives you
+`ghcr.io/ghcr.io/user/newsbox`.
 
 The two secrets that live neither in credentials nor on disk go in
 `.kamal/secrets-common`, which is gitignored. Kamal reads it before
