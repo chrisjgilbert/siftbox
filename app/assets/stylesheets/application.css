@@ -584,11 +584,15 @@ a {
 
 .topbar {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  padding: 22px var(--gutter) 16px;
-  border-bottom: 1px solid var(--rule);
-  font-size: 13px;
+  gap: 16px;
+  padding: 22px var(--gutter);
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .topbar__back {
@@ -596,10 +600,16 @@ a {
   text-decoration: none;
 }
 
+/* The arrow points the way back; it is direction, not copy, so it is drawn
+   here rather than translated. */
+.topbar__back::before {
+  content: "←\00a0\00a0";
+}
+
 .topbar__actions {
   display: flex;
-  align-items: baseline;
-  gap: var(--gutter);
+  align-items: center;
+  gap: 20px;
 }
 
 .topbar__action {
@@ -607,6 +617,8 @@ a {
   text-decoration: none;
   font-family: inherit;
   font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
   background: none;
   border: 0;
   padding: 0;
@@ -615,148 +627,221 @@ a {
 
 .topbar__action:hover {
   color: var(--ink);
-  opacity: 1;
 }
 
 .topbar__form {
   display: inline;
 }
 
+/* Below 720px the bar keeps the way back and one action, so the labels never
+   collapse into an unreadable row. View original is the one that stays: it is
+   the escape hatch when the rebuilt reading view loses too much, where
+   marking unread again is housekeeping that can wait for a wider screen. */
+@media (max-width: 719px) {
+  .topbar__form--secondary {
+    display: none;
+  }
+}
+
 @media (min-width: 720px) {
   .topbar {
-    padding: 24px var(--gutter);
-    font-size: 14px;
+    font-size: 11px;
+  }
+
+  .topbar__actions {
+    gap: 26px;
   }
 }
 
-/* Article ----------------------------------------------------------------- */
+/* Reader masthead --------------------------------------------------------- */
 
 .article {
-  padding: 32px var(--gutter) 0;
+  padding: 40px var(--gutter) 0;
 }
 
-.article__sender {
-  margin-bottom: 14px;
-  font-size: 13px;
-  color: var(--mute);
+.masthead-block {
+  max-width: var(--measure);
+  margin: 0 auto;
 }
 
-.article__sender-name {
-  color: var(--ink);
-  font-weight: 500;
+.masthead-block__kicker {
+  margin: 0 0 20px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
 }
 
-.article__title {
+.masthead-block__title {
   margin: 0;
-  font-size: 29px;
-  font-weight: 400;
-  line-height: 1.18;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
-.article__received {
-  margin-top: 12px;
-  font-size: 12px;
+.masthead-block__standfirst {
+  margin: 20px 0 0;
+  max-width: 620px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+/* Two fields below 720px, three above it: the issue number is the one the
+   narrow strip can do without. */
+.datastrip__field--issue {
+  display: none;
+}
+
+.datastrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0;
+  margin-top: 32px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--mute);
 }
 
-.article__rule {
-  border: 0;
-  border-top: 1px solid var(--rule);
-  margin: 28px 0;
+@media (min-width: 720px) {
+  .article {
+    padding: 80px 0 0;
+  }
+
+  .masthead-block__kicker {
+    margin-bottom: 24px;
+    font-size: 11px;
+  }
+
+  .masthead-block__title {
+    font-size: 56px;
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+  }
+
+  .masthead-block__standfirst {
+    margin-top: 28px;
+    font-size: 21px;
+  }
+
+  .datastrip {
+    gap: 40px;
+    margin-top: 44px;
+    font-size: 11px;
+  }
+
+  .datastrip__field--issue {
+    display: inline;
+  }
 }
 
-@media (min-width: 1024px) {
-  .article {
-    max-width: var(--measure);
-    margin: 0 auto;
-    padding: 72px 0 80px;
+/* Lead image -------------------------------------------------------------- */
+
+/* The one element that breaks the measure: wider than the text column, with
+   its caption sitting back inside it. */
+.leadshot {
+  margin: 0;
+  padding: 32px 0 0;
+}
+
+.leadshot__image {
+  display: block;
+  width: 100%;
+  max-width: var(--frame);
+  height: 240px;
+  object-fit: cover;
+  margin: 0 auto;
+  background: var(--hover);
+}
+
+.leadshot__caption:empty {
+  display: none;
+}
+
+.leadshot__caption {
+  max-width: var(--measure);
+  margin: 14px auto 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+@media (min-width: 720px) {
+  .leadshot {
+    padding: 48px var(--gutter) 0;
   }
 
-  .article__sender {
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-
-  .article__title {
-    font-size: 40px;
-    line-height: 1.15;
-  }
-
-  .article__received {
-    margin-top: 16px;
-    font-size: 13px;
-  }
-
-  .article__rule {
-    margin: 40px 0;
+  .leadshot__image {
+    height: 440px;
   }
 }
 
 /* Sanitized newsletter body ----------------------------------------------- */
 
+.body {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 40px 0 72px;
+}
+
 .body p {
-  margin: 0 0 20px;
+  margin: 0 0 22px;
   font-size: 16px;
-  line-height: 1.7;
+  line-height: 1.75;
   text-wrap: pretty;
 }
 
-.body h1,
-.body h2,
-.body h3,
-.body h4 {
-  font-family: var(--sans);
-}
-
 .body h2 {
-  margin: 32px 0 10px;
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1.25;
+  margin: 32px 0 12px;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
 }
 
 .body h3 {
-  margin: 36px 0 10px;
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1.3;
+  margin: 32px 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 .body ul,
 .body ol {
   list-style: none;
-  padding-left: 24px;
+  padding-left: 32px;
   margin: 0 0 24px;
+  counter-reset: item;
 }
 
 .body li {
   position: relative;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   font-size: 16px;
   line-height: 1.7;
-}
-
-.body ul li::before {
-  content: "—";
-  position: absolute;
-  left: -24px;
-  color: var(--mute);
-}
-
-.body ol {
-  counter-reset: item;
-}
-
-.body ol li {
   counter-increment: item;
 }
 
-.body ol li::before {
-  content: counter(item) ".";
+/* Zero-padded mono counters, the same index the feed uses. The em-dash
+   bullets of the old design are gone; a list here reads as a numbered list
+   whether or not the sender marked one up. */
+.body li::before {
+  content: counter(item, decimal-leading-zero);
   position: absolute;
-  left: -24px;
-  color: var(--mute);
-  font-variant-numeric: tabular-nums;
+  left: -32px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--blue);
 }
 
 .body code {
@@ -771,8 +856,9 @@ a {
 .body blockquote {
   margin: 36px 0;
   padding-left: 24px;
-  font-style: italic;
+  border-left: 2px solid var(--ink);
   font-size: 19px;
+  line-height: 1.6;
 }
 
 .body hr {
@@ -801,7 +887,16 @@ a {
   display: block;
   max-width: 100%;
   height: auto;
-  margin: 28px 0;
+  margin: 36px 0;
+}
+
+.body figcaption {
+  margin-top: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
 }
 
 /* Newsletter tables are layout, not data. Unwrapped in CSS rather than by a
@@ -830,19 +925,28 @@ a {
 .body a {
   color: var(--blue);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
   text-decoration-thickness: 1px;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 720px) {
+  .body {
+    padding: 56px 0 96px;
+  }
+
   .body p {
-    margin-bottom: 24px;
+    margin-bottom: 28px;
     font-size: 17px;
   }
 
   .body h2 {
-    margin: 44px 0 12px;
-    font-size: 26px;
+    margin: 52px 0 14px;
+    font-size: 28px;
+  }
+
+  .body h3 {
+    margin: 40px 0 12px;
+    font-size: 22px;
   }
 
   .body li {
@@ -850,7 +954,7 @@ a {
   }
 
   .body img {
-    margin: 36px 0;
+    margin: 48px 0;
   }
 }
 
@@ -858,30 +962,74 @@ a {
 
 .neighbours {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 48px;
-  border-top: 1px solid var(--rule);
-  margin-top: 64px;
-  padding: 28px 0 64px;
+  grid-template-columns: 1fr;
+  border-top: 2px solid var(--ink);
+  padding: 24px var(--gutter) 48px;
+}
+
+.neighbours__link {
+  display: block;
+  text-decoration: none;
 }
 
 .neighbours__label {
-  margin-bottom: 6px;
-  font-size: 13px;
-  color: var(--mute);
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
 }
 
-.neighbours__title {
-  font-family: var(--sans);
+/* The arrows carry the direction, so they sit outside the label the same way
+   the feed's slashes sit outside the sender. */
+.neighbours__cell--newer .neighbours__direction::before {
+  content: "←\00a0";
+}
+
+.neighbours__cell--older .neighbours__sender::after {
+  content: "\00a0→";
+}
+
+.neighbours__direction::after {
+  content: "\00a0/\00a0";
+}
+
+.neighbours__subject {
+  display: block;
   font-size: 19px;
-  line-height: 1.3;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
   color: var(--ink);
-  text-decoration: none;
   text-wrap: pretty;
 }
 
-.neighbours__cell--older {
-  text-align: right;
+@media (min-width: 720px) {
+  .neighbours {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 56px;
+    padding: 28px var(--gutter) 72px;
+  }
+
+  /* The cell stays in the grid when there is no newer newsletter, so the
+     older one keeps the right-hand column. Only its divider goes. */
+  .neighbours__cell--newer {
+    border-right: 1px solid var(--rule);
+  }
+
+  .neighbours__cell--newer:empty {
+    border-right: 0;
+  }
+
+  .neighbours__cell--older {
+    text-align: right;
+  }
+
+  .neighbours__subject {
+    font-size: 21px;
+  }
 }
 
 /* View original ----------------------------------------------------------- */

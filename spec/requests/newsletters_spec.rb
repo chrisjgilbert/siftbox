@@ -173,7 +173,84 @@ RSpec.describe "Newsletters" do
 
     get newsletter_path(newsletter)
 
-    expect(response.body).not_to include("neighbours__title")
+    expect(response.body).not_to include("neighbours__subject")
+  end
+
+  it "heads the reader with the sender and the source domain" do
+    sign_in
+    newsletter = create(:newsletter, sender_name: "Ruby Weekly",
+      sender_email: "peter@rubyweekly.com")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("Ruby Weekly / rubyweekly.com")
+  end
+
+  it "stamps the received time in the reader's data strip" do
+    sign_in
+    newsletter = create(:newsletter, received_at: Time.zone.parse("2026-08-05 09:02"))
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("Received 2026.08.05 09:02")
+  end
+
+  it "shows the issue number when the subject carries one" do
+    sign_in
+    newsletter = create(:newsletter, subject: "#742: A faster CSV parser")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("Issue 742")
+  end
+
+  it "leaves the issue field out when the subject carries no number" do
+    sign_in
+    newsletter = create(:newsletter, subject: "Five articles worth your evening")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).not_to include("Issue ")
+  end
+
+  it "estimates the reading time in the data strip" do
+    sign_in
+    newsletter = create(:newsletter, body_html: "<p>#{Array.new(600, 'word').join(' ')}</p>")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("3 min")
+  end
+
+  it "promotes the first image above the article" do
+    sign_in
+    newsletter = create(:newsletter, lead_image_url: "https://cdn.example/hero.png",
+      body_html: %(<img src="https://cdn.example/hero.png"><p>Morning</p>))
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("leadshot__image")
+  end
+
+  # Promoting it means taking it out of the body. Rendering both is the bug
+  # this guards.
+  it "renders the promoted image once rather than twice" do
+    sign_in
+    newsletter = create(:newsletter, lead_image_url: "https://cdn.example/hero.png",
+      body_html: %(<img src="https://cdn.example/hero.png"><p>Morning</p>))
+
+    get newsletter_path(newsletter)
+
+    expect(response.body.scan("cdn.example/hero.png").length).to eq(1)
+  end
+
+  it "omits the lead image block for a newsletter with no images" do
+    sign_in
+    newsletter = create(:newsletter, lead_image_url: "", body_html: "<p>Morning</p>")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).not_to include("leadshot__image")
   end
 
   it "marks a newsletter read when it is opened" do

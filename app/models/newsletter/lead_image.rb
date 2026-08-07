@@ -14,8 +14,12 @@ class Newsletter::LeadImage
   # feed reads on every row.
   UNRESOLVABLE_SCHEMES = %w[cid: data:].freeze
 
-  def initialize(html)
-    @html = html
+  # Takes a Newsletter::Body rather than a string, so the caller decides what
+  # that body knows — the reader hands one built with the stored image sizes,
+  # and the ingest-time capture hands a bare one, because a size cannot change
+  # which image comes first.
+  def initialize(body)
+    @body = body
   end
 
   def url
@@ -24,14 +28,25 @@ class Newsletter::LeadImage
     node["src"].to_s
   end
 
+  # Read rather than stored: the reader is the only screen that captions the
+  # image, and it already has the body open.
+  def alt
+    return "" if node.nil?
+
+    node["alt"].to_s
+  end
+
+  # #scrubbed rather than the document's own html: the body applies the stored
+  # image sizes on its way out, and it does that over the tree this has just
+  # taken the lead image out of.
   def remainder
     node&.remove
-    document.to_html
+    body.scrubbed
   end
 
   private
 
-  attr_reader :html
+  attr_reader :body
 
   # Memoised before #remainder detaches it, so #url answers the same either
   # side of the removal and no caller has to know the order.
@@ -46,6 +61,6 @@ class Newsletter::LeadImage
   end
 
   def document
-    @_document ||= Newsletter::Body.new(html).document
+    body.document
   end
 end

@@ -28,11 +28,14 @@ en:
       back: Back to the reader
       caption: Original HTML, sandboxed in an iframe. Styling is the sender's.
     show:
-      back: Back to the feed
+      back: Index
+      issue: Issue %{number}
+      kicker: "%{sender} / %{domain}"
       mark_unread: Mark unread
       newer: Newer
       older: Older
-      received: Received %{date} at %{time}
+      reading_time: "%{minutes} min"
+      received: Received %{stamp}
       view_original: View original
     unknown_sender: Unknown sender
   passwords:
@@ -54,8 +57,7 @@ en:
       title: Sign in
   time:
     formats:
-      received_date: "%-d %B %Y"
-      received_time: "%H:%M"
+      received_stamp: "%Y.%m.%d %H:%M"
       row_date: "%-d %b"
       row_day: "%a"
       row_time: "%H:%M"

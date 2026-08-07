@@ -1,8 +1,11 @@
-<%= tag.div(class: class_name) do %>
+<%= tag.div(class: class_names("neighbours__cell", class_name)) do %>
   <% if newsletter %>
-    <p class="neighbours__label"><%= label %></p>
-    <%= link_to newsletter.title,
-          newsletter_path(newsletter),
-          class: "neighbours__title" %>
+    <%= link_to newsletter_path(newsletter), class: "neighbours__link" do %>
+      <span class="neighbours__label">
+        <span class="neighbours__direction"><%= label %></span>
+        <span class="neighbours__sender"><%= newsletter.sender %></span>
+      </span>
+      <span class="neighbours__subject"><%= newsletter.subject %></span>
+    <% end %>
   <% end %>
 <% end %>

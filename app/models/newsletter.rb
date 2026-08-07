@@ -51,7 +51,7 @@ class Newsletter < ApplicationRecord
   # at ingest and for newsletters stored before the column existed. Safe to
   # run again: the same body gives the same answer.
   def capture_lead_image
-    update!(lead_image_url: Newsletter::LeadImage.new(body_html).url)
+    update!(lead_image_url: Newsletter::LeadImage.new(Newsletter::Body.new(body_html)).url)
   end
 
   def mark_read

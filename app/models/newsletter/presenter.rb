@@ -10,8 +10,8 @@ class Newsletter::Presenter
     older: :row_date
   }.freeze
 
-  delegate :body_html, :lead_image?, :lead_image_url, :read?, :snippet,
-    :subject, :to_param, to: :newsletter
+  delegate :lead_image?, :lead_image_url, :read?, :snippet, :subject,
+    :to_param, to: :newsletter
 
   def initialize(newsletter)
     @newsletter = newsletter
@@ -34,6 +34,12 @@ class Newsletter::Presenter
     newsletter.sender_domain.presence
   end
 
+  def kicker
+    return sender if sender_domain.nil?
+
+    I18n.t("newsletters.show.kicker", sender: sender, domain: sender_domain)
+  end
+
   def timestamp
     I18n.l(newsletter.received_at, format: TIMESTAMP_FORMATS.fetch(age.bucket))
   end
@@ -41,9 +47,34 @@ class Newsletter::Presenter
   def received_line
     I18n.t(
       "newsletters.show.received",
-      date: I18n.l(newsletter.received_at, format: :received_date),
-      time: I18n.l(newsletter.received_at, format: :received_time)
+      stamp: I18n.l(newsletter.received_at, format: :received_stamp)
     )
+  end
+
+  # Nil when the subject carries no number, so the data strip drops the field
+  # rather than showing a label with nothing after it.
+  def issue
+    number = Newsletter::IssueNumber.new(subject).to_s
+    return if number.blank?
+
+    I18n.t("newsletters.show.issue", number: number)
+  end
+
+  def reading_time
+    I18n.t(
+      "newsletters.show.reading_time",
+      minutes: Newsletter::ReadingTime.new(newsletter.body_html).minutes
+    )
+  end
+
+  # The body without the image the reader promotes above the article. Leaving
+  # it in would render the same image twice.
+  def body
+    lead_image.remainder
+  end
+
+  def lead_image_alt
+    lead_image.alt
   end
 
   def newer
@@ -54,17 +85,26 @@ class Newsletter::Presenter
     present(newsletter.older)
   end
 
-  # The sizes the reader view sets on each image, so the browser can reserve
-  # space before one loads. Here rather than reached for in the helper,
-  # because the view is handed a presenter and .claude/rules/views.md keeps
-  # it that way.
-  def image_dimensions
-    Newsletter::ImageDimensions.new(newsletter).to_h
-  end
-
   private
 
   attr_reader :newsletter
+
+  # One instance for both readers, so the body is parsed once per render
+  # rather than once for the caption and once for the article.
+  def lead_image
+    @_lead_image ||= Newsletter::LeadImage.new(reading_body)
+  end
+
+  # Built here rather than in the helper, because the view is handed a
+  # presenter and .claude/rules/views.md keeps it that way. The sizes let the
+  # browser reserve space for an image before it loads; without them every
+  # image shifts the text the reader is already looking at.
+  def reading_body
+    Newsletter::Body.new(
+      newsletter.body_html,
+      dimensions: Newsletter::ImageDimensions.new(newsletter).to_h
+    )
+  end
 
   def age
     Newsletter::Age.new(newsletter.received_at)

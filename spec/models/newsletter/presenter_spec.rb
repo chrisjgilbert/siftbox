@@ -78,17 +78,6 @@ RSpec.describe Newsletter::Presenter do
     end
   end
 
-  it "spells out the received line for the reader" do
-    newsletter = build_stubbed(
-      :newsletter,
-      received_at: Time.zone.parse("2026-08-05 09:02")
-    )
-
-    presenter = Newsletter::Presenter.new(newsletter)
-
-    expect(presenter.received_line).to eq("Received 5 August 2026 at 09:02")
-  end
-
   it "titles a neighbour with its sender and subject" do
     newsletter = build_stubbed(
       :newsletter,
@@ -142,5 +131,82 @@ RSpec.describe Newsletter::Presenter do
     newsletter = create(:newsletter, received_at: 1.day.ago)
 
     expect(Newsletter::Presenter.new(newsletter).newer).to be_nil
+  end
+
+  it "heads the reader with the sender and the source domain" do
+    newsletter = build_stubbed(
+      :newsletter,
+      sender_name: "This Week in Rails",
+      sender_email: "editors@weblog.rubyonrails.org"
+    )
+
+    presenter = Newsletter::Presenter.new(newsletter)
+
+    expect(presenter.kicker).to eq("This Week in Rails / weblog.rubyonrails.org")
+  end
+
+  it "drops the separator along with a missing domain" do
+    newsletter = build_stubbed(:newsletter, sender_name: "Ruby Weekly", sender_email: "")
+
+    expect(Newsletter::Presenter.new(newsletter).kicker).to eq("Ruby Weekly")
+  end
+
+  it "stamps the received time for the data strip" do
+    newsletter = build_stubbed(
+      :newsletter,
+      received_at: Time.zone.parse("2026-08-05 09:02")
+    )
+
+    presenter = Newsletter::Presenter.new(newsletter)
+
+    expect(presenter.received_line).to eq("Received 2026.08.05 09:02")
+  end
+
+  it "shows the issue number when the subject carries one" do
+    newsletter = build_stubbed(:newsletter, subject: "#742: A faster CSV parser")
+
+    expect(Newsletter::Presenter.new(newsletter).issue).to eq("Issue 742")
+  end
+
+  it "has no issue field when the subject carries no number" do
+    newsletter = build_stubbed(:newsletter, subject: "Five articles worth your evening")
+
+    expect(Newsletter::Presenter.new(newsletter).issue).to be_nil
+  end
+
+  it "estimates the reading time from the body" do
+    body = "<p>#{Array.new(600, 'word').join(' ')}</p>"
+    newsletter = build_stubbed(:newsletter, body_html: body)
+
+    expect(Newsletter::Presenter.new(newsletter).reading_time).to eq("3 min")
+  end
+
+  # The reader promotes the first image above the article, so leaving it in
+  # the body would show it twice.
+  it "leaves the promoted lead image out of the body" do
+    newsletter = build_stubbed(
+      :newsletter,
+      body_html: %(<img src="https://cdn.example/hero.png"><p>Morning</p>)
+    )
+
+    expect(Newsletter::Presenter.new(newsletter).body).not_to include("hero.png")
+  end
+
+  it "keeps the rest of the body around the promoted image" do
+    newsletter = build_stubbed(
+      :newsletter,
+      body_html: %(<img src="https://cdn.example/hero.png"><p>Morning</p>)
+    )
+
+    expect(Newsletter::Presenter.new(newsletter).body).to include("<p>Morning</p>")
+  end
+
+  it "captions the promoted image with the email's alt text" do
+    newsletter = build_stubbed(
+      :newsletter,
+      body_html: %(<img src="https://cdn.example/hero.png" alt="The new parser">)
+    )
+
+    expect(Newsletter::Presenter.new(newsletter).lead_image_alt).to eq("The new parser")
   end
 end
