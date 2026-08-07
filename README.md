@@ -59,10 +59,11 @@ permanently, which is the way to reject mail you never want.
 
 ### Locally
 
-`config.action_mailbox.ingress` is set in `production.rb` only. Development
-has no ingress at all, deliberately: nothing needs it, and arming it would
-accept the webhook's HTTP Basic credentials over plaintext, since `force_ssl`
-is off there.
+`config.action_mailbox.ingress` is set in `production.rb` only, matching
+Rails' own generated config. The webhook route is drawn in every environment
+regardless; leaving the ingress unset is what makes that endpoint answer 404
+outside production, so it cannot go live over plaintext if an ingress
+password is ever set locally.
 
 Use the conductor at `/rails/conductor/action_mailbox/inbound_emails` rather
 than a tunnel — it creates inbound emails directly and routes them through
