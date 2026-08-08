@@ -45,17 +45,40 @@ class Newsletter::LeadImage
 
   # Read rather than stored: the reader is the only screen that captions the
   # image, and it already has the body open.
+  #
+  # Kept separate from #caption rather than merged with it. alt is written for
+  # someone who cannot see the picture and a caption for someone who can, and
+  # the reader has a slot for each — a photo credit in the alt attribute is no
+  # use to a screen reader, and a chart's description reads oddly under it.
   def alt
     return "" if node.nil?
 
     node["alt"].to_s
   end
 
+  # The figure's caption when there is one, because that is what the sender
+  # wrote about this picture. Alt text is the fallback: it is the only other
+  # thing the email says about the image, and an empty caption slot under a
+  # full-width photograph reads as a rendering fault.
+  def caption
+    return "" if node.nil?
+
+    figure_caption.presence || node["alt"].to_s
+  end
+
   # #scrubbed rather than the document's own html: the body applies the stored
   # image sizes on its way out, and it does that over the tree this has just
   # taken the lead image out of.
+  #
+  # The whole figure goes, not just the image inside it: a <figure> exists to
+  # tie an image to its caption, so lifting the image above the article and
+  # leaving the figure behind strands the caption mid-body, describing a
+  # picture that is no longer beside it.
+  # The figure is found before the image is detached, because it is found
+  # through the image's own parent. Removing the figure takes the image with
+  # it; without one, the image goes on its own.
   def remainder
-    node&.remove
+    (enclosing_figure || node)&.remove
     body.scrubbed
   end
 
@@ -72,6 +95,41 @@ class Newsletter::LeadImage
     return @_node if defined?(@_node)
 
     @_node = document.css("img").detect { |image| hosted?(image) }
+  end
+
+  # Memoised the same way as #node, and for the same reason: #remainder
+  # detaches it, and #caption still has to answer afterwards.
+  #
+  # Found through the ancestors rather than the image's own parent, because a
+  # CMS links the image to its full-size version — `<figure><a><img></a>
+  # <figcaption>` — and the parent is then the <a>. That is the shape most of
+  # them emit, so reading the parent alone misses the common case entirely.
+  def enclosing_figure
+    return @_enclosing_figure if defined?(@_enclosing_figure)
+
+    figure = node&.ancestors("figure")&.first
+    @_enclosing_figure = figure if figure && holds_only_the_lead?(figure)
+  end
+
+  # A figure holding anything besides the lead image and a caption is the
+  # sender using it as a layout box. Taking that out would delete the rest of
+  # its contents from the article — not promoted, not captioned, just gone.
+  #
+  # Asked of the text rather than the element children, which skip text nodes:
+  # a sentence sitting loose beside the image is exactly the content worth
+  # keeping, and counting only elements would read it as an empty figure.
+  def holds_only_the_lead?(figure)
+    figure.css("img").length == 1 && prose_outside_caption(figure).blank?
+  end
+
+  def prose_outside_caption(figure)
+    figure.children
+      .reject { |child| child.name == "figcaption" }
+      .map(&:text).join
+  end
+
+  def figure_caption
+    enclosing_figure&.at_css("figcaption")&.text.to_s.strip
   end
 
   def hosted?(image)

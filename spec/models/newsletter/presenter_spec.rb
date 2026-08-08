@@ -210,6 +210,24 @@ RSpec.describe Newsletter::Presenter do
       body_html: %(<img src="https://cdn.example/hero.png" alt="The new parser">)
     )
 
-    expect(Newsletter::Presenter.new(newsletter).lead_image_alt).to eq("The new parser")
+    expect(Newsletter::Presenter.new(newsletter).lead_image_caption).to eq("The new parser")
+  end
+
+  # The two slots carry different things: the caption is for a reader looking
+  # at the picture, the alt for one who cannot see it. A figure gives the
+  # email somewhere to say both.
+  it "captions the promoted image from its figure while keeping the alt text" do
+    newsletter = build_stubbed(
+      :newsletter,
+      body_html: %(<figure><img src="https://cdn.example/hero.png" alt="A bar chart">) +
+        %(<figcaption>Photo: Getty Images</figcaption></figure>)
+    )
+
+    presenter = Newsletter::Presenter.new(newsletter)
+
+    expect(presenter).to have_attributes(
+      lead_image_caption: "Photo: Getty Images",
+      lead_image_alt: "A bar chart"
+    )
   end
 end
