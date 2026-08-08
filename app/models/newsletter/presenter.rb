@@ -17,10 +17,6 @@ class Newsletter::Presenter
     @newsletter = newsletter
   end
 
-  def title
-    "#{sender} — #{subject}"
-  end
-
   # Mail with no From header at all leaves nothing to show, and a row headed
   # by a bare em dash reads as a rendering fault rather than as missing data.
   def sender
