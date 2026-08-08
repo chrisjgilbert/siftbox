@@ -320,6 +320,25 @@ RSpec.describe Newsletter::InboundMessage do
     expect(newsletter.body_html).to include("Ruby 3.4 is out")
   end
 
+  # The body reader survives an unknown transfer encoding, but the same
+  # header on an inline image part raised out of Newsletter::InlineImages and
+  # took the newsletter with it — text, subject, and all.
+  it "stores a newsletter whose inline image declares an unknown transfer encoding" do
+    mail = Mail.read_from_string(
+      "From: a@b.com\r\nSubject: s\r\n" \
+      "Content-Type: multipart/related; boundary=X\r\n\r\n--X\r\n" \
+      "Content-Type: text/html\r\n\r\n<p>Ruby 3.4 is out</p>" \
+      "<img src=\"cid:logo@b.com\">\r\n--X\r\n" \
+      "Content-Type: image/png\r\nContent-ID: <logo@b.com>\r\n" \
+      "Content-Disposition: inline\r\n" \
+      "Content-Transfer-Encoding: bogus-encoding\r\n\r\naGk=\r\n--X--\r\n"
+    )
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.body_html).to include("Ruby 3.4 is out")
+  end
+
   # tidy_bytes recodes only the runs that are not already UTF-8, so a body
   # that is valid apart from one stray byte keeps the accents it got right.
   # Transcoding the whole string from Windows-1252 would mojibake them.

@@ -43,7 +43,24 @@ class Newsletter::InlineImages
   # too. Left as cid:, Newsletter::LeadImage passes over it and the row falls
   # back to "No image in email", which is the truth.
   def inline_image?(part)
-    part.content_id.present? && DISPLAYABLE_TYPES.include?(part.mime_type)
+    part.content_id.present? &&
+      DISPLAYABLE_TYPES.include?(part.mime_type) &&
+      readable?(part)
+  end
+
+  # Mail raises rather than returning anything for a Content-Transfer-Encoding
+  # it does not recognise, and raising here loses the whole newsletter — text,
+  # subject, and all — the way Newsletter::InboundMessage's own readers used
+  # to. The same question Mail::Body#decoded asks before it raises.
+  #
+  # Skipped rather than stored from the raw source, which is what the body
+  # reader does with the same header. Prose survives being read as it stands;
+  # an image part almost certainly does not, and a blob of undecoded base64
+  # served as an image is broken in the reader and can win lead_image_url and
+  # break the feed row too. One missing image beats one lost newsletter, and
+  # beats one image that is quietly wrong everywhere it appears.
+  def readable?(part)
+    Mail::Encodings.defined?(part.body.encoding)
   end
 
   def upload(part)
