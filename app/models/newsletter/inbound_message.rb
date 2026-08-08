@@ -102,18 +102,51 @@ class Newsletter::InboundMessage
     mail.date&.to_time || Time.current
   end
 
+  # Memoised because an HTML-only newsletter — the common case — asks for the
+  # body twice: once to store it, once for the snippet when there is no text
+  # part to build one from. Decoding is the expensive half of ingest.
   def html_source
-    return mail.html_part.decoded if mail.html_part
-    return mail.decoded if mail.mime_type == "text/html"
+    @_html_source ||= source(mail.html_part, "text/html")
+  end
+
+  def text_source
+    @_text_source ||= source(mail.text_part, "text/plain")
+  end
+
+  def source(part, mime_type)
+    return decoded(part) if part
+    return decoded(mail) if mail.mime_type == mime_type
 
     ""
   end
 
-  def text_source
-    return mail.text_part.decoded if mail.text_part
-    return mail.decoded if mail.mime_type == "text/plain"
+  def decoded(part)
+    utf8(bytes(part))
+  end
 
-    ""
+  # Mail raises on a Content-Transfer-Encoding it does not recognise, and a
+  # mailer that writes a nonsense one has almost always sent the body as it
+  # stands — so the raw source is a better answer than losing the newsletter
+  # to a header no reader will ever see.
+  def bytes(part)
+    part.decoded
+  rescue Mail::UnknownEncodingType
+    part.body.raw_source
+  end
+
+  # Mail has nothing to transcode from when a part declares no charset, so it
+  # hands back ASCII-8BIT, and one Windows-1252 curly quote in that fails the
+  # INSERT — which loses the newsletter exactly as raising would. `tidy_bytes`
+  # recodes only the bad runs, so a body that is UTF-8 apart from one stray
+  # byte keeps its other accents instead of being transcoded whole.
+  #
+  # dup because Mail hands back the same raw_source object every call, and
+  # force_encoding would re-tag its string in place. The tag is needed:
+  # tidy_bytes finds nothing to repair while the string still says binary.
+  def utf8(source)
+    ActiveSupport::Multibyte::Unicode.tidy_bytes(
+      source.dup.force_encoding(Encoding::UTF_8)
+    )
   end
 
   # A plain-text newsletter still has to render as something. Wrapping its

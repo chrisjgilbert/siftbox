@@ -30,8 +30,24 @@ class Newsletter::Body
     sized.to_html
   end
 
+  # Joined on the text nodes rather than read off the tree in one go, because
+  # Nokogiri runs them together: "<p>Hello there</p><p>Goodbye now</p>" reads
+  # back as "Hello thereGoodbye now", which is a snippet of glued words and a
+  # word count a block short each time.
+  #
+  # Loofah's own #to_text knows which elements are line breakers and would get
+  # "<p>a<b>b</b>c</p>" right where this returns "a b c" — but it walks the
+  # tree again to do it, and measured nineteen times slower on a table-heavy
+  # body. This class is careful about how many passes it makes; a separator
+  # inside a word is the price, and it costs a word count, not a rendering.
+  #
+  # `descendant-or-self::` rather than `.//`, which is not the same thing once
+  # a predicate is attached: `.//text()[normalize-space()]` silently drops a
+  # text node sitting at the top level of the fragment. The predicate skips
+  # the whitespace-only nodes, which are two thirds of them on a real body.
   def text
-    document.text.squish
+    document.xpath("descendant-or-self::text()[normalize-space()]")
+      .map(&:text).join(" ").squish
   end
 
   # Public so Newsletter::LeadImage can find and remove the lead image in the

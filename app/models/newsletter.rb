@@ -13,6 +13,14 @@ class Newsletter < ApplicationRecord
 
   has_many_attached :inline_images
 
+  # SQLite stops reading a string literal at a NUL, so one stray byte fails
+  # the INSERT and loses the newsletter. Held here rather than where the mail
+  # is read, because it is a fact about storing a string and not about
+  # reading MIME — Newsletter::InlineImages and Newsletter::RemoteImages both
+  # rewrite body_html later without going near the mail reader.
+  normalizes :body_html, :sender_email, :sender_name, :snippet, :subject,
+    with: ->(value) { value.delete("\0") }
+
   validates :received_at, presence: true
 
   # Date headers carry whole seconds, so a batch send lands several
