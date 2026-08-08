@@ -319,4 +319,17 @@ RSpec.describe Newsletter::InboundMessage do
 
     expect(newsletter.body_html).to include("Ruby 3.4 is out")
   end
+
+  # tidy_bytes recodes only the runs that are not already UTF-8, so a body
+  # that is valid apart from one stray byte keeps the accents it got right.
+  # Transcoding the whole string from Windows-1252 would mojibake them.
+  it "repairs one stray byte without mangling the rest of the body" do
+    headers = "From: a@b.com\r\nSubject: s\r\nContent-Type: text/html\r\n\r\n"
+    body = "<p>caf\xC3\xA9 and \xE9</p>".b
+    mail = Mail.read_from_string(headers + body)
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.body_html).to include("café and é")
+  end
 end

@@ -151,4 +151,22 @@ RSpec.describe Newsletter do
 
     expect(Newsletter.without_lead_image).to eq([ without ])
   end
+
+  # SQLite stops reading a string literal at a NUL, so one stray byte fails
+  # the INSERT. Held on the record rather than in the mail reader, because
+  # Newsletter::InlineImages and Newsletter::RemoteImages both rewrite
+  # body_html later without going near it.
+  it "strips a null byte from a body rewritten after ingest" do
+    newsletter = create(:newsletter)
+
+    newsletter.update!(body_html: "<p>rewritten#{0.chr} by a job</p>")
+
+    expect(newsletter.reload.body_html).to eq("<p>rewritten by a job</p>")
+  end
+
+  it "strips a null byte from a header the mail reader never guarded" do
+    newsletter = create(:newsletter, subject: "Issue#{0.chr} 742")
+
+    expect(newsletter.reload.subject).to eq("Issue 742")
+  end
 end
