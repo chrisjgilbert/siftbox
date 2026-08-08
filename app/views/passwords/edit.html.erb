@@ -7,7 +7,11 @@
 
   <h1 class="signin__title"><%= t("passwords.edit.title") %></h1>
 
-  <%= form_with url: password_path(params[:token]), method: :put do |form| %>
+  <%# Hidden rather than in the URL, so the token stays out of the request
+      line the log records. %>
+  <%= form_with url: password_path, method: :put do |form| %>
+    <%= form.hidden_field :token, value: params[:token] %>
+
     <label class="signin__field">
       <span class="signin__label"><%= t("passwords.edit.password") %></span>
       <%= form.password_field :password,

@@ -26,7 +26,7 @@ class PasswordsController < ApplicationController
     if @user.reset_password(password_params)
       redirect_to new_session_url, notice: "Password has been reset."
     else
-      redirect_to edit_password_url(params[:token]), alert: "Passwords did not match."
+      redirect_to edit_password_url(token: params[:token]), alert: "Passwords did not match."
     end
   end
 

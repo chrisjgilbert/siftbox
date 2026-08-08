@@ -5,7 +5,10 @@ Rails.application.routes.draw do
     resource :read, only: :destroy, module: :newsletters
     resource :source, only: :show, module: :newsletters
   end
-  resources :passwords, param: :token, only: [ :new, :create, :edit, :update ]
+  # Singular, and the token travels as a parameter rather than a path
+  # segment: config.filter_parameters redacts query and body parameters and
+  # never the path, so a token routed as :id reaches the log verbatim.
+  resource :password, only: [ :new, :create, :edit, :update ]
   resource :session, only: [ :new, :create, :destroy ]
   resource :waitlist_signup, only: [ :new, :create ]
 
