@@ -69,6 +69,20 @@ RSpec.describe Newsletter::Source do
       .and include(Base64.strict_encode64("two"))
   end
 
+  # A logo in the header and again in the footer is one blob and two
+  # references. #html encodes on demand rather than up front, so this is the
+  # one shape that reads the same blob twice.
+  it "embeds an image the body references twice at both references" do
+    newsletter = newsletter_with_inline_image
+    path = newsletter.inline_images.blobs.first.then { |blob| newsletter.inline_image_path(blob) }
+    newsletter.update!(body_html: %(<img src="#{path}"><p>Hi</p><img src="#{path}">))
+
+    result = Newsletter::Source.new(newsletter).html
+
+    expect(result.scan("data:image/png;base64,#{Base64.strict_encode64('pretend-png-bytes')}").length)
+      .to eq(2)
+  end
+
   it "leaves no path behind when one blob id is a prefix of another" do
     newsletter = create(:newsletter)
     blobs = %w[one two].map do |name|
