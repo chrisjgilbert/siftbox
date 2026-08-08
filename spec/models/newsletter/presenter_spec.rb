@@ -181,6 +181,20 @@ RSpec.describe Newsletter::Presenter do
     expect(Newsletter::Presenter.new(newsletter).reading_time).to eq("3 min")
   end
 
+  # The data strip and the article share one Newsletter::Body, and #body
+  # removes the promoted image from the tree the word count then walks. The
+  # view renders the strip first, but nothing enforces that, and a reading
+  # time that depended on the order would be wrong on whichever render
+  # changed it.
+  it "estimates the same reading time after the body has been rendered" do
+    body = %(<img src="https://cdn.example/hero.png"><p>#{Array.new(600, 'word').join(' ')}</p>)
+    newsletter = build_stubbed(:newsletter, body_html: body)
+    presenter = Newsletter::Presenter.new(newsletter)
+    presenter.body
+
+    expect(presenter.reading_time).to eq("3 min")
+  end
+
   # The reader promotes the first image above the article, so leaving it in
   # the body would show it twice.
   it "leaves the promoted lead image out of the body" do

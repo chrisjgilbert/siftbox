@@ -63,7 +63,7 @@ class Newsletter::Presenter
   def reading_time
     I18n.t(
       "newsletters.show.reading_time",
-      minutes: Newsletter::ReadingTime.new(newsletter.body_html).minutes
+      minutes: Newsletter::ReadingTime.new(reading_body).minutes
     )
   end
 
@@ -110,12 +110,16 @@ class Newsletter::Presenter
     @_lead_image ||= Newsletter::LeadImage.new(reading_body)
   end
 
+  # Memoised because all three of the reader's body readers share it: the
+  # article, the promoted image, and the word count. Each one building its
+  # own cost a full Loofah pass over a body that runs to tens of kilobytes.
+  #
   # Built here rather than in the helper, because the view is handed a
   # presenter and .claude/rules/views.md keeps it that way. The sizes let the
   # browser reserve space for an image before it loads; without them every
   # image shifts the text the reader is already looking at.
   def reading_body
-    Newsletter::Body.new(
+    @_reading_body ||= Newsletter::Body.new(
       newsletter.body_html,
       dimensions: Newsletter::ImageDimensions.new(newsletter).to_h
     )
