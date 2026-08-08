@@ -26,26 +26,32 @@ RSpec.describe "Passwords" do
   # segments. Routed as :id the token reached production STDOUT verbatim on
   # every reset, and reset mail is the only way into an account this app has
   # no sign-up flow for — so anyone who could read a log line could take it.
-  it "keeps the reset token out of the path the log records" do
+  # Asserts the redaction is there rather than that the token is absent. A
+  # token ends in "==", which a URL carries as "%3D%3D", so `not_to
+  # include(token)` held whether or not anything was filtered — the spec
+  # passed with :token deleted from filter_parameters while the credential
+  # went to STDOUT in full.
+  it "redacts the reset token from the path the log records" do
     user = create(:user)
-    token = user.password_reset_token
 
-    get edit_password_path(token: token)
+    get edit_password_path(token: user.password_reset_token)
 
-    expect(request.filtered_path).not_to include(token)
+    expect(request.filtered_path).to eq("/password/edit?token=[FILTERED]")
   end
 
-  it "keeps the reset token out of the path the log records when setting a password" do
+  # The path cannot carry the token on this one — PATCH /password has no query
+  # string and no segment — so asserting on it proves nothing. The token
+  # travels in the body, and the body is what the log prints as Parameters.
+  it "redacts the reset token from the parameters the log records" do
     user = create(:user)
-    token = user.password_reset_token
 
     patch password_path, params: {
-      token: token,
+      token: user.password_reset_token,
       password: "a-long-enough-password",
       password_confirmation: "a-long-enough-password"
     }
 
-    expect(request.filtered_path).not_to include(token)
+    expect(request.filtered_parameters["token"]).to eq("[FILTERED]")
   end
 
   it "sets the password from a token sent in the body" do

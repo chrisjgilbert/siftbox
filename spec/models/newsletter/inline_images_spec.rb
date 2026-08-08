@@ -199,6 +199,29 @@ RSpec.describe Newsletter::InlineImages do
     expect(newsletter.inline_images).not_to be_attached
   end
 
+  # Mail recognises x-uuencode, so the encoding guard admits it, but hands
+  # back "" for anything that is not actually uuencoded. The empty blob was
+  # stored, attached, rewritten into the body and promoted to lead_image_url
+  # — one image quietly wrong everywhere it appears, which is the outcome
+  # this guard exists to prevent.
+  it "stores no blob for a part that decodes to nothing" do
+    mail = mail_with_inline_image_encoded("x-uuencode")
+    newsletter = create(:newsletter, body_html: mail.html_part.decoded)
+
+    Newsletter::InlineImages.new(newsletter, mail.all_parts).attach
+
+    expect(newsletter.inline_images).not_to be_attached
+  end
+
+  it "leaves the reference of a part that decodes to nothing alone" do
+    mail = mail_with_inline_image_encoded("x-uuencode")
+    newsletter = create(:newsletter, body_html: mail.html_part.decoded)
+
+    Newsletter::InlineImages.new(newsletter, mail.all_parts).attach
+
+    expect(newsletter.reload.body_html).to eq(%(<img src="cid:logo@b.com">))
+  end
+
   it "stores a part whose transfer encoding it recognises" do
     mail = mail_with_inline_image_encoded("base64")
     newsletter = create(:newsletter, body_html: mail.html_part.decoded)

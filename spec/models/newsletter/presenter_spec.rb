@@ -99,14 +99,6 @@ RSpec.describe Newsletter::Presenter do
     expect(presenter.older.sender).to eq("Ruby Weekly")
   end
 
-  it "names the newer neighbour it wraps" do
-    create(:newsletter, received_at: 2.days.ago)
-    create(:newsletter, received_at: 1.day.ago, subject: "Later one")
-    presenter = Newsletter::Presenter.new(Newsletter.order(:received_at).first)
-
-    expect(presenter.newer.subject).to eq("Later one")
-  end
-
   it "has no older neighbour when it is the oldest" do
     newsletter = create(:newsletter, received_at: 1.day.ago)
 

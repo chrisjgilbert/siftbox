@@ -31,8 +31,15 @@ class PasswordsController < ApplicationController
   end
 
   private
+    # :token is permitted and then dropped. It arrives in the same body since
+    # it moved out of the path, so leaving it unpermitted logs "Unpermitted
+    # parameter: :token" on every reset — noise on the one flow an operator is
+    # most likely to be watching — and raises outright anywhere
+    # action_on_unpermitted_parameters is set to :raise. It addresses the
+    # reader rather than describing the password, so it does not belong in
+    # the attributes either.
     def password_params
-      params.permit(:password, :password_confirmation)
+      params.permit(:token, :password, :password_confirmation).except(:token)
     end
 
     def set_user_by_token

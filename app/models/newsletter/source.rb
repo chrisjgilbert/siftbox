@@ -17,22 +17,13 @@ class Newsletter::Source
   # One pass over the body. A gsub per image would copy the whole markup
   # again each time, over a string already grown by every data URI before it.
   #
-  # Encoded inside the block rather than up front, so only the image being
-  # substituted is held alongside the result. Building every data URI first
-  # meant two copies of the whole payload at once — the hash and the string
-  # growing from it — and base64 is already four bytes for every three. A
-  # body referencing one blob twice reads it twice; that is a small image
-  # read again, against holding every image in the newsletter at once.
-  #
   # Longest path first: alternation is leftmost-first, so ".../images/7" ahead
   # of ".../images/71" matches inside it and appends the leftover "1" to the
   # previous image's base64 — two broken images from one collision.
   def html
-    return newsletter.body_html if embeddable.empty?
+    return newsletter.body_html if embedded.empty?
 
-    newsletter.body_html.gsub(longest_first(embeddable.keys)) do |found|
-      data_uri(embeddable.fetch(found))
-    end
+    newsletter.body_html.gsub(longest_first(embedded.keys)) { |found| embedded.fetch(found) }
   end
 
   private
@@ -43,15 +34,12 @@ class Newsletter::Source
     Regexp.union(paths.sort_by { |path| -path.length })
   end
 
-  # Blobs rather than the URIs built from them: an ActiveStorage::Blob is a
-  # row, and the bytes stay on disk until #html asks for them.
-  #
   # Same allowlist the serving controller applies. A part this app will not
   # render there should not be embedded here either.
-  def embeddable
-    @_embeddable ||= newsletter.inline_images.blobs
+  def embedded
+    @_embedded ||= newsletter.inline_images.blobs
       .select { |blob| Newsletter::InlineImages.displayable?(blob) }
-      .index_by { |blob| newsletter.inline_image_path(blob) }
+      .to_h { |blob| [ newsletter.inline_image_path(blob), data_uri(blob) ] }
   end
 
   def data_uri(blob)
