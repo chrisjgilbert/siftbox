@@ -88,6 +88,10 @@ class Newsletter::Presenter
     lead_image.alt
   end
 
+  def lead_image_caption
+    lead_image.caption
+  end
+
   def newer
     present(newsletter.newer)
   end
