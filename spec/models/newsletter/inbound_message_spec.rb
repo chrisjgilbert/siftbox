@@ -258,4 +258,65 @@ RSpec.describe Newsletter::InboundMessage do
 
     expect(newsletter.lead_image_url).to start_with("/newsletters/")
   end
+
+  # Mail raises on a Content-Transfer-Encoding it does not recognise, and
+  # anything raised here loses the newsletter for good — Action Mailbox marks
+  # the inbound email failed and incinerates the raw source after 30 days.
+  it "stores a newsletter whose part declares an unknown transfer encoding" do
+    mail = inbound_mail(html: "<p>Ruby 3.4 is out</p>")
+    mail.html_part.content_transfer_encoding = "bogus-encoding"
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.body_html).to include("Ruby 3.4 is out")
+  end
+
+  it "stores a plain-text newsletter whose part declares an unknown transfer encoding" do
+    mail = Mail.read_from_string(
+      "From: a@b.com\r\nSubject: s\r\nContent-Type: text/plain\r\n" \
+      "Content-Transfer-Encoding: bogus-encoding\r\n\r\nRuby 3.4 is out"
+    )
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.body_html).to include("Ruby 3.4 is out")
+  end
+
+  # Mail has nothing to transcode from when a part declares no charset, so it
+  # hands back ASCII-8BIT and one Windows-1252 curly quote fails the INSERT.
+  # Senders omit the charset constantly, which makes this the likeliest way to
+  # lose a newsletter outright.
+  it "stores a newsletter whose part declares no charset" do
+    mail = Mail.read_from_string(
+      "From: a@b.com\r\nSubject: s\r\nContent-Type: text/html\r\n\r\n" \
+      "<p>Caf\xE9 news</p>".b
+    )
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.body_html).to include("Café news")
+  end
+
+  it "reads an undeclared part that is already UTF-8 as UTF-8" do
+    mail = Mail.read_from_string(
+      "From: a@b.com\r\nSubject: s\r\nContent-Type: text/html\r\n\r\n" \
+      "<p>Café news</p>".dup.force_encoding(Encoding::BINARY)
+    )
+
+    newsletter = Newsletter::InboundMessage.new(mail: mail).save
+
+    expect(newsletter.body_html).to include("Café news")
+  end
+
+  # SQLite stops reading a string literal at a NUL byte, so one stray byte
+  # fails the INSERT and takes the newsletter with it.
+  it "stores a newsletter whose body carries a null byte" do
+    message = Newsletter::InboundMessage.new(
+      mail: inbound_mail(html: "<p>Ruby 3.4#{0.chr} is out</p>")
+    )
+
+    newsletter = message.save
+
+    expect(newsletter.body_html).to include("Ruby 3.4 is out")
+  end
 end

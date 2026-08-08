@@ -103,17 +103,47 @@ class Newsletter::InboundMessage
   end
 
   def html_source
-    return mail.html_part.decoded if mail.html_part
-    return mail.decoded if mail.mime_type == "text/html"
+    return decoded(mail.html_part) if mail.html_part
+    return decoded(mail) if mail.mime_type == "text/html"
 
     ""
   end
 
   def text_source
-    return mail.text_part.decoded if mail.text_part
-    return mail.decoded if mail.mime_type == "text/plain"
+    return decoded(mail.text_part) if mail.text_part
+    return decoded(mail) if mail.mime_type == "text/plain"
 
     ""
+  end
+
+  # Mail raises on a Content-Transfer-Encoding it does not recognise, and a
+  # mailer that writes a nonsense one has almost always sent the body as it
+  # stands — so the raw source is a better answer than losing the newsletter
+  # to a header no reader will ever see.
+  def decoded(part)
+    readable(part.decoded)
+  rescue Mail::UnknownEncodingType
+    readable(part.body.raw_source)
+  end
+
+  # Mail has nothing to transcode from when a part declares no charset, so it
+  # hands back ASCII-8BIT — and one Windows-1252 curly quote in that fails the
+  # INSERT, which loses the newsletter exactly as raising would. NUL goes with
+  # it: SQLite stops reading a string literal at one.
+  def readable(source)
+    utf8(source).delete("\0")
+  end
+
+  # UTF-8 first, because a part that declares nothing usually is one anyway.
+  # Windows-1252 second, because that is what the rest of them send, and it is
+  # the one guess where every byte maps to something.
+  def utf8(source)
+    found = source.dup.force_encoding(Encoding::UTF_8)
+    return found if found.valid_encoding?
+
+    source.encode(
+      Encoding::UTF_8, Encoding::WINDOWS_1252, invalid: :replace, undef: :replace
+    )
   end
 
   # A plain-text newsletter still has to render as something. Wrapping its

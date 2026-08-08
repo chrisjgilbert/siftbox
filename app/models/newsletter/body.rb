@@ -30,8 +30,13 @@ class Newsletter::Body
     sized.to_html
   end
 
+  # Joined on the text nodes rather than read off the tree in one go, because
+  # Nokogiri runs them together: "<p>Hello there</p><p>Goodbye now</p>" reads
+  # back as "Hello thereGoodbye now", which is a snippet of glued words and a
+  # word count a block short each time. A sentence broken up by inline markup
+  # gains a separator too, and squish flattens it again.
   def text
-    document.text.squish
+    document.xpath(".//text()").map(&:text).join(" ").squish
   end
 
   # Public so Newsletter::LeadImage can find and remove the lead image in the

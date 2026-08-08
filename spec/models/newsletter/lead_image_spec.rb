@@ -171,4 +171,15 @@ RSpec.describe Newsletter::LeadImage do
 
     expect(result).to eq("//cdn.example/hero.png")
   end
+
+  # Loofah percent-encodes the padding on its way through, so `src=" https://…"`
+  # arrives as "%20https://…" and no browser resolves it either. Refusing it
+  # here agrees with what the reader's own body renders.
+  it "passes over an image whose source is padded with whitespace" do
+    html = %(<img src=" https://cdn.example/padded.png "><img src="https://cdn.example/hero.png">)
+
+    result = lead_image_for(html).url
+
+    expect(result).to eq("https://cdn.example/hero.png")
+  end
 end
