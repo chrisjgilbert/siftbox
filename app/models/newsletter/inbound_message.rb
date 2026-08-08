@@ -52,6 +52,11 @@ class Newsletter::InboundMessage
         # the hotlinked images too. This one is what the feed shows until
         # then — the sender's own URL, which is where the body still points.
         stored.capture_lead_image
+
+        # Once, unlike the lead image: rewriting a reference changes an
+        # image's src and never the structure around it, so the shape the
+        # reader routes on cannot move afterwards.
+        stored.capture_shape
       end
     end
 

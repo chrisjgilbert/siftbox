@@ -164,6 +164,33 @@ RSpec.describe Newsletter do
     expect(newsletter.reload.body_html).to eq("<p>rewritten by a job</p>")
   end
 
+  # Read once and stored, because both screens that need it load no body: the
+  # feed never reads one, and the reader has to know which way to render
+  # before it decides what to parse.
+  it "records a story grid as a designed layout" do
+    grid = %(<table><tr>) +
+      %(<td><img src="https://cdn.example/one.png"><p>One</p></td>) +
+      %(<td><img src="https://cdn.example/two.png"><p>Two</p></td>) +
+      %(</tr></table>)
+    newsletter = create(:newsletter, body_html: grid)
+
+    newsletter.capture_shape
+
+    expect(newsletter.reload).to be_designed_layout
+  end
+
+  it "records prose as no designed layout" do
+    newsletter = create(:newsletter, body_html: "<h2>Wins</h2><p>Bootsnap.</p>")
+
+    newsletter.capture_shape
+
+    expect(newsletter.reload).not_to be_designed_layout
+  end
+
+  it "records a newsletter as prose until its shape is read" do
+    expect(create(:newsletter)).not_to be_designed_layout
+  end
+
   it "strips a null byte from a header the mail reader never guarded" do
     newsletter = create(:newsletter, subject: "Issue#{0.chr} 742")
 

@@ -10,8 +10,8 @@ class Newsletter::Presenter
     older: :row_date
   }.freeze
 
-  delegate :lead_image?, :lead_image_url, :read?, :snippet, :subject,
-    :to_param, to: :newsletter
+  delegate :designed_layout?, :lead_image?, :lead_image_url, :read?, :snippet,
+    :subject, :to_param, to: :newsletter
 
   def initialize(newsletter)
     @newsletter = newsletter
@@ -76,7 +76,22 @@ class Newsletter::Presenter
   # figure above it never renders, so the image leaves the page entirely.
   # Backfilling `lead_images:backfill` is what makes them agree; this makes
   # the reader correct whether or not that deploy step has run.
+  # Which body the reader renders. A newsletter laid out with tables loses its
+  # meaning when the columns stack, so it reads as it was sent, inside the
+  # same sandboxed frame "view original" uses. Everything else reads through
+  # the design system. Same shape as Feed::Row's, which picks a row template
+  # the same way.
+  def to_partial_path
+    return "newsletters/original_body" if designed_layout?
+
+    "newsletters/prose_body"
+  end
+
+  # Never above a designed newsletter: the frame below renders the sender's
+  # own header, so promoting an image out of it would show it twice.
   def promoted_image?
+    return false if designed_layout?
+
     lead_image.promotable? && promoted_image_url.present?
   end
 

@@ -1,0 +1,17 @@
+<%# A newsletter built out of layout tables loses its meaning when the reader
+    stacks the columns, so it reads as it was sent. Same frame and same
+    sandbox as "view original", which is the screen this is standing in for.
+
+    No allow-scripts and no allow-same-origin: the frame gets an opaque origin
+    and cannot reach the app's cookies or DOM. allow-popups and
+    allow-popups-to-escape-sandbox are what make the sender's links work. %>
+<div class="body body--original">
+  <p class="body__notice"><%= t("newsletters.show.designed_layout") %></p>
+
+  <iframe class="original__frame"
+          src="<%= newsletter_source_path(newsletter) %>"
+          sandbox="allow-popups allow-popups-to-escape-sandbox"
+          referrerpolicy="no-referrer"
+          loading="lazy"
+          title="<%= newsletter.subject %>"></iframe>
+</div>

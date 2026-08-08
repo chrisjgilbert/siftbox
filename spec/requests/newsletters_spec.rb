@@ -363,6 +363,56 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include(newsletter_source_path(newsletter))
   end
 
+  # A newsletter built out of layout tables loses its meaning when the reader
+  # stacks the columns, so the reader shows it as it arrived rather than
+  # showing it wrongly.
+  it "shows a designed newsletter in the sandboxed frame" do
+    sign_in
+    newsletter = create(:newsletter, designed_layout: true)
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include(newsletter_source_path(newsletter))
+  end
+
+  it "sandboxes the frame it shows a designed newsletter in" do
+    sign_in
+    newsletter = create(:newsletter, designed_layout: true)
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include(
+      %(sandbox="allow-popups allow-popups-to-escape-sandbox")
+    )
+  end
+
+  it "shows a written newsletter through the reader" do
+    sign_in
+    newsletter = create(:newsletter, designed_layout: false, body_html: "<p>Morning</p>")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).to include("<p>Morning</p>")
+  end
+
+  it "frames no source for a written newsletter" do
+    sign_in
+    newsletter = create(:newsletter, designed_layout: false, body_html: "<p>Morning</p>")
+
+    get newsletter_path(newsletter)
+
+    expect(response.body).not_to include("<iframe")
+  end
+
+  it "still marks a designed newsletter read when it is opened" do
+    sign_in
+    newsletter = create(:newsletter, designed_layout: true, read_at: nil)
+
+    get newsletter_path(newsletter)
+
+    expect(newsletter.reload).to be_read
+  end
+
   it "sandboxes the frame without allowing scripts or same-origin access" do
     sign_in
     newsletter = create(:newsletter)

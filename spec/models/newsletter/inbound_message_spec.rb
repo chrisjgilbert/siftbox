@@ -234,6 +234,30 @@ RSpec.describe Newsletter::InboundMessage do
     expect(newsletter.lead_image_url).to eq("https://cdn.example/hero.png")
   end
 
+  # Read at ingest and not again: rewriting a cid: or hotlinked reference
+  # changes an image's src and never the structure around it, so the answer
+  # cannot move the way lead_image_url does.
+  it "records the shape of a newsletter laid out as a grid" do
+    grid = %(<table><tr>) +
+      %(<td><img src="https://cdn.example/one.png"><p>One</p></td>) +
+      %(<td><img src="https://cdn.example/two.png"><p>Two</p></td>) +
+      %(</tr></table>)
+
+    newsletter = Newsletter::InboundMessage.new(mail: inbound_mail(html: grid)).save
+
+    expect(newsletter).to be_designed_layout
+  end
+
+  it "records the shape of a newsletter written as prose" do
+    message = Newsletter::InboundMessage.new(
+      mail: inbound_mail(html: "<h2>Wins</h2><p>Bootsnap is doing more.</p>")
+    )
+
+    newsletter = message.save
+
+    expect(newsletter).not_to be_designed_layout
+  end
+
   it "stores no lead image for a newsletter that carries none" do
     newsletter = Newsletter::InboundMessage.new(mail: inbound_mail).save
 

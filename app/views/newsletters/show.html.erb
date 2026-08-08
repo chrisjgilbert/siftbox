@@ -41,7 +41,7 @@
     </figure>
   <% end %>
 
-  <div class="body"><%= newsletter_body(@newsletter) %></div>
+  <%= render @newsletter.to_partial_path, newsletter: @newsletter %>
 </article>
 
 <nav class="neighbours">

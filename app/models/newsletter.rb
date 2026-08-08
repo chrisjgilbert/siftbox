@@ -51,6 +51,10 @@ class Newsletter < ApplicationRecord
     where(lead_image_url: "")
   end
 
+  def self.designed_layout
+    where(designed_layout: true)
+  end
+
   def read?
     read_at.present?
   end
@@ -64,6 +68,14 @@ class Newsletter < ApplicationRecord
   # run again: the same body gives the same answer.
   def capture_lead_image
     update!(lead_image_url: Newsletter::LeadImage.new(Newsletter::Body.new(body_html)).url)
+  end
+
+  # Stored rather than read per render, because the reader has to know which
+  # way to render before it decides what to parse — asking would mean parsing
+  # the body to find out whether to parse the body. Safe to run again, and
+  # read from the stored body the same way as the lead image.
+  def capture_shape
+    update!(designed_layout: Newsletter::Shape.new(Newsletter::Body.new(body_html)).designed?)
   end
 
   def mark_read

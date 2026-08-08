@@ -192,6 +192,32 @@ RSpec.describe Newsletter::Presenter do
     expect(presenter.reading_time).to eq("3 min")
   end
 
+  # Which body the reader renders. A laid-out newsletter reads as it was sent,
+  # in the sandboxed frame; a written one reads through the design system.
+  it "renders a designed newsletter as the sender sent it" do
+    newsletter = build_stubbed(:newsletter, designed_layout: true)
+
+    expect(Newsletter::Presenter.new(newsletter).to_partial_path)
+      .to eq("newsletters/original_body")
+  end
+
+  it "renders a written newsletter through the reader" do
+    newsletter = build_stubbed(:newsletter, designed_layout: false)
+
+    expect(Newsletter::Presenter.new(newsletter).to_partial_path)
+      .to eq("newsletters/prose_body")
+  end
+
+  it "promotes no image above a designed newsletter, which shows its own" do
+    newsletter = build_stubbed(
+      :newsletter,
+      designed_layout: true,
+      body_html: %(<img src="https://cdn.example/hero.png">)
+    )
+
+    expect(Newsletter::Presenter.new(newsletter)).not_to be_promoted_image
+  end
+
   # A story card's image belongs to the headline beside it. The reader shows
   # the grid as it stands rather than lifting one card's image out of it.
   it "promotes no image out of a two-column story grid" do

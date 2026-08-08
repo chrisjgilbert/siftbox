@@ -29,6 +29,7 @@ en:
       caption: Original HTML, sandboxed in an iframe. Styling is the sender's.
     show:
       back: Index
+      designed_layout: Laid out by the sender, shown as it arrived.
       issue: Issue %{number}
       kicker: "%{sender} / %{domain}"
       mark_unread: Mark unread

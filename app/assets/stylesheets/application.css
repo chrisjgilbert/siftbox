@@ -1030,6 +1030,24 @@ a {
 
 /* View original ----------------------------------------------------------- */
 
+/* The reader's body region when the newsletter was laid out rather than
+   written. Same frame as the "view original" screen, sat where the article
+   would be, so the masthead and the neighbours still read as siftbox. */
+.body--original {
+  max-width: none;
+}
+/* Scoped past `.body p`, which is a class and an element and would otherwise
+   win the margin back and shove the notice to the viewport edge. */
+.body--original .body__notice {
+  max-width: var(--measure);
+  margin: 0 auto 24px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
 .original {
   padding: 40px var(--gutter) 72px;
 }

@@ -113,17 +113,12 @@ class Newsletter::LeadImage
     enclosing_figure&.at_css("figcaption")&.text.to_s.strip
   end
 
-  # A row is a layout grid when more than one of its cells carries something.
-  # A row whose other cells hold spacers or nothing is a single column wearing
-  # a table, which every other newsletter is.
+  # Newsletter::Shape's own test, so a newsletter the reader is willing to
+  # render as prose is always one whose images it is willing to promote. A row
+  # whose other cells hold spacers or nothing is a single column wearing a
+  # table, which most newsletters are.
   def inside_grid_row?
-    node.ancestors("tr").any? { |row| filled_cells(row) > 1 }
-  end
-
-  def filled_cells(row)
-    row.element_children
-      .select { |child| %w[td th].include?(child.name) }
-      .count { |cell| cell.text.strip.present? || cell.css("img").any? }
+    node.ancestors("tr").any? { |row| Newsletter::Shape.grid_row?(row) }
   end
 
   # Memoised before #remainder detaches it, so #url answers the same either
