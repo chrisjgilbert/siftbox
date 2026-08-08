@@ -45,23 +45,60 @@ class Newsletter::LeadImage
 
   # Read rather than stored: the reader is the only screen that captions the
   # image, and it already has the body open.
+  #
+  # The figure's caption wins over alt text when there is one. A figcaption is
+  # what the sender wrote about this picture for someone looking at it; alt is
+  # written for someone who cannot see it, and is often the filename.
   def alt
     return "" if node.nil?
 
-    node["alt"].to_s
+    caption.presence || node["alt"].to_s
   end
 
   # #scrubbed rather than the document's own html: the body applies the stored
   # image sizes on its way out, and it does that over the tree this has just
   # taken the lead image out of.
+  #
+  # The whole figure goes, not just the image inside it. A <figure> exists to
+  # bind an image to its caption, so lifting the image above the article and
+  # leaving the figure behind orphans the caption mid-body, describing a
+  # picture that is no longer beside it.
   def remainder
-    node&.remove
+    (enclosing_figure || node)&.remove
     body.scrubbed
   end
 
   private
 
   attr_reader :body
+
+  # Memoised the same way as #node and for the same reason: #remainder
+  # detaches it, and both #alt and #remainder ask.
+  def enclosing_figure
+    return @_enclosing_figure if defined?(@_enclosing_figure)
+
+    @_enclosing_figure = figure_around(node)
+  end
+
+  # Only when the image is all the figure holds. A figure wrapped round more
+  # than its own image is the sender using it as a layout box, and removing it
+  # would take that other content out of the article with it.
+  def figure_around(image)
+    return if image.nil?
+    return unless image.parent.respond_to?(:name) && image.parent.name == "figure"
+
+    image.parent if only_the_image?(image.parent, image)
+  end
+
+  def only_the_image?(figure, image)
+    figure.element_children.all? do |child|
+      child == image || child.name == "figcaption"
+    end
+  end
+
+  def caption
+    enclosing_figure&.at_css("figcaption")&.text.to_s.strip
+  end
 
   # Memoised before #remainder detaches it, so #url answers the same either
   # side of the removal and no caller has to know the order. `defined?` rather

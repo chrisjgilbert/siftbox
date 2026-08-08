@@ -149,6 +149,57 @@ RSpec.describe Newsletter::LeadImage do
     expect(lead_image_for("<p>Morning</p>").alt).to eq("")
   end
 
+  # A <figure> exists to bind an image to its caption. Lifting the image out
+  # and leaving the figure behind orphans the caption in the middle of the
+  # article, describing a picture that is no longer next to it.
+  it "drops the figure the lead image was wrapped in" do
+    html = %(<figure><img src="https://cdn.example/hero.png">) +
+      %(<figcaption>Where the time goes</figcaption></figure><p>Morning</p>)
+
+    result = lead_image_for(html).remainder
+
+    expect(result).not_to include("Where the time goes")
+  end
+
+  it "keeps the rest of the body when the lead image was in a figure" do
+    html = %(<figure><img src="https://cdn.example/hero.png"></figure><p>Morning</p>)
+
+    result = lead_image_for(html).remainder
+
+    expect(result).to include("<p>Morning</p>")
+  end
+
+  # The caption travels with the image rather than being thrown away with the
+  # figure — it is what the sender wrote about this picture, and it is better
+  # than alt text, which is written for a screen reader rather than a reader.
+  it "captions the lead image with the figure's caption" do
+    html = %(<figure><img src="https://cdn.example/hero.png" alt="A flame graph">) +
+      %(<figcaption>Where the first 900ms goes</figcaption></figure>)
+
+    result = lead_image_for(html).alt
+
+    expect(result).to eq("Where the first 900ms goes")
+  end
+
+  it "falls back to the alt text when the figure carries no caption" do
+    html = %(<figure><img src="https://cdn.example/hero.png" alt="A flame graph"></figure>)
+
+    result = lead_image_for(html).alt
+
+    expect(result).to eq("A flame graph")
+  end
+
+  # A figure holding more than its image is the sender using it as a layout
+  # box. Removing it would take that other content out of the article.
+  it "keeps a figure that holds more than the lead image" do
+    html = %(<figure><img src="https://cdn.example/hero.png">) +
+      %(<p>A whole paragraph</p></figure>)
+
+    result = lead_image_for(html).remainder
+
+    expect(result).to include("A whole paragraph")
+  end
+
   # A sender who writes a relative URL points the reader's own browser back at
   # this app, with the session cookie attached. /newsletters/:id marks a
   # newsletter read on GET, so that reference must never reach a src.
