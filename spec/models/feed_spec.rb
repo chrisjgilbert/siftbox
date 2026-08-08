@@ -128,7 +128,7 @@ RSpec.describe Feed do
 
     create(:newsletter, received_at: 1.hour.ago, sender_name: "Ruby Weekly")
 
-    expect(Feed.new.groups.first.newsletters.first.title).to include("Ruby Weekly")
+    expect(Feed.new.groups.first.newsletters.first.sender).to eq("Ruby Weekly")
   end
 
   it "is empty when nothing has arrived" do

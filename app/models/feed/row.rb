@@ -7,7 +7,7 @@
 # blue when unread, grey when read.
 class Feed::Row
   delegate :lead_image?, :lead_image_url, :read?, :sender, :snippet, :subject,
-    :timestamp, :title, :to_param, to: :presenter
+    :timestamp, :to_param, to: :presenter
 
   def initialize(presenter, position)
     @presenter = presenter

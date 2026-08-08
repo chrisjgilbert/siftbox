@@ -26,13 +26,24 @@ class PasswordsController < ApplicationController
     if @user.reset_password(password_params)
       redirect_to new_session_url, notice: "Password has been reset."
     else
-      redirect_to edit_password_url(params[:token]), alert: "Passwords did not match."
+      redirect_to edit_password_url(token: params[:token]), alert: "Passwords did not match."
     end
   end
 
   private
+    # :token is permitted and then dropped. It arrives in the body now that it
+    # has moved out of the path, so leaving it unpermitted logged "Unpermitted
+    # parameter: :token" on every reset and would raise anywhere
+    # action_on_unpermitted_parameters is :raise. It addresses the reader
+    # rather than describing the password, so it does not belong in the
+    # attributes either.
+    #
+    # `_method` and `authenticity_token` still report unpermitted here, as
+    # they have since before the token moved: this permits at the top level,
+    # where a form's own fields sit alongside the model's. Scoping the form
+    # would silence them, and is a bigger change than a log line is worth.
     def password_params
-      params.permit(:password, :password_confirmation)
+      params.permit(:token, :password, :password_confirmation).except(:token)
     end
 
     def set_user_by_token

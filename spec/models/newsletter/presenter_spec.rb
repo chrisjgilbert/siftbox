@@ -78,27 +78,16 @@ RSpec.describe Newsletter::Presenter do
     end
   end
 
-  it "titles a neighbour with its sender and subject" do
-    newsletter = build_stubbed(
-      :newsletter,
-      sender_name: "Ruby Weekly",
-      subject: "Issue 742"
-    )
-
-    presenter = Newsletter::Presenter.new(newsletter)
-
-    expect(presenter.title).to eq("Ruby Weekly — Issue 742")
-  end
-
-  # `title` is the presenter's own, so this fails if the neighbour comes back
-  # unwrapped — which `subject` alone could not tell apart.
+  # `sender` is the presenter's own — a Newsletter carries sender_name and
+  # sender_email and nothing called `sender` — so this fails if the neighbour
+  # comes back unwrapped, which `subject` alone could not tell apart.
   it "wraps the newer neighbour in a presenter" do
     create(:newsletter, received_at: 2.days.ago)
     create(:newsletter, received_at: 1.day.ago, sender_name: "Ruby Weekly",
       subject: "Later one")
     presenter = Newsletter::Presenter.new(Newsletter.order(:received_at).first)
 
-    expect(presenter.newer.title).to eq("Ruby Weekly — Later one")
+    expect(presenter.newer.sender).to eq("Ruby Weekly")
   end
 
   it "wraps the older neighbour in a presenter" do
@@ -107,7 +96,7 @@ RSpec.describe Newsletter::Presenter do
     create(:newsletter, received_at: 1.day.ago)
     presenter = Newsletter::Presenter.new(Newsletter.order(:received_at).last)
 
-    expect(presenter.older.title).to eq("Ruby Weekly — Earlier one")
+    expect(presenter.older.sender).to eq("Ruby Weekly")
   end
 
   it "has no older neighbour when it is the oldest" do
@@ -179,6 +168,20 @@ RSpec.describe Newsletter::Presenter do
     newsletter = build_stubbed(:newsletter, body_html: body)
 
     expect(Newsletter::Presenter.new(newsletter).reading_time).to eq("3 min")
+  end
+
+  # The data strip and the article share one Newsletter::Body, and #body
+  # removes the promoted image from the tree the word count then walks. The
+  # view renders the strip first, but nothing enforces that, and a reading
+  # time that depended on the order would be wrong on whichever render
+  # changed it.
+  it "estimates the same reading time after the body has been rendered" do
+    body = %(<img src="https://cdn.example/hero.png"><p>#{Array.new(600, 'word').join(' ')}</p>)
+    newsletter = build_stubbed(:newsletter, body_html: body)
+    presenter = Newsletter::Presenter.new(newsletter)
+    presenter.body
+
+    expect(presenter.reading_time).to eq("3 min")
   end
 
   # The reader promotes the first image above the article, so leaving it in
