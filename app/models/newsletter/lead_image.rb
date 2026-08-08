@@ -55,6 +55,19 @@ class Newsletter::LeadImage
     caption.presence || node["alt"].to_s
   end
 
+  # Whether the reader should lift this image above the article, which is a
+  # different question from what the newsletter's first image is. A story
+  # card's image belongs to the headline beside it: lift one out of a
+  # two-column row and the other card's image ends up above the first card's
+  # headline, shifting every pairing in the grid by one.
+  #
+  # The feed asks #url and gets its thumbnail either way.
+  def promotable?
+    return false if node.nil?
+
+    !inside_grid_row?
+  end
+
   # #scrubbed rather than the document's own html: the body applies the stored
   # image sizes on its way out, and it does that over the tree this has just
   # taken the lead image out of.
@@ -64,7 +77,7 @@ class Newsletter::LeadImage
   # leaving the figure behind orphans the caption mid-body, describing a
   # picture that is no longer beside it.
   def remainder
-    (enclosing_figure || node)&.remove
+    (enclosing_figure || node)&.remove if promotable?
     body.scrubbed
   end
 
@@ -98,6 +111,19 @@ class Newsletter::LeadImage
 
   def caption
     enclosing_figure&.at_css("figcaption")&.text.to_s.strip
+  end
+
+  # A row is a layout grid when more than one of its cells carries something.
+  # A row whose other cells hold spacers or nothing is a single column wearing
+  # a table, which every other newsletter is.
+  def inside_grid_row?
+    node.ancestors("tr").any? { |row| filled_cells(row) > 1 }
+  end
+
+  def filled_cells(row)
+    row.element_children
+      .select { |child| %w[td th].include?(child.name) }
+      .count { |cell| cell.text.strip.present? || cell.css("img").any? }
   end
 
   # Memoised before #remainder detaches it, so #url answers the same either

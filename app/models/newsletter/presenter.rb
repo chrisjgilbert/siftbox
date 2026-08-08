@@ -77,7 +77,7 @@ class Newsletter::Presenter
   # Backfilling `lead_images:backfill` is what makes them agree; this makes
   # the reader correct whether or not that deploy step has run.
   def promoted_image?
-    promoted_image_url.present?
+    lead_image.promotable? && promoted_image_url.present?
   end
 
   def promoted_image_url

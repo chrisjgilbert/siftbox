@@ -200,6 +200,49 @@ RSpec.describe Newsletter::LeadImage do
     expect(result).to include("A whole paragraph")
   end
 
+  # A story card's image belongs to the headline beside it. Lifting one out
+  # of a two-column row leaves the other card's image sitting above the first
+  # card's headline — every pairing in the grid shifts by one.
+  def two_column_grid
+    %(<table><tr>) +
+      %(<td><img src="https://cdn.example/one.png"><p>Story one</p></td>) +
+      %(<td><img src="https://cdn.example/two.png"><p>Story two</p></td>) +
+      %(</tr></table>)
+  end
+
+  it "does not promote an image out of a row that holds more than one cell" do
+    expect(lead_image_for(two_column_grid)).not_to be_promotable
+  end
+
+  it "leaves both cards' images where they are when it will not promote" do
+    result = lead_image_for(two_column_grid).remainder
+
+    expect(result).to include("one.png").and include("two.png")
+  end
+
+  # The feed still wants a thumbnail. #url answers what the newsletter's
+  # first image is; #promotable? answers whether the reader should lift it.
+  it "still reads the first image of a grid for the feed" do
+    result = lead_image_for(two_column_grid).url
+
+    expect(result).to eq("https://cdn.example/one.png")
+  end
+
+  # A row whose other cells are spacers is a single column wearing a table.
+  it "promotes an image from a row whose other cell carries nothing" do
+    html = %(<table><tr><td><img src="https://cdn.example/hero.png"></td><td></td></tr></table>)
+
+    expect(lead_image_for(html)).to be_promotable
+  end
+
+  it "promotes an image that sits in no table at all" do
+    expect(lead_image_for(%(<img src="https://cdn.example/hero.png">))).to be_promotable
+  end
+
+  it "is not promotable when there is no image to promote" do
+    expect(lead_image_for("<p>Morning</p>")).not_to be_promotable
+  end
+
   # A sender who writes a relative URL points the reader's own browser back at
   # this app, with the session cookie attached. /newsletters/:id marks a
   # newsletter read on GET, so that reference must never reach a src.

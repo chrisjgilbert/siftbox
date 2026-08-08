@@ -192,6 +192,30 @@ RSpec.describe Newsletter::Presenter do
     expect(presenter.reading_time).to eq("3 min")
   end
 
+  # A story card's image belongs to the headline beside it. The reader shows
+  # the grid as it stands rather than lifting one card's image out of it.
+  it "promotes no image out of a two-column story grid" do
+    grid = %(<table><tr>) +
+      %(<td><img src="https://cdn.example/one.png"><p>Story one</p></td>) +
+      %(<td><img src="https://cdn.example/two.png"><p>Story two</p></td>) +
+      %(</tr></table>)
+    newsletter = build_stubbed(:newsletter, body_html: grid)
+
+    expect(Newsletter::Presenter.new(newsletter)).not_to be_promoted_image
+  end
+
+  it "keeps a story grid's images in the body when it promotes none of them" do
+    grid = %(<table><tr>) +
+      %(<td><img src="https://cdn.example/one.png"><p>Story one</p></td>) +
+      %(<td><img src="https://cdn.example/two.png"><p>Story two</p></td>) +
+      %(</tr></table>)
+    newsletter = build_stubbed(:newsletter, body_html: grid)
+
+    result = Newsletter::Presenter.new(newsletter).body
+
+    expect(result).to include("one.png").and include("two.png")
+  end
+
   # The reader promotes the first image above the article, so leaving it in
   # the body would show it twice.
   it "leaves the promoted lead image out of the body" do
