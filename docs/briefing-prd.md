@@ -1,13 +1,15 @@
 # PRD: Editions — a twice-daily briefing
 
-Draft for discussion. Decisions marked **Proposed** are recommendations with
-reasoning; decisions marked **Open** genuinely need the reader's call.
-Nothing here is implemented yet.
+v2, after review. The shape questions from the first draft are now decided:
+story-first editions, an edition-first app, the inbox demoted. What remains
+**Open** is marked. The app is a prototype with one user, so nothing here
+carries a backwards-compatibility burden.
 
 ## The idea
 
-siftbox today is a newsfeed: every newsletter arrives as a row, and the reader
-triages and reads each one individually. The model to move to is The Week:
+siftbox today is a newsfeed: every newsletter arrives as a row, and the
+reader triages and reads each one individually. The model to move to is The
+Week:
 
 > a news digest that does almost no original reporting. Editors read a large
 > volume of newspapers, magazines and websites, then condense that coverage
@@ -15,256 +17,279 @@ triages and reads each one individually. The model to move to is The Week:
 > spectrum.
 
 Here, the newsletters (and later, blogs via RSS) are the original reporting.
-An AI editor reads everything that arrived since the last edition and writes a
-short briefing. The briefing — not the feed — becomes the thing the reader
-opens.
+An AI editor reads everything that arrived since the last edition, works out
+what the stories are, and writes them up with attribution. The edition — not
+the inbox — is the app.
 
 Two editions a day:
 
-- **Morning edition**, ~07:00 Europe/London — covers the overnight window,
-  which is when US newsletters land.
-- **Afternoon edition**, ~15:00 Europe/London — covers the day so far,
+- **Morning edition**, 07:00 Europe/London — covers the overnight window,
+  when US newsletters land. Starting time; adjust once real editions show
+  the senders' actual rhythm.
+- **Afternoon edition**, 15:00 Europe/London — covers the day so far,
   catching US morning releases.
 
 ## Jobs to be done
 
 1. **Catch me up.** When I open the app, tell me what mattered across all my
-   newsletters since I last looked, without me triaging each email. This is
-   the core job; today it takes a scroll through the feed and N opens.
+   newsletters since I last looked, without me triaging each email.
 2. **Collapse duplicate coverage.** When four newsletters cover the same
-   story, I want one synthesis that notes the differing angles — read it
+   story, I want one write-up that notes the differing angles — read it
    once, not four times. This is where an edition beats per-email TL;DRs.
-3. **Route me to the good stuff.** The briefing is a router, not a
-   replacement. When something deserves a full read, the edition should say
-   so and link me straight into the reader.
-4. **Absorb my absence.** After a weekend away I want one catch-up read, not
-   scroll guilt over thirty unread rows.
-5. **Keep the archive honest.** The feed and reader stay as the source of
-   record. Every claim in an edition traces to an original I can open.
+3. **Route me to the good stuff.** The edition is a router, not a
+   replacement. When something deserves a full read, the edition links me to
+   the original.
+4. **Absorb my absence.** After a weekend away, one catch-up read — not
+   thirty unread rows.
+5. **Keep the archive honest.** Originals remain stored and reachable.
+   Every claim in an edition traces to a source I can open.
 
-## Product decisions
+## Decisions
 
-### Edition shape — **Proposed: hybrid**
+### Story-first editions
 
-Two sections per edition:
+The unit of an edition is the **story**, not the newsletter. The editor
+reads the window, extracts the stories each newsletter covers, clusters
+them across sources, and writes each one up with attribution — "Money Stuff
+and The Diff both read the Figma S-1; Levine focuses on…". A newsletter
+that covers five topics contributes to five stories; five newsletters on
+one topic collapse into one.
 
-1. **Lead stories** (roughly 2–4): themes the editor found across sources,
-   each a short synthesised paragraph with attribution — "Money Stuff and
-   The Diff both read the Figma S-1; Levine focuses on…". This is the
-   Week-style editorial value.
-2. **In brief**: one line per newsletter not already cited in a lead story,
-   in received order, each linking to the reader.
+Presentation has two tiers, but they are the same thing at different
+lengths:
 
-Why not story-first everywhere: pure cross-source clustering is the hardest
-prompt to get right, and on quiet days most newsletters share no story — the
-structure needs a home for singletons anyway. Why not source-first TL;DRs
-only: that is a compressed feed, not an edition, and gives up job 2.
+- **Lead stories**: the day's few significant threads, a paragraph each.
+- **Briefly**: minor stories in a line or two. A singleton story from one
+  source lands here naturally — so quiet days degrade gracefully rather
+  than forcing fake syntheses.
 
-### Completeness — **Proposed: cover everything**
+This is the hardest version of the prompt problem, chosen deliberately.
+The fallback, if testing shows clustering isn't reliable enough, is the
+hybrid shape from v1 of this document (synthesised leads over per-source
+briefs). See "Proving the bet".
 
-Every newsletter in the edition's window appears somewhere — cited in a lead
-story or listed in brief. This is a hard validation on the generated output,
-not a hope about the prompt. The briefing can only replace feed triage if
-missing something is impossible.
+### Completeness is a hard guarantee
 
-### Entrypoint — **Proposed: the edition is home**
+Every newsletter in the window is cited by at least one story. This is
+validated mechanically against the model's output — regenerate on failure —
+not hoped for in the prompt. It was important before; now that the edition
+is the *only* triage surface (below), it is load-bearing. A dull promo
+email becomes a one-line singleton in Briefly; that is the floor that makes
+"nothing can be missed" true.
 
-Signed-in root shows the latest edition. The feed remains intact one click
-away as the archive. Rationale: if the edition is good, it is what the reader
-wants first; if it is not good, side-by-side placement would just let it rot
-politely. Making it home forces the quality question early — right for a
-one-person prototype.
+### The edition is the app; the inbox is demoted
 
-### Edition windows — **Proposed: high-water mark, not fixed windows**
+- Signed-in root serves the latest edition. Edition archive at
+  `resources :editions, only: [:index, :show]`.
+- Story citations link to the **original** — the existing in-app original
+  page (sandboxed iframe of the sender's HTML). Extracting the
+  newsletter's own "view in browser" URL and linking out to the live web
+  version is a possible later refinement.
+- **Read state is retired.** No unread counts, no read filter, no
+  mark-as-read — triage is the edition's job now. Drop the UI and the
+  `reads` route; the column can linger or go in a cleanup migration.
+- The feed survives only as a plain **archive** of originals (a list, by
+  day, as now, minus read state). It earns its place three ways: verifying
+  ingestion ("did this morning's Money Stuff arrive?"), finding something
+  weeks later outside any edition, and auditing the editor ("what did the
+  edition have to work with?"). If living with editions shows nobody
+  visits it, delete it then — cheap to keep, cheap to kill.
 
-An edition covers newsletters received after the previous edition's cutoff,
-up to the moment it is composed. No fixed 15:00→07:00 ranges: with fixed
-windows, a failed run or a late-arriving email falls into a gap and is never
-covered. With a watermark, a newsletter is covered by exactly one edition,
-whichever runs next. `received_at` (already indexed) is the clock.
+### Windows: high-water mark, not fixed ranges
 
-### Empty windows — **Proposed: skip silently**
+An edition covers newsletters received after the previous edition's
+cutoff, up to the moment composition starts. No fixed 15:00→07:00 ranges:
+with fixed windows, a failed run or an email landing at 07:02 falls into a
+gap and is never covered. With a watermark, every newsletter belongs to
+exactly one edition, whichever runs next. `received_at` (already indexed)
+is the clock; anything arriving mid-composition belongs to the next
+edition.
 
-No newsletters since the last cutoff → no edition. A "nothing arrived"
-edition is noise, and the watermark means the next real edition still covers
-everything. The home page shows the most recent edition regardless of age,
-with its timestamp doing the honesty work.
+### Empty windows skip silently
 
-### Read state — **Open**
+No newsletters since the last cutoff → no edition. The home page shows the
+most recent edition regardless of age, its timestamp doing the honesty
+work.
 
-Options:
+### Masthead and numbering
 
-- **a) Decoupled (lean this way).** Reading an edition does not touch
-  `read_at`. Clicking through to a newsletter marks it read as today. Unread
-  in the feed keeps meaning "original not opened", and the feed's unread
-  filter becomes "what the edition summarised but I never opened" — arguably
-  more useful, arguably nagging.
-- **b) Edition read = all covered newsletters read.** The edition is the
-  read; the feed's unread count drops to zero twice a day. Cleaner if the
-  edition truly replaces triage, but destroys "which originals did I
-  actually read".
+Editions number their own sequence from **No. 1**, independent of the
+feed's issue numbering. "Morning edition · No. 1" — JetBrains Mono's job,
+per `docs/siftbox-redesign.md`.
 
-Depends on how the reader wants unread to feel after living with editions
-for a week. Ship (a), revisit.
+### Delivery: web only for v1
 
-### Delivery — **Proposed: web only for v1**
-
-Editions live in the app. Email delivery of the edition (the digest arriving
-where the newsletters would have) and a private RSS feed of editions are both
-natural later steps — noted under Future, not v1.
+Editions live in the app. Emailing the edition to the reader's own address
+and a private RSS feed of editions are natural later steps — Future, not
+v1.
 
 ## Requirements
 
 ### Functional
 
-- Compose an edition at ~07:00 and ~15:00 Europe/London on a schedule
-  (Solid Queue recurring task; DST handled by scheduling in the zone, not
-  UTC). Per `.claude/rules/review.md`: a scheduled task is a deploy step and
-  must be called out in the deploy docs.
-- An edition records: its slot (morning/afternoon), when it was published,
-  the window it covered, its stories and briefs, and which newsletters each
-  cites.
-- Every newsletter in the window is cited at least once (validated
-  mechanically against the model output; regenerate on failure).
-- Edition page renders lead stories with attribution links into the reader,
-  then the in-brief list. Design follows `docs/siftbox-redesign.md` — the
-  masthead ("Morning edition · No. 41") is a natural JetBrains Mono job.
-- Editions are browsable as an archive: `resources :editions, only:
-  [:index, :show]`.
-- Signed-in root serves the latest edition; the feed moves to its existing
-  `/newsletters` path with navigation between the two.
-- A failed run retries; a morning edition composed late is still the morning
-  edition (labelled by slot, not by wall clock).
-- One edition per slot per day, enforced with a unique index.
+- Compose an edition at 07:00 and 15:00 Europe/London on a schedule (Solid
+  Queue recurring task; scheduled in the zone so DST never moves it). Per
+  `.claude/rules/review.md`: a scheduled task is a deploy step and must be
+  called out in the deploy docs.
+- An edition records: slot (morning/afternoon), published time, the window
+  covered, its stories in order, and which newsletters each story cites.
+- Every newsletter in the window cited at least once, mechanically
+  validated; regenerate on failure, fail loudly (log) if it won't converge.
+- Edition page: masthead, lead stories with attribution links to
+  originals, then Briefly. One edition per slot per day, unique index.
+- Root serves the latest edition; archive of editions; archive of
+  originals at `/newsletters` stripped of read state.
+- A failed run retries; a morning edition composed late is still the
+  morning edition (labelled by slot, not wall clock).
 
 ### AI editor
 
-- Input: per-newsletter plain text extracted from `body_html` (the reader
-  pipeline already understands these bodies; strip to text, cap per-source
-  length), plus sender, subject, received time.
-- Output: structured JSON — lead stories (headline, summary, cited
-  newsletter ids) and briefs (newsletter id, one-liner) — never free-form
-  HTML. Rendered through normal ERB escaping; the model's words get no
-  `html_safe` path, ever (`.claude/rules/security.md`).
-- Store alongside the edition: model name, prompt version, token counts,
-  and the raw response — enough to debug a bad edition and to regenerate
-  after a prompt change without re-fetching anything.
-- Editorial constraints in the prompt: summarise only what the sources say;
-  attribute claims to their newsletter; note disagreement between sources
-  rather than resolving it; no outside knowledge or invented links.
+- Input: per-newsletter plain text extracted from `body_html` — stripped
+  of newsletter chrome (subscribe prompts, "read in app", social icons,
+  footers; the ingest pipeline already scrubs tracking pixels) and capped
+  per source — plus sender, subject, received time.
+- Output: structured JSON — stories with headline, body, tier, and cited
+  newsletter ids — never free-form HTML. Rendered through normal ERB
+  escaping; the model's words get no `html_safe` path, ever
+  (`.claude/rules/security.md`).
+- Stored alongside the edition: model name, prompt version, token counts,
+  raw response — enough to debug a bad edition and regenerate after a
+  prompt change without re-fetching anything.
+- Editorial constraints in the prompt: report only what the sources say;
+  attribute claims to their newsletter; where sources disagree, say so
+  rather than resolving it; no outside knowledge, no invented links;
+  cluster before writing — one story per underlying event, however many
+  sources touched it.
 - Cost envelope: ~10–20 newsletters × a few thousand tokens, twice daily —
   tens of cents a day on a mid-tier model. Not a constraint at one reader;
-  worth a line item in any public-release thinking.
+  a line item in any public-release thinking.
 
 ### Non-functional
 
 - Composition is a background job; nothing in the request path calls the
   model. A reader mid-morning sees the last published edition, never a
   spinner.
-- The API key lives in credentials. Failures alert via logs for now (it is
-  one reader who will notice a missing edition anyway).
+- API key in credentials. Failures surface in logs; one reader will notice
+  a missing edition anyway.
 - Tests stub the model client with a fake (`.claude/rules/testing.md`:
   prefer a fake object over stubbing HTTP; WebMock blocks the rest).
+
+## Proving the bet
+
+Story-first is chosen to be tested, and there is real data to test on:
+weeks of already-ingested newsletters. **Milestone 0, before any schedule
+or UI:** a dev task that composes an edition from a chosen historical
+window and dumps it for reading. Judge, by hand, over several windows:
+
+- **Clustering** — did one event become one story? No duplicates, no
+  false merges of unrelated items?
+- **Attribution** — is every claim traceable to the cited newsletter, and
+  accurate against it?
+- **Coverage** — does the citation validation pass, and does Briefly read
+  as useful lines rather than filler?
+- **Selection** — are the leads the pieces the reader would have picked?
+
+Iterate the prompt against real windows until these hold, then build the
+schedule and pages around it. If clustering won't converge, fall back to
+the v1 hybrid shape — the schema below supports either.
 
 ## Data model sketch
 
 For discussion, not a migration:
 
-- `editions` — `slot` (morning/afternoon), `published_at`,
-  `window_started_at`, `window_ended_at`, `model`, `prompt_version`,
-  `raw_response`. Unique on `(published_on-derived date, slot)`.
-- `edition_stories` — `edition_id`, `position`, `headline`, `body` (plain
-  text/markdown). A brief is a story with one citation and no headline, or a
-  separate `edition_briefs` table — leaning separate tables, since the two
-  sections render and validate differently.
-- `edition_citations` — `story/brief → newsletter_id`. This is the joint
-  that later admits RSS items: when blogs arrive, citations point at a
-  second source type. Not building polymorphism now (`.claude/rules/ruby.md`:
-  no code for functionality that doesn't exist) — but the citation table is
-  the seam, and it's cheap to keep it a real table rather than embedding
-  newsletter ids in story text.
+- `editions` — `slot`, `published_at`, `window_started_at`,
+  `window_ended_at`, `model`, `prompt_version`, `raw_response`. Unique on
+  (date of publication, slot).
+- `edition_stories` — `edition_id`, `position`, `tier` (lead/brief),
+  `headline`, `body` (plain text/markdown).
+- `edition_citations` — `edition_story_id`, `newsletter_id`. The joint
+  where RSS items later plug in as a second source type — not building
+  polymorphism now (`.claude/rules/ruby.md`: no code for functionality
+  that doesn't exist), but keeping citations a real table leaves the seam.
 - Domain objects per `.claude/rules/models.md`: `Edition`,
-  `Edition::Editor` (a noun — it composes an edition from a window of
-  newsletters, `#compose`), `Edition::PublishJob`. No `*Service`.
+  `Edition::Editor` (a noun — composes an edition from a window,
+  `#compose`), `Edition::PublishJob`. No `*Service`.
 
 ## Edge cases
 
-- **Digest-of-digests newsletters** (TLDR, Benedict's Newsletter): already
-  summaries of many links. Summarising them flattens badly. The prompt
-  should treat link-list newsletters as a menu — pull the 2–3 most notable
-  items — rather than summarising the summary. May eventually want a
-  per-sender hint.
-- **Huge bodies**: bodies run to hundreds of KB of HTML. Text extraction
-  plus a per-source cap keeps the prompt bounded; if a window is still too
-  large (catch-up after downtime), chunk by source and compose in two
-  passes.
-- **Same story, five sources**: the core value case — must cluster, not
-  repeat five times.
+- **Huge bodies**: newsletters run to hundreds of KB of HTML. Text
+  extraction plus a per-source cap bounds the prompt; a catch-up window
+  after downtime that still overflows gets chunked by source and composed
+  in two passes.
+- **Link-roundup newsletters** (e.g. AINews): less a special case under
+  story-first than under summarisation — their items are simply more
+  story candidates, and notable ones cluster with other sources' coverage.
+  Whether their long tails pollute Briefly is a Milestone 0 observation.
+  Per-sender handling hints are deferred (see Later).
 - **Non-newsletter mail** to the ingest address (receipts, spam): today it
-  lands in the feed; in an edition it would be summarised deadpan. Existing
-  problem made louder; out of scope here but worth a note.
-- **A newsletter arriving mid-composition**: the watermark is the moment
-  composition starts; anything later belongs to the next edition.
+  lands in the feed; in an edition it becomes a deadpan Briefly line. An
+  existing problem made louder; out of scope here.
 - **Model hallucination**: structured output + citation validation + the
   original one click away. The edition never needs to be trusted further
   than its links.
-- **Prompt iteration**: regenerating a published edition overwrites history.
-  Proposed: editions are immutable once published; prompt changes apply
-  from the next edition. A dev-only regenerate task is fine.
+- **Prompt iteration**: editions are immutable once published; prompt
+  changes apply from the next edition. A dev-only regenerate task is fine
+  (and is Milestone 0's tool anyway).
 - **DST**: schedule in Europe/London so 07:00 means 07:00 all year.
 
 ## Assumptions
 
 - One reader, one global timeline — editions, like `Feed`, are unscoped
   behind the authentication gate. Multi-user means per-user editions, N×
-  model cost, and per-user schedules; acknowledged and deferred, same as
-  the README's note on multiple users.
+  model cost, per-user schedules; acknowledged and deferred, as in the
+  README's note on multiple users.
 - English-language sources.
-- The Anthropic API (or equivalent) is reachable from production and its
-  latency (tens of seconds for a big window) is fine in a background job.
-- Twice-daily cadence is a starting guess. The mechanism (slots +
-  watermark) doesn't care if it becomes once daily or thrice.
+- The model API is reachable from production; latency of tens of seconds
+  is fine in a background job.
+- Twice-daily is a starting cadence. Slots + watermark don't care if it
+  becomes once or thrice daily.
 
 ## Non-goals for v1
 
-- Blogs / RSS ingestion (the citation seam is left ready; see Future).
+- Blogs / RSS ingestion (the citation seam is left ready).
 - Email or RSS delivery of editions.
+- Per-sender prompt hints, including special handling for link-roundup
+  newsletters.
 - Personalisation, feedback ("more like this"), topic weighting.
 - Search, audio, multi-user, public sign-up.
-- Any change to ingestion or the reader.
+- Any change to ingestion.
 
 ## Success measures
 
 Honest ones, at n=1:
 
-- The reader opens the edition first, and the feed stops being the daily
-  entrypoint within a couple of weeks.
-- Click-throughs from editions feel right — the editor routes to the pieces
-  the reader would have picked anyway.
-- Time-to-caught-up drops from "scroll and open each" to one read.
+- Milestone 0's four checks (clustering, attribution, coverage,
+  selection) hold across several real windows before launch, and keep
+  holding after.
+- The edition is the only surface the reader needs day to day; the
+  originals archive is visited for reference, not for triage.
+- Click-throughs feel right — the editor routes to the pieces the reader
+  would have picked anyway.
 - A month in, no edition has misattributed or invented a claim that the
   citation links exposed.
 
-## Future
+## Later
 
+- **Per-sender hints** for link-roundup newsletters, if Milestone 0 shows
+  they need different treatment.
+- **Canonical web links**: extract the sender's own "view in browser" URL
+  and offer the live web original alongside the stored one.
 - **RSS/blog sources**: a second ingest path writing a sibling of
-  `Newsletter`; citations gain a second source type; the editor's input
-  gains a source kind. The edition model shouldn't need to change shape.
-- **Email the edition** to the reader's own address — the digest arrives
-  where the newsletters would have.
+  `Newsletter`; citations gain a second source type; the edition's shape
+  doesn't change.
+- **Email the edition** to the reader's own address.
 - **Private RSS feed of editions** for reader apps.
-- **Weekend edition**: one Saturday edition covering the week's long-form
+- **Weekend edition**: one Saturday edition surfacing the week's long-form
   pieces worth a slow read — the most Week-like artefact of all.
-- **Public release**: per-user sources and editions, cost controls, and the
-  waitlist finally gets something to graduate into.
+- **Public release**: per-user sources and editions, cost controls, and
+  the waitlist finally gets something to graduate into.
 
 ## Open questions
 
-1. Read-state coupling (see above) — decoupled or edition-marks-read?
-2. Should the in-brief line for a link-list newsletter be its top items or
-   a one-line gist? (Affects prompt, not schema.)
-3. Morning at 07:00 — before or after the US west coast evening sends
-   (~01:00–03:00 UK)? 07:00 catches them; confirm that matches the actual
-   senders' rhythm once real data is in.
-4. Does the edition number continue the feed's issue numbering or start its
-   own ("No. 1")? Cosmetic, but mastheads are the product's personality.
+1. How much of the current feed/reader survives the demotion? Proposed:
+   the archive list and the original page stay (citations point at the
+   latter); the clean reader stays for archive browsing; read state and
+   its routes go. Confirm at build time.
+2. Should the editor decide how many leads an edition has (within bounds),
+   or is the count fixed? Proposed: editor's judgement, bounded 2–5 — a
+   thin news day shouldn't be padded to a quota.
