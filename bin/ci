@@ -14,3 +14,9 @@ bin/brakeman --quiet --no-pager
 
 echo "== bundle audit =="
 bundle exec bundle-audit check --update
+
+# The workflow's fifth job, and the only one that boots the app outside the
+# suite — so it is where a Gemfile change can take the whole process down
+# while every other gate stays green.
+echo "== importmap audit =="
+bin/importmap audit

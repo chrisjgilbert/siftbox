@@ -37,8 +37,28 @@ gem "kamal", require: false
 # Add HTTP asset caching/compression and X-Sendfile acceleration to Puma [https://github.com/basecamp/thruster/]
 gem "thruster", require: false
 
-# Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-gem "image_processing", "~> 1.2"
+# What Active Storage's image analyser needs. See Newsletter::ImageDimensions
+# for why the app wants the sizes it measures. Named directly because nothing
+# else brings it: this app builds no variants, so it does not bundle
+# image_processing, and Active Storage logs one warning a boot saying so.
+#
+# Do not take that warning's second suggestion. `variant_processor = :disabled`
+# silences it and silently stops every image being measured — the Vips
+# analyser only accepts a blob while the processor is :vips.
+#
+# 2.2.1 because Active Storage raises unless ruby-vips answers
+# `block_untrusted`, added in that version, and the raise is a bare
+# RuntimeError its LoadError handler does not catch. Nothing else in the graph
+# sets a floor, so a resolution below it installs cleanly and then cannot
+# boot. The control is live here rather than a formality: this app measures
+# images that arrive by email and images it fetches from the web.
+#
+# require: false so Bundler does not require it at boot. Active Storage
+# requires it first and inside a rescue, and carries on without sizes when
+# libvips is missing; Bundler's require is unguarded and would take the
+# process down instead — which is what happened to the JavaScript audit job,
+# whose runner has no reason to carry the library.
+gem "ruby-vips", ">= 2.2.1", "< 3", require: false
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem

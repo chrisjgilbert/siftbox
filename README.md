@@ -12,6 +12,11 @@ shows the sender's HTML in a sandboxed iframe.
 
 ## Getting started
 
+Needs libvips 8.13 or later on the machine — `brew install vips`, or
+`apt-get install libvips`. Active Storage measures every stored image with it,
+and without it the reader renders images with no width or height and one spec
+fails. See `Newsletter::ImageDimensions` for what that costs the page.
+
 ```bash
 bin/setup
 bin/rails credentials:edit   # add the reader block below

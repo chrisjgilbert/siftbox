@@ -195,21 +195,28 @@ There is no sign-up flow, by design. This is the only account.
 
 ### Measure the images already stored
 
-Run once, on the first deploy that carries `image_processing`:
+Run once, on the first deploy where Active Storage can reach libvips:
 
 ```bash
 bin/kamal app exec --reuse "bin/rails images:analyze"
 ```
 
-Active Storage measures an image with libvips, which the app had no gem for
-until now, so every blob stored before this deploy is flagged analysed and
-carries no width or height. Rails will not look at an analysed blob again, so
-nothing re-measures them on its own and the reader keeps the shifting text the
-sizes exist to stop. Anything attached after this deploy is measured by its
+Active Storage measures an image with libvips, so every blob stored before it
+could do that is flagged analysed and carries no width or height. Rails will
+not look at an analysed blob again, so nothing re-measures them on its own and
+the reader keeps the shifting text the sizes exist to stop. Anything attached after this deploy is measured by its
 own `AnalyzeJob` and needs no task.
 
 Safe to run more than once: a blob that already has a width is skipped, and a
 blob libvips cannot read is reported and left as it is.
+
+The base image needs libvips 8.13 or later. Active Storage refuses to run
+against anything older — it cannot switch off libvips's unfuzzed loaders
+there, and this app measures images that arrived by email — and it refuses by
+raising at boot rather than degrading. Nothing pins the version: the Dockerfile
+and CI both install whatever the distro carries, which is 8.14 on bookworm. A
+base image change is the thing that would break it, and it would break as a
+crash loop rather than as missing image sizes.
 
 ## 7. The egress rule — Hetzner specifics
 
