@@ -1,9 +1,11 @@
 # PRD: Editions — a twice-daily briefing
 
-v2, after review. The shape questions from the first draft are now decided:
-story-first editions, an edition-first app, the inbox demoted. What remains
-**Open** is marked. The app is a prototype with one user, so nothing here
-carries a backwards-compatibility burden.
+v3, after review. Decided: story-first editions, an edition-first app, the
+inbox demoted, the clean reader removed — content is consumed either as the
+edition or as the original, nothing between — and a holding pen for
+subscription-confirmation emails. What remains **Open** is marked. The app
+is a prototype with one user, so nothing here carries a
+backwards-compatibility burden.
 
 ## The idea
 
@@ -43,6 +45,9 @@ Two editions a day:
    thirty unread rows.
 5. **Keep the archive honest.** Originals remain stored and reachable.
    Every claim in an edition traces to a source I can open.
+6. **Let the roster grow.** When I subscribe to something new, the
+   double-opt-in confirmation must reach me quickly and be clickable —
+   and must never be written up as news.
 
 ## Decisions
 
@@ -70,21 +75,22 @@ briefs). See "Proving the bet".
 
 ### Completeness is a hard guarantee
 
-Every newsletter in the window is cited by at least one story. This is
-validated mechanically against the model's output — regenerate on failure —
-not hoped for in the prompt. It was important before; now that the edition
-is the *only* triage surface (below), it is load-bearing. A dull promo
-email becomes a one-line singleton in Briefly; that is the floor that makes
-"nothing can be missed" true.
+Every **content** newsletter in the window is cited by at least one story.
+This is validated mechanically against the model's output — regenerate on
+failure — not hoped for in the prompt. It was important before; now that
+the edition is the *only* triage surface (below), it is load-bearing. A
+dull promo email becomes a one-line singleton in Briefly; that is the
+floor that makes "nothing can be missed" true.
+
+"Content" has exactly one carve-out: mail held as a subscription
+confirmation (below). The carve-out is a stored flag the window query
+reads — never a prompt instruction, which would be unverifiable and would
+break the validation.
 
 ### The edition is the app; the inbox is demoted
 
 - Signed-in root serves the latest edition. Edition archive at
   `resources :editions, only: [:index, :show]`.
-- Story citations link to the **original** — the existing in-app original
-  page (sandboxed iframe of the sender's HTML). Extracting the
-  newsletter's own "view in browser" URL and linking out to the live web
-  version is a possible later refinement.
 - **Read state is retired.** No unread counts, no read filter, no
   mark-as-read — triage is the edition's job now. Drop the UI and the
   `reads` route; the column can linger or go in a cleanup migration.
@@ -94,6 +100,65 @@ email becomes a one-line singleton in Briefly; that is the floor that makes
   weeks later outside any edition, and auditing the editor ("what did the
   edition have to work with?"). If living with editions shows nobody
   visits it, delete it then — cheap to keep, cheap to kill.
+
+### Two ways to read; the clean reader goes
+
+The reader — re-rendering the sender's HTML in the app's own typography —
+has not worked in practice: email HTML is hostile to re-rendering, and the
+result faithfully reproduces its debris (icon-only links, "read in app"
+chrome, preheader fragments) as broken pages. Remove it. Content is
+consumed exactly two ways:
+
+1. **The edition** — the app's own words in the app's own styling. Never
+   the sender's content re-dressed.
+2. **The original** — the sender's HTML untouched, in the existing
+   sandboxed iframe page. Linking out to the sender's own "view in
+   browser" web version is a later refinement (see Later).
+
+Story citations and archive rows share the one destination: the original
+page. What the reader leaves behind is repointed, not deleted: the
+image-serving and scrubbing pipeline stays (it feeds the original frame),
+and HTML-to-text extraction gains a new consumer — it becomes the AI
+editor's input. Reader-only code (the show view, previous/next
+navigation, reading time, the presenter) goes.
+
+### Subscription confirmations: held, surfaced, actionable
+
+Double-opt-in confirmations are actionable mail, not content. With the
+inbox gone they need a home; in an edition they would be noise. They also
+age badly — confirm links commonly expire within a day or two — so they
+must surface somewhere the reader actually looks.
+
+- **Detection, at ingest**: an email from a first-time sender whose
+  subject matches a confirmation phrase set — confirm/confirmation,
+  verify/verification, "finish signing up", "complete your sign up",
+  activate, opt in — is flagged and held. One constant holds the phrases;
+  expect to tune it. The first-time-sender guard keeps an established
+  newsletter titled "Confirmation bias" out of the pen. Confirmations
+  usually come from the platform's address (no-reply@substack.com,
+  Mailchimp) rather than the eventual content sender, which makes the
+  first-time guard nearly always true for genuine ones — and means the
+  flag is per-email; no sender model is needed.
+- **Surfacing**: a pending area lists held mail, each row opening the
+  original page — whose iframe sandbox already grants `allow-popups
+  allow-popups-to-escape-sandbox` precisely so sender links work, so the
+  confirm click needs no new mechanics. While anything is pending, the
+  edition page carries an app-level notice ("1 subscription awaiting
+  confirmation") — app chrome, never editor output.
+- **Resolution**: *dismiss* (confirmed, or just clearing it) or *release*
+  (misfire — it is content). Released newsletters join the next edition's
+  window even though their `received_at` predates the watermark.
+- **Held mail is excluded from edition windows** via the stored flag —
+  the completeness carve-out above.
+
+The heuristic does not need to be perfect, because both failure
+directions are visible. A false positive sits in plain sight in the
+pending area, one click from release; the cost is one edition's delay. A
+false negative is made loud by the completeness guarantee itself: the
+edition dutifully carries a deadpan cited line ("Beehiiv would like you
+to confirm…"), and its citation opens the original where the confirm
+link still works. The digest mentioning a confirmation *is* the alarm
+for a missed one — annoying, self-announcing, never silent.
 
 ### Windows: high-water mark, not fixed ranges
 
@@ -138,7 +203,12 @@ v1.
 - Edition page: masthead, lead stories with attribution links to
   originals, then Briefly. One edition per slot per day, unique index.
 - Root serves the latest edition; archive of editions; archive of
-  originals at `/newsletters` stripped of read state.
+  originals at `/newsletters` stripped of read state, rows opening the
+  original page. The clean reader and its routes are removed.
+- Confirmation-shaped mail from first-time senders is flagged at ingest,
+  held out of edition windows, listed in a pending area, and badged on
+  the edition page while unresolved; resolving is dismiss or release,
+  and releases join the next edition's window.
 - A failed run retries; a morning edition composed late is still the
   morning edition (labelled by slot, not wall clock).
 
@@ -193,6 +263,10 @@ Iterate the prompt against real windows until these hold, then build the
 schedule and pages around it. If clustering won't converge, fall back to
 the v1 hybrid shape — the schema below supports either.
 
+Backtests should apply the confirmation heuristic to historical rows
+first (a small backfill task), so judgement isn't skewed by admin mail
+the live path would have held.
+
 ## Data model sketch
 
 For discussion, not a migration:
@@ -206,6 +280,9 @@ For discussion, not a migration:
   where RSS items later plug in as a second source type — not building
   polymorphism now (`.claude/rules/ruby.md`: no code for functionality
   that doesn't exist), but keeping citations a real table leaves the seam.
+- On `newsletters`: the confirmation lifecycle as timestamps, per the
+  database rules' timestamp-backed-boolean convention — flagged at
+  ingest, then either dismissed or released. Names at build time.
 - Domain objects per `.claude/rules/models.md`: `Edition`,
   `Edition::Editor` (a noun — composes an edition from a window,
   `#compose`), `Edition::PublishJob`. No `*Service`.
@@ -221,9 +298,12 @@ For discussion, not a migration:
   story candidates, and notable ones cluster with other sources' coverage.
   Whether their long tails pollute Briefly is a Milestone 0 observation.
   Per-sender handling hints are deferred (see Later).
-- **Non-newsletter mail** to the ingest address (receipts, spam): today it
-  lands in the feed; in an edition it becomes a deadpan Briefly line. An
-  existing problem made louder; out of scope here.
+- **Other administrative mail** (welcome notes after confirming, login
+  and magic-link emails if the ingest address gets used to sign in
+  somewhere, re-permission campaigns, receipts): flows to the editor and
+  becomes a deadpan Briefly line. Tolerable — visible, one line, cited.
+  Extending the held-mail phrase set beyond confirmations is deliberately
+  deferred (see Later) until Briefly noise proves it's needed.
 - **Model hallucination**: structured output + citation validation + the
   original one click away. The edition never needs to be trusted further
   than its links.
@@ -250,9 +330,10 @@ For discussion, not a migration:
 - Email or RSS delivery of editions.
 - Per-sender prompt hints, including special handling for link-roundup
   newsletters.
+- Silencing sources (first fast follow — see Later).
 - Personalisation, feedback ("more like this"), topic weighting.
 - Search, audio, multi-user, public sign-up.
-- Any change to ingestion.
+- Any change to ingestion beyond the confirmation flag.
 
 ## Success measures
 
@@ -270,10 +351,24 @@ Honest ones, at n=1:
 
 ## Later
 
+- **Silencing sources** (first fast follow): mute a sender from inside
+  the app — unsubscribing's in-app cousin. Mail from a silenced sender
+  still arrives and is stored, but is excluded from edition windows and
+  the coverage guarantee; the archive still shows it. Silencing is the
+  roster's back door as confirmations are its front door — and it is the
+  moment "sender" becomes a model rather than a string column, the same
+  `Source` concept that per-sender hints and RSS feeds also want. True
+  unsubscribing stays manual via the original's unsubscribe link;
+  automating it through the `List-Unsubscribe` header (RFC 8058 one-click)
+  is a further step down this road.
 - **Per-sender hints** for link-roundup newsletters, if Milestone 0 shows
   they need different treatment.
+- **Broader administrative-mail handling**: welcome notes, login links,
+  re-permission campaigns — extend the phrase set or add per-sender rules
+  if Briefly noise warrants it.
 - **Canonical web links**: extract the sender's own "view in browser" URL
-  and offer the live web original alongside the stored one.
+  and offer the live web original alongside the stored one — the "actual
+  email itself" reading path.
 - **RSS/blog sources**: a second ingest path writing a sibling of
   `Newsletter`; citations gain a second source type; the edition's shape
   doesn't change.
@@ -286,10 +381,6 @@ Honest ones, at n=1:
 
 ## Open questions
 
-1. How much of the current feed/reader survives the demotion? Proposed:
-   the archive list and the original page stay (citations point at the
-   latter); the clean reader stays for archive browsing; read state and
-   its routes go. Confirm at build time.
-2. Should the editor decide how many leads an edition has (within bounds),
+1. Should the editor decide how many leads an edition has (within bounds),
    or is the count fixed? Proposed: editor's judgement, bounded 2–5 — a
    thin news day shouldn't be padded to a quota.
