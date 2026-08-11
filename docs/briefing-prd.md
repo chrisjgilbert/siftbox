@@ -1,11 +1,11 @@
-# PRD: Editions — a twice-daily briefing
+# PRD: Editions — a daily briefing
 
-v3, after review. Decided: story-first editions, an edition-first app, the
-inbox demoted, the clean reader removed — content is consumed either as the
-edition or as the original, nothing between — and a holding pen for
-subscription-confirmation emails. What remains **Open** is marked. The app
-is a prototype with one user, so nothing here carries a
-backwards-compatibility burden.
+v4, after PR review. Decided: story-first editions, one edition a day, an
+edition-first app, the inbox demoted, the clean reader removed — content is
+consumed either as the edition or as the original, nothing between — and a
+holding pen for subscription-confirmation emails with its failure modes
+traced end to end. What remains **Open** is marked. The app is a prototype
+with one user, so nothing here carries a backwards-compatibility burden.
 
 ## The idea
 
@@ -23,13 +23,12 @@ An AI editor reads everything that arrived since the last edition, works out
 what the stories are, and writes them up with attribution. The edition — not
 the inbox — is the app.
 
-Two editions a day:
-
-- **Morning edition**, 07:00 Europe/London — covers the overnight window,
-  when US newsletters land. Starting time; adjust once real editions show
-  the senders' actual rhythm.
-- **Afternoon edition**, 15:00 Europe/London — covers the day so far,
-  catching US morning releases.
+One edition a day, at **07:00 Europe/London** — composed as the overnight
+US newsletters have finished landing. Anything released during the UK day
+appears the next morning; that lag is accepted for v1. An afternoon
+edition to catch US morning releases is the obvious second step (see
+Later), and nothing in the mechanism below assumes one edition rather
+than two.
 
 ## Jobs to be done
 
@@ -41,11 +40,9 @@ Two editions a day:
 3. **Route me to the good stuff.** The edition is a router, not a
    replacement. When something deserves a full read, the edition links me to
    the original.
-4. **Absorb my absence.** After a weekend away, one catch-up read — not
-   thirty unread rows.
-5. **Keep the archive honest.** Originals remain stored and reachable.
+4. **Keep the archive honest.** Originals remain stored and reachable.
    Every claim in an edition traces to a source I can open.
-6. **Let the roster grow.** When I subscribe to something new, the
+5. **Let the roster grow.** When I subscribe to something new, the
    double-opt-in confirmation must reach me quickly and be clickable —
    and must never be written up as news.
 
@@ -144,26 +141,60 @@ must surface somewhere the reader actually looks.
   allow-popups-to-escape-sandbox` precisely so sender links work, so the
   confirm click needs no new mechanics. While anything is pending, the
   edition page carries an app-level notice ("1 subscription awaiting
-  confirmation") — app chrome, never editor output.
+  confirmation") — app chrome, never editor output. Pen and badge are
+  written at **ingest**, not at composition, so a confirmation surfaces
+  the moment it arrives rather than waiting for the next edition.
 - **Resolution**: *dismiss* (confirmed, or just clearing it) or *release*
   (misfire — it is content). Released newsletters join the next edition's
   window even though their `received_at` predates the watermark.
 - **Held mail is excluded from edition windows** via the stored flag —
   the completeness carve-out above.
 
-The heuristic does not need to be perfect, because both failure
-directions are visible. A false positive sits in plain sight in the
-pending area, one click from release; the cost is one edition's delay. A
-false negative is made loud by the completeness guarantee itself: the
-edition dutifully carries a deadpan cited line ("Beehiiv would like you
-to confirm…"), and its citation opens the original where the confirm
-link still works. The digest mentioning a confirmation *is* the alarm
-for a missed one — annoying, self-announcing, never silent.
+**Failure modes, traced end to end.** The feared outcome is a
+subscription that never shows up and fails silently. Tracing the
+pipeline — sender's signup form → Postmark → the mailbox spam gate →
+ingest → flag → pen — there are four distinct failure paths, and they
+are not equally visible:
+
+1. **The regex misses** and the confirmation ingests as content. Not
+   silent: the completeness guarantee forces a deadpan cited Briefly
+   line, and its citation opens the original where the confirm link
+   works. But at one edition a day that alarm can take a day to ring
+   while confirm links age, so the pen page adds a second net: it also
+   lists **recent first-time senders**, unflagged ones included. Every
+   genuinely new subscription's first mail is either a confirmation or a
+   first issue, and new senders are rare, deliberate events — a short
+   list that makes any new arrival visible in one place, whatever the
+   regex thought of it.
+2. **The spam gate eats it.** `NewslettersMailbox` bounces anything
+   Postmark scores at or above 5.0 *before it becomes a newsletter row* —
+   the one truly silent in-app drop, and ESP confirmation blasts do
+   occasionally trip spam scoring. Action Mailbox retains bounced
+   inbound emails (30 days by default), so the pen page surfaces
+   recently bounced mail — sender and subject read back from the stored
+   source — making the gate auditable instead of silent.
+3. **It never arrives**: the address was mistyped into the sender's
+   form, or their ESP refused it. The app cannot see mail it never
+   received; no heuristic fixes this. The cure is expectation-side: the
+   pen's first-time-senders list is the place to glance after
+   subscribing, and an explicit "expected subscriptions" watchlist is
+   sketched under Later if this ever bites in practice.
+4. **Flagged but unactioned** until the confirm link expires. The badge
+   is state-driven — it persists on the edition page until resolved, so
+   it cannot scroll away — and an expired link just means re-subscribing,
+   which flows through the pen again.
+
+A false positive, for symmetry, sits in plain sight in the pen, one
+click from release; the cost is one edition's delay. So the heuristic
+needs to be good, not perfect: paths 1 and 4 are self-announcing, and
+paths 2 and 3 — the genuinely silent ones — get their own surfaces (the
+bounce list, the new-senders list) rather than relying on detection at
+all.
 
 ### Windows: high-water mark, not fixed ranges
 
 An edition covers newsletters received after the previous edition's
-cutoff, up to the moment composition starts. No fixed 15:00→07:00 ranges:
+cutoff, up to the moment composition starts. No fixed 07:00→07:00 ranges:
 with fixed windows, a failed run or an email landing at 07:02 falls into a
 gap and is never covered. With a watermark, every newsletter belongs to
 exactly one edition, whichever runs next. `received_at` (already indexed)
@@ -179,8 +210,8 @@ work.
 ### Masthead and numbering
 
 Editions number their own sequence from **No. 1**, independent of the
-feed's issue numbering. "Morning edition · No. 1" — JetBrains Mono's job,
-per `docs/siftbox-redesign.md`.
+feed's issue numbering. "No. 1 · Tuesday 11 August" — JetBrains Mono's
+job, per `docs/siftbox-redesign.md`.
 
 ### Delivery: web only for v1
 
@@ -192,16 +223,17 @@ v1.
 
 ### Functional
 
-- Compose an edition at 07:00 and 15:00 Europe/London on a schedule (Solid
-  Queue recurring task; scheduled in the zone so DST never moves it). Per
+- Compose an edition at 07:00 Europe/London daily (Solid Queue recurring
+  task; scheduled in the zone so DST never moves it). Per
   `.claude/rules/review.md`: a scheduled task is a deploy step and must be
   called out in the deploy docs.
-- An edition records: slot (morning/afternoon), published time, the window
-  covered, its stories in order, and which newsletters each story cites.
+- An edition records: published time, the window covered, its stories in
+  order, and which newsletters each story cites.
 - Every newsletter in the window cited at least once, mechanically
   validated; regenerate on failure, fail loudly (log) if it won't converge.
 - Edition page: masthead, lead stories with attribution links to
-  originals, then Briefly. One edition per slot per day, unique index.
+  originals, then Briefly. One edition per day, unique index on the
+  publication date.
 - Root serves the latest edition; archive of editions; archive of
   originals at `/newsletters` stripped of read state, rows opening the
   original page. The clean reader and its routes are removed.
@@ -209,8 +241,11 @@ v1.
   held out of edition windows, listed in a pending area, and badged on
   the edition page while unresolved; resolving is dismiss or release,
   and releases join the next edition's window.
-- A failed run retries; a morning edition composed late is still the
-  morning edition (labelled by slot, not wall clock).
+- The pending area also lists recent first-time senders and recently
+  bounced inbound mail, so a new subscription's arrival — or
+  non-arrival — is checkable in one place (see the failure modes above).
+- A failed run retries; an edition composed late is still that day's
+  edition (labelled by date, not wall clock).
 
 ### AI editor
 
@@ -230,7 +265,7 @@ v1.
   rather than resolving it; no outside knowledge, no invented links;
   cluster before writing — one story per underlying event, however many
   sources touched it.
-- Cost envelope: ~10–20 newsletters × a few thousand tokens, twice daily —
+- Cost envelope: ~10–20 newsletters × a few thousand tokens, once daily —
   tens of cents a day on a mid-tier model. Not a constraint at one reader;
   a line item in any public-release thinking.
 
@@ -271,9 +306,9 @@ the live path would have held.
 
 For discussion, not a migration:
 
-- `editions` — `slot`, `published_at`, `window_started_at`,
-  `window_ended_at`, `model`, `prompt_version`, `raw_response`. Unique on
-  (date of publication, slot).
+- `editions` — `published_at`, `window_started_at`, `window_ended_at`,
+  `model`, `prompt_version`, `raw_response`. Unique on the publication
+  date. (A slot column arrives with the afternoon edition, if it does.)
 - `edition_stories` — `edition_id`, `position`, `tier` (lead/brief),
   `headline`, `body` (plain text/markdown).
 - `edition_citations` — `edition_story_id`, `newsletter_id`. The joint
@@ -321,8 +356,9 @@ For discussion, not a migration:
 - English-language sources.
 - The model API is reachable from production; latency of tens of seconds
   is fine in a background job.
-- Twice-daily is a starting cadence. Slots + watermark don't care if it
-  becomes once or thrice daily.
+- Once daily at 07:00 is the starting cadence. The watermark doesn't
+  care how many editions a day there are, so adding more later is a
+  schedule change, not a redesign.
 
 ## Non-goals for v1
 
@@ -361,6 +397,17 @@ Honest ones, at n=1:
   unsubscribing stays manual via the original's unsubscribe link;
   automating it through the `List-Unsubscribe` header (RFC 8058 one-click)
   is a further step down this road.
+- **Afternoon edition**, ~15:00 Europe/London, to catch US morning
+  releases on the same day — a second recurring task and a slot column,
+  nothing structural.
+- **Holiday mode**: a catch-up shape for returning after days away.
+  Deliberately not worried about now — the watermark already guarantees
+  the next edition covers everything; this would only change how a big
+  window is presented.
+- **Expected subscriptions**: a watchlist entry made when subscribing
+  ("expecting mail from X"), alerting if nothing arrives — the only cure
+  for failure path 3 (never delivered), if the passive new-senders list
+  proves insufficient.
 - **Per-sender hints** for link-roundup newsletters, if Milestone 0 shows
   they need different treatment.
 - **Broader administrative-mail handling**: welcome notes, login links,
