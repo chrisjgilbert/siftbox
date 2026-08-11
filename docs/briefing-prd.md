@@ -1,11 +1,13 @@
 # PRD: Editions — a daily briefing
 
-v4, after PR review. Decided: story-first editions, one edition a day, an
+v5, after PR review. Decided: story-first editions, one edition a day, an
 edition-first app, the inbox demoted, the clean reader removed — content is
-consumed either as the edition or as the original, nothing between — and a
-holding pen for subscription-confirmation emails with its failure modes
-traced end to end. What remains **Open** is marked. The app is a prototype
-with one user, so nothing here carries a backwards-compatibility burden.
+consumed either as the edition or as the original, nothing between — item
+natures (news is synthesised; evergreen is reviewed; teasers are reported
+honestly), and a holding pen for subscription confirmations with a concrete
+flow and its failure modes traced end to end. What remains **Open** is
+marked. The app is a prototype with one user, so nothing here carries a
+backwards-compatibility burden.
 
 ## The idea
 
@@ -40,9 +42,13 @@ than two.
 3. **Route me to the good stuff.** The edition is a router, not a
    replacement. When something deserves a full read, the edition links me to
    the original.
-4. **Keep the archive honest.** Originals remain stored and reachable.
+4. **Review the evergreen, don't flatten it.** When a newsletter is a
+   tutorial or essay rather than news, tell me what it teaches and
+   whether it's worth my next free evening — don't pretend a summary
+   replaces reading it.
+5. **Keep the archive honest.** Originals remain stored and reachable.
    Every claim in an edition traces to a source I can open.
-5. **Let the roster grow.** When I subscribe to something new, the
+6. **Let the roster grow.** When I subscribe to something new, the
    double-opt-in confirmation must reach me quickly and be clickable —
    and must never be written up as news.
 
@@ -57,24 +63,63 @@ and The Diff both read the Figma S-1; Levine focuses on…". A newsletter
 that covers five topics contributes to five stories; five newsletters on
 one topic collapse into one.
 
-Presentation has two tiers, but they are the same thing at different
-lengths:
+The news pages have two tiers, the same thing at different lengths:
 
 - **Lead stories**: the day's few significant threads, a paragraph each.
 - **Briefly**: minor stories in a line or two. A singleton story from one
   source lands here naturally — so quiet days degrade gracefully rather
   than forcing fake syntheses.
 
+A third section, **The reading list**, holds items that are not news at
+all — see "Item natures" below.
+
 This is the hardest version of the prompt problem, chosen deliberately.
 The fallback, if testing shows clustering isn't reliable enough, is the
 hybrid shape from v1 of this document (synthesised leads over per-source
 briefs). See "Proving the bet".
 
+### Item natures: news is synthesised, evergreen is reviewed
+
+The Week is not only a news digest — it has departments. News is
+condensed; books are *reviewed*; nobody there summarises a novel into a
+paragraph meant to replace reading it. The edition inherits that. During
+extraction the editor classifies each item's nature — per item, not per
+sender, since one email can mix a news roundup with a tutorial link, and
+content-level judgement costs nothing extra in the same pass:
+
+- **News** → clusters into stories, as above.
+- **Evergreen** (tutorials, essays, explainers — e.g. systemdesign.one's
+  masterclass posts) → **The reading list**: a review blurb, not a
+  summary. What it teaches, how deep it goes, roughly how long a read.
+  It answers "is this worth my next free evening" — the only question a
+  briefing *can* answer about a tutorial. Condensing the tutorial itself
+  is a category error: skills transfer by reading, diagrams don't
+  survive summarisation, and a summary would falsely imply the reading
+  is done.
+- **Teaser** (a paywalled stub — the email carries an excerpt, then an
+  upgrade prompt) → the editor writes only from what the email actually
+  contains and says so: "…the free portion covers X; the rest is
+  paywalled." Never a write-up implying knowledge the email doesn't
+  hold — the same fake-depth failure class guarded against everywhere
+  else. Detection is content-level judgement (truncation point, upgrade
+  CTA) in the extraction pass; no regex, no per-sender config. A paid
+  subscription whose emails carry the full piece never reads as a
+  teaser, because classification works from what is actually present.
+
+Natures compose: an evergreen teaser (the systemdesign.one case) is a
+reading-list entry with a paywall note. And completeness is untouched —
+every newsletter is cited in a story, in Briefly, or on the reading
+list. Excluding these sources instead was considered and rejected: they
+were subscribed to deliberately, and unclassified handling produces
+exactly the two worst outputs — a uselessly flattened tutorial, or a
+teaser padded into a story faking substance.
+
 ### Completeness is a hard guarantee
 
-Every **content** newsletter in the window is cited by at least one story.
-This is validated mechanically against the model's output — regenerate on
-failure — not hoped for in the prompt. It was important before; now that
+Every **content** newsletter in the window is cited at least once — in a
+lead story, a Briefly line, or a reading-list entry. This is validated
+mechanically against the model's output — regenerate on failure — not
+hoped for in the prompt. It was important before; now that
 the edition is the *only* triage surface (below), it is load-bearing. A
 dull promo email becomes a one-line singleton in Briefly; that is the
 floor that makes "nothing can be missed" true.
@@ -136,19 +181,58 @@ must surface somewhere the reader actually looks.
   Mailchimp) rather than the eventual content sender, which makes the
   first-time guard nearly always true for genuine ones — and means the
   flag is per-email; no sender model is needed.
-- **Surfacing**: a pending area lists held mail, each row opening the
-  original page — whose iframe sandbox already grants `allow-popups
-  allow-popups-to-escape-sandbox` precisely so sender links work, so the
-  confirm click needs no new mechanics. While anything is pending, the
-  edition page carries an app-level notice ("1 subscription awaiting
-  confirmation") — app chrome, never editor output. Pen and badge are
-  written at **ingest**, not at composition, so a confirmation surfaces
-  the moment it arrives rather than waiting for the next edition.
+- **Surfacing**: a **Subscriptions page** (the pen) lists held mail, each
+  row opening the original page — whose iframe sandbox already grants
+  `allow-popups allow-popups-to-escape-sandbox` precisely so sender links
+  work, so the confirm click needs no new mechanics. While anything is
+  pending, the edition page carries an app-level notice ("1 subscription
+  awaiting confirmation") — app chrome, never editor output. Pen and
+  badge are written at **ingest**, not at composition, so a confirmation
+  surfaces the moment it arrives rather than waiting for the next
+  edition.
 - **Resolution**: *dismiss* (confirmed, or just clearing it) or *release*
   (misfire — it is content). Released newsletters join the next edition's
   window even though their `received_at` predates the watermark.
 - **Held mail is excluded from edition windows** via the stored flag —
-  the completeness carve-out above.
+  the completeness carve-out above. Held and dismissed mail also stays
+  **off the originals archive**: the archive's job is content of record,
+  and admin mail would pollute "did Money Stuff arrive?". It stays in the
+  database; the pen is its only surface. Released mail is content and
+  appears normally.
+
+**The flow, concretely.** Subscribe on the sender's site with the ingest
+address; the confirmation lands within a minute (usually from the
+platform's address) and is flagged and held. Next visit, the edition page
+carries the notice strip — JetBrains Mono, between two rules: "1
+SUBSCRIPTION AWAITING CONFIRMATION →". It links to the Subscriptions
+page, whose three sections are the roster's health view:
+
+1. **Awaiting confirmation** — held mail: sender, subject, and freshness
+   front and centre ("4 minutes ago"), because confirm links age.
+2. **New senders** — first-time senders from the last couple of weeks,
+   flagged or not, each linking to their first email. The glance-here
+   place after subscribing; failure-mode net for paths 1 and 3 below.
+3. **Recently bounced** — what the spam gate refused. Almost always
+   empty; exists so path 2 below stays auditable.
+
+Opening a held email shows the original page with a pen top bar in place
+of the archive one. The sender's email is the UI: scroll it, click
+*their* confirm button — a `target="_blank"` link opens in a new tab, a
+plain link navigates within the frame; either way their flow completes
+for real, with no link-extraction guesswork on our side. The top bar
+offers two of our own actions: **Done** (dismiss) and **This is a
+newsletter** (release). Done is explicit because it has to be: the
+frame's content is an opaque origin with no scripts, so the app *cannot
+observe* the confirm click — auto-dismissal would be a guess.
+Afterwards, the loop closes on its own: the sender's first real issue
+flows into the next edition, and its appearance under New senders is the
+arrival receipt. Routes stay resourceful: the page is an index; dismiss
+and release are nested `only: :create` resources.
+
+The page is named **Subscriptions**, not Confirmations, deliberately: it
+is the roster's future home — silencing (see Later) lands there as a
+Sources section, making it the roster's front door and back door in one
+place.
 
 **Failure modes, traced end to end.** The feared outcome is a
 subscription that never shows up and fails silently. Tracing the
@@ -232,18 +316,20 @@ v1.
 - Every newsletter in the window cited at least once, mechanically
   validated; regenerate on failure, fail loudly (log) if it won't converge.
 - Edition page: masthead, lead stories with attribution links to
-  originals, then Briefly. One edition per day, unique index on the
-  publication date.
+  originals, then Briefly, then The reading list when the window held
+  evergreen items (the section only renders when populated). One edition
+  per day, unique index on the publication date.
 - Root serves the latest edition; archive of editions; archive of
   originals at `/newsletters` stripped of read state, rows opening the
   original page. The clean reader and its routes are removed.
 - Confirmation-shaped mail from first-time senders is flagged at ingest,
-  held out of edition windows, listed in a pending area, and badged on
+  held out of edition windows, listed on the Subscriptions page, and badged on
   the edition page while unresolved; resolving is dismiss or release,
   and releases join the next edition's window.
-- The pending area also lists recent first-time senders and recently
-  bounced inbound mail, so a new subscription's arrival — or
+- The Subscriptions page also lists recent first-time senders and
+  recently bounced inbound mail, so a new subscription's arrival — or
   non-arrival — is checkable in one place (see the failure modes above).
+  Held and dismissed mail never appears in the originals archive.
 - A failed run retries; an edition composed late is still that day's
   edition (labelled by date, not wall clock).
 
@@ -253,8 +339,8 @@ v1.
   of newsletter chrome (subscribe prompts, "read in app", social icons,
   footers; the ingest pipeline already scrubs tracking pixels) and capped
   per source — plus sender, subject, received time.
-- Output: structured JSON — stories with headline, body, tier, and cited
-  newsletter ids — never free-form HTML. Rendered through normal ERB
+- Output: structured JSON — stories with headline, body, section, and
+  cited newsletter ids — never free-form HTML. Rendered through normal ERB
   escaping; the model's words get no `html_safe` path, ever
   (`.claude/rules/security.md`).
 - Stored alongside the edition: model name, prompt version, token counts,
@@ -265,6 +351,10 @@ v1.
   rather than resolving it; no outside knowledge, no invented links;
   cluster before writing — one story per underlying event, however many
   sources touched it.
+- Classification in the same extraction pass: each item's nature (news /
+  evergreen / teaser) decides its section and register — synthesis,
+  review blurb, or an honest excerpt note. A teaser is never written up
+  beyond what the email actually contains.
 - Cost envelope: ~10–20 newsletters × a few thousand tokens, once daily —
   tens of cents a day on a mid-tier model. Not a constraint at one reader;
   a line item in any public-release thinking.
@@ -293,6 +383,10 @@ window and dumps it for reading. Judge, by hand, over several windows:
 - **Coverage** — does the citation validation pass, and does Briefly read
   as useful lines rather than filler?
 - **Selection** — are the leads the pieces the reader would have picked?
+- **Classification** — do evergreen pieces land on the reading list with
+  truthful blurbs, do teasers get honest paywall notes, and does the
+  editor ever fake depth on a stub? (systemdesign.one issues make ideal
+  test material: evergreen and teaser at once.)
 
 Iterate the prompt against real windows until these hold, then build the
 schedule and pages around it. If clustering won't converge, fall back to
@@ -309,8 +403,10 @@ For discussion, not a migration:
 - `editions` — `published_at`, `window_started_at`, `window_ended_at`,
   `model`, `prompt_version`, `raw_response`. Unique on the publication
   date. (A slot column arrives with the afternoon edition, if it does.)
-- `edition_stories` — `edition_id`, `position`, `tier` (lead/brief),
-  `headline`, `body` (plain text/markdown).
+- `edition_stories` — `edition_id`, `position`, `section`
+  (lead/briefly/reading_list), `headline`, `body` (plain text/markdown).
+  A reading-list entry is a story like any other — usually a singleton
+  with one citation.
 - `edition_citations` — `edition_story_id`, `newsletter_id`. The joint
   where RSS items later plug in as a second source type — not building
   polymorphism now (`.claude/rules/ruby.md`: no code for functionality
@@ -375,9 +471,9 @@ For discussion, not a migration:
 
 Honest ones, at n=1:
 
-- Milestone 0's four checks (clustering, attribution, coverage,
-  selection) hold across several real windows before launch, and keep
-  holding after.
+- Milestone 0's five checks (clustering, attribution, coverage,
+  selection, classification) hold across several real windows before
+  launch, and keep holding after.
 - The edition is the only surface the reader needs day to day; the
   originals archive is visited for reference, not for triage.
 - Click-throughs feel right — the editor routes to the pieces the reader
@@ -388,11 +484,12 @@ Honest ones, at n=1:
 ## Later
 
 - **Silencing sources** (first fast follow): mute a sender from inside
-  the app — unsubscribing's in-app cousin. Mail from a silenced sender
-  still arrives and is stored, but is excluded from edition windows and
-  the coverage guarantee; the archive still shows it. Silencing is the
-  roster's back door as confirmations are its front door — and it is the
-  moment "sender" becomes a model rather than a string column, the same
+  the app — unsubscribing's in-app cousin, living on the Subscriptions
+  page as a Sources section. Mail from a silenced sender still arrives
+  and is stored, but is excluded from edition windows and the coverage
+  guarantee; the archive still shows it. Silencing is the roster's back
+  door as confirmations are its front door — and it is the moment
+  "sender" becomes a model rather than a string column, the same
   `Source` concept that per-sender hints and RSS feeds also want. True
   unsubscribing stays manual via the original's unsubscribe link;
   automating it through the `List-Unsubscribe` header (RFC 8058 one-click)
