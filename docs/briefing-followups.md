@@ -26,6 +26,15 @@ findings are not listed; they are in the diff.
   than two editions numbered 4. Allocation belongs on `Edition`, not on
   whoever happens to create one.
 
+- **`number` and `published_on` can disagree about order.** `newest_first`
+  sorts by `published_on`, and nothing ties the masthead number to that
+  sequence. `maximum(:number) + 1` inverts them in exactly the case the model
+  is built around: an edition composed late for an earlier day takes the
+  higher number but sorts below the day that beat it out, so the archive
+  reads No. 1, No. 3, No. 2. Decide whether the number follows the date or
+  the composition order — and if the date, allocation cannot simply be a max
+  plus one.
+
 - **`index_editions_on_window_ended_at` is unpaid-for until this milestone.**
   It exists for the watermark query (`maximum(:window_ended_at)`), which does
   not ship until here.
@@ -70,6 +79,20 @@ findings are not listed; they are in the diff.
   edition may be held retroactively by the backfill. Nothing currently
   prevents it, and the citation would then point at mail the archive hides.
   Worth deciding before the backfill is written.
+
+## Undecided design
+
+- **Deleting a newsletter guts the editions that cite it.**
+  `edition_citations.newsletter_id` cascades on delete, so removing a
+  newsletter silently strips it from the stories of published — supposedly
+  immutable — editions, leaving claims with no source behind them. There is
+  no delete path in production today, and the development sample-data task
+  now clears editions first so it cannot leave that state behind, so nothing
+  is broken right now. The open question is what *should* happen: `restrict`
+  says a cited newsletter is pinned by the edition citing it, which fits
+  "every claim traces to a source I can open", but it would mean anything
+  clearing newsletters has to clear editions first. Worth deciding before
+  there is any way to delete a newsletter from the app.
 
 ## Smaller, no particular milestone
 
