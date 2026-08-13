@@ -7,6 +7,11 @@ FactoryBot.define do
     window_ended_at { Time.current }
   end
 
+  factory :edition_citation, class: "Edition::Citation" do
+    newsletter
+    story factory: :edition_story
+  end
+
   factory :edition_story, class: "Edition::Story" do
     edition
     sequence(:position)

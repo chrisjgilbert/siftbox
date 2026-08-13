@@ -119,4 +119,13 @@ RSpec.describe Edition do
 
     expect(Edition::Story.count).to eq(0)
   end
+
+  it "takes its stories' citations with it when destroyed" do
+    edition = create(:edition)
+    create(:edition_citation, story: create(:edition_story, edition: edition))
+
+    edition.destroy
+
+    expect(Edition::Citation.count).to eq(0)
+  end
 end

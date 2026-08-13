@@ -51,6 +51,34 @@ RSpec.describe Edition::Story do
     expect(story).to be_valid
   end
 
+  it "cites the newsletters its citations point at" do
+    story = create(:edition_story)
+    newsletter = create(:newsletter)
+    create(:edition_citation, story: story, newsletter: newsletter)
+
+    expect(story.newsletters).to eq([ newsletter ])
+  end
+
+  it "takes its citations with it when destroyed" do
+    story = create(:edition_story)
+    create(:edition_citation, story: story)
+
+    story.destroy
+
+    expect(Edition::Citation.count).to eq(0)
+  end
+
+  # A citation is a fact about the edition, not about the newsletter, so
+  # clearing an edition away leaves the archive of originals untouched.
+  it "leaves the newsletters it cited behind when destroyed" do
+    story = create(:edition_story)
+    create(:edition_citation, story: story, newsletter: create(:newsletter))
+
+    story.destroy
+
+    expect(Newsletter.count).to eq(1)
+  end
+
   it "orders by position" do
     edition = create(:edition)
     second = create(:edition_story, edition: edition, position: 2)

@@ -13,6 +13,12 @@ class Edition::Story < ApplicationRecord
 
   belongs_to :edition, touch: true
 
+  # Same foreign key mismatch as on the other end of the citation: the column
+  # is edition_story_id, and Rails demodulises Edition::Story down to story_id
+  # when it guesses.
+  has_many :citations, foreign_key: :edition_story_id, dependent: :destroy, inverse_of: :story
+  has_many :newsletters, through: :citations
+
   validates :body, presence: true
   validates :position, presence: true, uniqueness: { scope: :edition }
   validates :section, presence: true, inclusion: { in: SECTIONS }
