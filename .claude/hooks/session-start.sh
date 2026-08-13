@@ -24,6 +24,16 @@ fi
 
 bundle check >/dev/null 2>&1 || bundle install
 
+# Gems install their executables into Ruby's own bindir, and this image does
+# not put that directory on PATH. The project's binstubs still work, so
+# bin/rspec and bin/rubocop pass and only the last line of bin/ci dies —
+# "bundler: command not found: bundle-audit", for a gem that is installed and
+# listed in the bundle. Exporting the directory is what makes bin/ci
+# runnable end to end.
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+  echo "export PATH=\"$(ruby -e 'require "rubygems"; print Gem.bindir'):\$PATH\"" >> "$CLAUDE_ENV_FILE"
+fi
+
 # Test database only. db:prepare would also run the seeds, which read the
 # reader's account out of encrypted credentials — unreadable here, since a
 # remote container has no master key.
