@@ -64,4 +64,59 @@ RSpec.describe Edition do
   it "has no latest edition before the first one is published" do
     expect(Edition.latest).to be_nil
   end
+
+  it "keeps its stories in the order the editor put them in" do
+    edition = create(:edition)
+    second = create(:edition_story, edition: edition, position: 2)
+    first = create(:edition_story, edition: edition, position: 1)
+
+    expect(edition.stories).to eq([ first, second ])
+  end
+
+  it "hands out its lead stories" do
+    edition = create(:edition)
+    lead = create(:edition_story, edition: edition, section: Edition::Story::LEAD)
+    create(:edition_story, edition: edition, section: Edition::Story::BRIEFLY)
+
+    expect(edition.lead_stories).to eq([ lead ])
+  end
+
+  it "hands out its briefly items" do
+    edition = create(:edition)
+    briefly = create(:edition_story, edition: edition, section: Edition::Story::BRIEFLY)
+    create(:edition_story, edition: edition, section: Edition::Story::LEAD)
+
+    expect(edition.briefly).to eq([ briefly ])
+  end
+
+  it "hands out its reading list" do
+    edition = create(:edition)
+    entry = create(:edition_story, edition: edition, section: Edition::Story::READING_LIST)
+    create(:edition_story, edition: edition, section: Edition::Story::LEAD)
+
+    expect(edition.reading_list).to eq([ entry ])
+  end
+
+  it "has a reading list when the window held an evergreen item" do
+    edition = create(:edition)
+    create(:edition_story, edition: edition, section: Edition::Story::READING_LIST)
+
+    expect(edition).to be_reading_list
+  end
+
+  it "has no reading list when the window held nothing but news" do
+    edition = create(:edition)
+    create(:edition_story, edition: edition, section: Edition::Story::LEAD)
+
+    expect(edition).not_to be_reading_list
+  end
+
+  it "takes its stories with it when destroyed" do
+    edition = create(:edition)
+    create(:edition_story, edition: edition)
+
+    edition.destroy
+
+    expect(Edition::Story.count).to eq(0)
+  end
 end

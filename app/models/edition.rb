@@ -5,6 +5,13 @@
 # one account, and the authentication gate is the scope. See README.md on what
 # multiple users would take.
 class Edition < ApplicationRecord
+  # Ordered through Edition::Story's own method rather than an inline order
+  # here, so the position ordering has one owner. Declared dependent even
+  # though the foreign key already cascades: the constraint is the floor that
+  # catches a delete going round Rails, and this is what gives each story its
+  # own destroy callbacks on the way out.
+  has_many :stories, -> { in_position_order }, dependent: :destroy, inverse_of: :edition
+
   validates :number, presence: true, uniqueness: true
   validates :published_at, presence: true
   validates :published_on, presence: true, uniqueness: true
@@ -22,5 +29,28 @@ class Edition < ApplicationRecord
 
   def self.latest
     newest_first.first
+  end
+
+  # The page renders the three sections separately, but it is one edition's
+  # worth of stories either way — sifted in Ruby off the loaded association
+  # rather than asked for in three queries, the way Feed splits its day
+  # groups out of one.
+  def lead_stories
+    stories.select(&:lead?)
+  end
+
+  def briefly
+    stories.select(&:briefly?)
+  end
+
+  def reading_list
+    stories.select(&:reading_list?)
+  end
+
+  # The reading list is the one section that disappears when it is empty: a
+  # window with no evergreen items renders no heading at all, rather than a
+  # heading over nothing.
+  def reading_list?
+    reading_list.any?
   end
 end

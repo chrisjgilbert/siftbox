@@ -7,6 +7,13 @@ FactoryBot.define do
     window_ended_at { Time.current }
   end
 
+  factory :edition_story, class: "Edition::Story" do
+    edition
+    sequence(:position)
+    section { Edition::Story::LEAD }
+    body { "Money Stuff and The Diff both read the Figma S-1." }
+  end
+
   factory :newsletter do
     sender_name { "Ruby Weekly" }
     sender_email { "peter@rubyweekly.com" }
