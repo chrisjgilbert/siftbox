@@ -61,6 +61,34 @@ RSpec.describe Feed do
     expect(subjects).to eq([ "Later one", "Earlier one" ])
   end
 
+  # The archive answers "did this morning's Money Stuff arrive?", and a
+  # Substack confirmation sitting in the pen is not an answer to that.
+  it "leaves out mail held as a subscription confirmation" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 2.hours.ago, held_at: 1.hour.ago)
+
+    expect(Feed.new.issue_count).to eq(0)
+  end
+
+  it "leaves out a confirmation that was dismissed" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 3.hours.ago, held_at: 2.hours.ago, dismissed_at: 1.hour.ago)
+
+    expect(Feed.new.issue_count).to eq(0)
+  end
+
+  # A misfire put real mail in the pen; releasing it has to put it back where
+  # it would have been, not merely stop hiding it from the next edition.
+  it "shows a newsletter released back out of the pen" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 3.hours.ago, held_at: 2.hours.ago, released_at: 1.hour.ago)
+
+    expect(Feed.new.issue_count).to eq(1)
+  end
+
   it "excludes newsletters older than the window the end-of-list copy claims" do
     travel_to Time.zone.parse("2026-08-06 18:00")
 

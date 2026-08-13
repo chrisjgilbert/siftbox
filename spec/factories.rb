@@ -1,7 +1,11 @@
 FactoryBot.define do
   factory :edition do
     sequence(:number)
-    published_on { Date.current }
+    # Sequenced like the number beside it, and for the same reason: both
+    # columns are uniquely indexed, so a constant here makes every example
+    # that builds two editions supply dates by hand to dodge a collision it
+    # did not set out to test.
+    sequence(:published_on) { |n| Date.current - n.days }
     published_at { Time.current }
     window_started_at { 1.day.ago }
     window_ended_at { Time.current }

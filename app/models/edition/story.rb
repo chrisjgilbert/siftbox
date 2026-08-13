@@ -11,7 +11,10 @@ class Edition::Story < ApplicationRecord
   # there.
   SECTIONS = [ LEAD, BRIEFLY, READING_LIST ].freeze
 
-  belongs_to :edition, touch: true
+  # Deliberately not touched, against the rule of thumb for belongs_to: an
+  # edition is written once at composition and immutable after, so a bumped
+  # updated_at would only ever record the edition finishing being built.
+  belongs_to :edition
 
   # Same foreign key mismatch as on the other end of the citation: the column
   # is edition_story_id, and Rails demodulises Edition::Story down to story_id

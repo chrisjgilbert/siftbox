@@ -67,22 +67,19 @@ class Newsletter < ApplicationRecord
     where.not(held_at: nil).where(dismissed_at: nil, released_at: nil)
   end
 
-  def self.dismissed
-    where.not(dismissed_at: nil)
-  end
-
   def self.released
     where.not(released_at: nil)
   end
 
-  # What the originals archive shows. Admin mail would answer "did Money
-  # Stuff arrive?" with a Substack confirmation, so mail in the pen and mail
-  # dismissed out of it stays off it entirely, while released mail reads as
-  # though it had never been flagged. Stated as a disjunction rather than as
-  # a negation of .held, because dismissed mail keeps its held_at and .held
-  # has already stopped matching it.
+  # What the originals archive shows, and the only set an edition is composed
+  # from. Admin mail would answer "did Money Stuff arrive?" with a Substack
+  # confirmation, so mail in the pen and mail dismissed out of it stays off
+  # it entirely, while released mail reads as though it had never been
+  # flagged. Stated as a disjunction rather than as a negation of .held,
+  # because dismissed mail keeps its held_at and .held has already stopped
+  # matching it.
   def self.content
-    where(held_at: nil).or(where.not(released_at: nil))
+    where(held_at: nil).or(released)
   end
 
   def read?
@@ -147,7 +144,16 @@ class Newsletter < ApplicationRecord
   # renders in a sandboxed frame with an opaque origin, so the app cannot
   # observe the confirm click; this is the reader saying so, and nothing
   # infers it.
+  # Idempotent on itself, the way hold is, though the repeat comes from the
+  # reader rather than a backfill: the pen row disappears the moment it
+  # resolves, so a second dismiss is a stale tab. When the misfire was caught
+  # is what the phrase set gets judged against later, and re-stamping would
+  # replace that with the moment someone clicked twice. Only the repeat is
+  # quiet — dismissing something already released is a contradiction, not a
+  # double-click, and the validation still raises on it.
   def dismiss
+    return if dismissed?
+
     update!(dismissed_at: Time.current)
   end
 
@@ -156,6 +162,8 @@ class Newsletter < ApplicationRecord
   # window has to pick the newsletter up on when it was released — its
   # received_at is behind the watermark by then.
   def release
+    return if released?
+
     update!(released_at: Time.current)
   end
 

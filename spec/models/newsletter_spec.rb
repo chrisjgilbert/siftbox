@@ -284,6 +284,18 @@ RSpec.describe Newsletter do
     expect { newsletter.dismiss }.to raise_error(ActiveRecord::RecordInvalid)
   end
 
+  # The pen row disappears the moment it resolves, so a second dismiss is a
+  # stale tab rather than a decision. When the misfire was caught is what the
+  # phrase set gets judged against later, and re-stamping would replace that
+  # with the moment someone clicked twice.
+  it "keeps the original time when dismissed mail is dismissed again" do
+    newsletter = create(:newsletter, held_at: 2.days.ago, dismissed_at: 1.day.ago)
+
+    newsletter.dismiss
+
+    expect(newsletter.reload.dismissed_at).to be_within(1.second).of(1.day.ago)
+  end
+
   it "records the time when held mail is released as content" do
     newsletter = create(:newsletter, held_at: 1.hour.ago)
 
@@ -304,6 +316,14 @@ RSpec.describe Newsletter do
     expect { newsletter.release }.to raise_error(ActiveRecord::RecordInvalid)
   end
 
+  it "keeps the original time when released mail is released again" do
+    newsletter = create(:newsletter, held_at: 2.days.ago, released_at: 1.day.ago)
+
+    newsletter.release
+
+    expect(newsletter.reload.released_at).to be_within(1.second).of(1.day.ago)
+  end
+
   # What the Subscriptions page's first section lists and the edition page's
   # badge counts: mail in the pen right now, not mail that was ever in it.
   it "finds the held mail still awaiting action" do
@@ -313,13 +333,6 @@ RSpec.describe Newsletter do
     create(:newsletter, held_at: nil)
 
     expect(Newsletter.held).to eq([ waiting ])
-  end
-
-  it "finds the held mail that has been dismissed" do
-    dismissed = create(:newsletter, held_at: 2.days.ago, dismissed_at: 1.day.ago)
-    create(:newsletter, held_at: 1.hour.ago)
-
-    expect(Newsletter.dismissed).to eq([ dismissed ])
   end
 
   it "finds the held mail that has been released" do

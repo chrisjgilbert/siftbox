@@ -18,11 +18,16 @@ class Edition::Citation < ApplicationRecord
   # key is stated. Doing that switches off automatic inverse detection, hence
   # inverse_of on both ends — without it, a story built with its citations in
   # memory reloads the story it already has.
+  # Not touched either, and for the same reason as the newsletter above rather
+  # than a different one. Composition writes an edition once and never again,
+  # so there is no staleness for a touch to signal — and touch propagates, so
+  # every citation would walk up to the story and on to the edition, rewriting
+  # the one edition row once per citation inside a single SQLite write
+  # transaction. See the note on immutability in the editions migration.
   belongs_to :story,
     class_name: "Edition::Story",
     foreign_key: :edition_story_id,
-    inverse_of: :citations,
-    touch: true
+    inverse_of: :citations
 
   # The unique index is what actually holds under a retried composition —
   # this is here so a duplicate reads as a validation failure rather than a

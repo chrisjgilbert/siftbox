@@ -114,7 +114,13 @@ class Feed
     within_window
   end
 
+  # .content, not a bare Newsletter: a subscription confirmation sitting in
+  # the pen, or dismissed out of it, is administrative mail and answering
+  # "did Money Stuff arrive?" with a Substack confirmation defeats the point
+  # of the archive. Applied here rather than left to each caller, because
+  # nothing goes red when it is forgotten — the archive just quietly grows
+  # mail the reader has already dealt with.
   def within_window
-    Newsletter.where(received_at: Newsletter::Age::WINDOW.ago..)
+    Newsletter.content.where(received_at: Newsletter::Age::WINDOW.ago..)
   end
 end

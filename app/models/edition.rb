@@ -32,9 +32,10 @@ class Edition < ApplicationRecord
   end
 
   # The page renders the three sections separately, but it is one edition's
-  # worth of stories either way — sifted in Ruby off the loaded association
-  # rather than asked for in three queries, the way Feed splits its day
-  # groups out of one.
+  # worth of stories either way. Sifted in Ruby off the loaded association
+  # rather than asked for in three queries: Relation#select takes a block, so
+  # the ordered association loads once and all three readers partition that
+  # same load.
   def lead_stories
     stories.select(&:lead?)
   end
