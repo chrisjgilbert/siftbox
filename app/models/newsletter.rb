@@ -21,7 +21,15 @@ class Newsletter < ApplicationRecord
   normalizes :body_html, :sender_email, :sender_name, :snippet, :subject,
     with: ->(value) { value.delete("\0") }
 
+  # Three nullable timestamps allow far more combinations than mean anything,
+  # and each meaningless one is a page reading a falsehood: a resolution with
+  # no hold lists mail in a pen section it never entered, and a stray
+  # released_at drags ordinary content into a second edition window. The
+  # absence rule closes a double resolution from either side, because
+  # whichever of the two is written second is the one being validated.
+  validates :held_at, presence: true, if: :resolved?
   validates :received_at, presence: true
+  validates :released_at, absence: true, if: :dismissed?
 
   # Date headers carry whole seconds, so a batch send lands several
   # newsletters on the same instant. Every ordering here breaks the tie on id
@@ -51,12 +59,61 @@ class Newsletter < ApplicationRecord
     where(lead_image_url: "")
   end
 
+  # The pen: flagged at ingest and not yet dealt with. Everything that reads
+  # it — the Subscriptions page's first section, the edition page's badge,
+  # the exclusion from an edition window — wants the unresolved set, so the
+  # resolution check lives here instead of in three callers.
+  def self.held
+    where.not(held_at: nil).where(dismissed_at: nil, released_at: nil)
+  end
+
+  def self.dismissed
+    where.not(dismissed_at: nil)
+  end
+
+  def self.released
+    where.not(released_at: nil)
+  end
+
+  # What the originals archive shows. Admin mail would answer "did Money
+  # Stuff arrive?" with a Substack confirmation, so mail in the pen and mail
+  # dismissed out of it stays off it entirely, while released mail reads as
+  # though it had never been flagged. Stated as a disjunction rather than as
+  # a negation of .held, because dismissed mail keeps its held_at and .held
+  # has already stopped matching it.
+  def self.content
+    where(held_at: nil).or(where.not(released_at: nil))
+  end
+
   def read?
     read_at.present?
   end
 
   def lead_image?
     lead_image_url.present?
+  end
+
+  # Waiting in the pen right now, not "was ever flagged". The badge has to
+  # clear the moment the reader deals with a confirmation, and the top bar on
+  # the original has to go back to the archive's. The held_at stamp itself
+  # survives resolution — that the mail was once flagged is how the archive
+  # knows to keep a dismissed confirmation off it.
+  def held?
+    held_at.present? && !resolved?
+  end
+
+  def dismissed?
+    dismissed_at.present?
+  end
+
+  def released?
+    released_at.present?
+  end
+
+  # One name for both endings, so nothing downstream has to remember there
+  # are two of them.
+  def resolved?
+    dismissed? || released?
   end
 
   # Read out of the stored body rather than the raw email, so it works both
@@ -74,6 +131,32 @@ class Newsletter < ApplicationRecord
 
   def mark_unread
     update!(read_at: nil)
+  end
+
+  # Idempotent because the heuristic gets pointed at stored rows again: the
+  # backfill the PRD's backtests need would otherwise re-stamp mail still
+  # waiting in the pen, and pull mail the reader already released straight
+  # back out of the archive.
+  def hold
+    return if held_at.present?
+
+    update!(held_at: Time.current)
+  end
+
+  # Confirmed, or simply cleared — the two are the same to us. The original
+  # renders in a sandboxed frame with an opaque origin, so the app cannot
+  # observe the confirm click; this is the reader saying so, and nothing
+  # infers it.
+  def dismiss
+    update!(dismissed_at: Time.current)
+  end
+
+  # The heuristic misfired and this was content all along. Recorded as its
+  # own timestamp rather than by clearing held_at, because the next edition's
+  # window has to pick the newsletter up on when it was released — its
+  # received_at is behind the watermark by then.
+  def release
+    update!(released_at: Time.current)
   end
 
   # "" rather than the whole string when there is no @ to split on. Mail
