@@ -59,10 +59,13 @@ class Newsletter < ApplicationRecord
     where(lead_image_url: "")
   end
 
-  # The pen: flagged at ingest and not yet dealt with. Everything that reads
-  # it — the Subscriptions page's first section, the edition page's badge,
-  # the exclusion from an edition window — wants the unresolved set, so the
-  # resolution check lives here instead of in three callers.
+  # The pen: flagged at ingest and not yet dealt with. Both readers — the
+  # Subscriptions page's first section and the edition page's badge — want
+  # the unresolved set, so the resolution check lives here rather than in
+  # each of them. Not what an edition window excludes: this stops matching
+  # mail once it is dismissed, and a window built from it would readmit
+  # dismissed confirmations for completeness to force into Briefly. The
+  # window wants .content.
   def self.held
     where.not(held_at: nil).where(dismissed_at: nil, released_at: nil)
   end
@@ -180,14 +183,18 @@ class Newsletter < ApplicationRecord
   # Ordered through the scopes rather than inline, so the tie-break on id has
   # one owner. Stated in three places it would drift, and the chain silently
   # dropping a newsletter is exactly what the tie-break exists to prevent.
+  #
+  # Through .content for the same reason the archive is: the chain walks the
+  # archive, and a confirmation the archive refuses to list is not something
+  # to hand the reader a link to.
   def newer
-    Newsletter.neighbour.oldest_first
+    Newsletter.content.neighbour.oldest_first
       .where("(received_at, id) > (?, ?)", received_at, id)
       .first
   end
 
   def older
-    Newsletter.neighbour.newest_first
+    Newsletter.content.neighbour.newest_first
       .where("(received_at, id) < (?, ?)", received_at, id)
       .first
   end

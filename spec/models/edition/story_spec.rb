@@ -122,4 +122,23 @@ RSpec.describe Edition::Story do
 
     expect(story).not_to be_reading_list
   end
+
+  # The shape composition builds: the whole graph in memory, saved at the end.
+  # Citation's own uniqueness check reads the table, so it sees nothing here.
+  it "refuses to cite the same newsletter twice before either is saved" do
+    newsletter = create(:newsletter)
+    story = build(:edition_story)
+    story.citations.build(newsletter: newsletter)
+    story.citations.build(newsletter: newsletter)
+
+    expect(story).not_to be_valid
+  end
+
+  it "allows one story to cite two different newsletters" do
+    story = build(:edition_story)
+    story.citations.build(newsletter: create(:newsletter))
+    story.citations.build(newsletter: create(:newsletter))
+
+    expect(story).to be_valid
+  end
 end

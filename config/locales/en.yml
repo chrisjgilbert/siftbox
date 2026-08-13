@@ -1,4 +1,15 @@
 en:
+  activerecord:
+    errors:
+      models:
+        edition:
+          attributes:
+            stories:
+              duplicate_position: claim the same position twice.
+        edition/story:
+          attributes:
+            citations:
+              duplicate_newsletter: name the same newsletter twice.
   date:
     formats:
       feed_group: "%A %-d %B"

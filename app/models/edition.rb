@@ -12,6 +12,8 @@ class Edition < ApplicationRecord
   # own destroy callbacks on the way out.
   has_many :stories, -> { in_position_order }, dependent: :destroy, inverse_of: :edition
 
+  validate :stories_hold_distinct_positions
+
   validates :number, presence: true, uniqueness: true
   validates :published_at, presence: true
   validates :published_on, presence: true, uniqueness: true
@@ -53,5 +55,23 @@ class Edition < ApplicationRecord
   # heading over nothing.
   def reading_list?
     reading_list.any?
+  end
+
+  private
+
+  # The same blind spot Edition::Story has about its citations: Story's own
+  # uniqueness validation reads the table, so two unsaved stories claiming
+  # position 3 both pass it and the insert fails on the index instead, under
+  # a message that names no position.
+  #
+  # Read off the association's in-memory target rather than through #stories,
+  # which would load it. Validating on create would then cache an empty
+  # collection, and every section reader after that would answer out of that
+  # cache — an edition full of stories rendering as an edition of none.
+  def stories_hold_distinct_positions
+    claimed = association(:stories).target.map(&:position)
+    return if claimed.length == claimed.uniq.length
+
+    errors.add(:stories, :duplicate_position)
   end
 end

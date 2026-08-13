@@ -3,6 +3,10 @@ namespace :sample_data do
   task load: :environment do
     raise "Development only" unless Rails.env.development?
 
+    # Editions first, and not only for tidiness: a newsletter's citations
+    # cascade with it, so clearing newsletters alone would leave yesterday's
+    # sample editions standing with stories that cite nothing.
+    Edition.destroy_all
     Newsletter.destroy_all
     SampleData.newsletters.each do |attributes|
       Newsletter.create!(attributes).capture_lead_image

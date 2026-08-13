@@ -128,4 +128,22 @@ RSpec.describe Edition do
 
     expect(Edition::Citation.count).to eq(0)
   end
+
+  # Story's uniqueness validation reads the table, so two unsaved stories both
+  # claiming position 3 pass it and collide on the index instead.
+  it "refuses two stories at the same position before either is saved" do
+    edition = build(:edition)
+    edition.stories.build(attributes_for(:edition_story, position: 3))
+    edition.stories.build(attributes_for(:edition_story, position: 3))
+
+    expect(edition).not_to be_valid
+  end
+
+  it "allows stories at different positions" do
+    edition = build(:edition)
+    edition.stories.build(attributes_for(:edition_story, position: 1))
+    edition.stories.build(attributes_for(:edition_story, position: 2))
+
+    expect(edition).to be_valid
+  end
 end

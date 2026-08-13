@@ -26,6 +26,8 @@ class Edition::Story < ApplicationRecord
   validates :position, presence: true, uniqueness: { scope: :edition }
   validates :section, presence: true, inclusion: { in: SECTIONS }
 
+  validate :citations_point_at_distinct_newsletters
+
   # Position is unique within an edition, so this is already a total order and
   # needs no tie-break on id.
   def self.in_position_order
@@ -42,5 +44,23 @@ class Edition::Story < ApplicationRecord
 
   def reading_list?
     section == READING_LIST
+  end
+
+  private
+
+  # Citation's own uniqueness validation and the unique index behind it both
+  # answer from what is already in the table, so neither sees a story citing
+  # one newsletter twice in a graph that has not been saved yet — which is
+  # the exact shape composition builds, out of model output that is perfectly
+  # capable of naming the same source twice in one story. Without this the
+  # insert fails on the index and Rails reports "Stories is invalid", naming
+  # neither the story nor the newsletter.
+  # In-memory target rather than #citations, which would load the association
+  # and leave a validated story answering out of a stale cache.
+  def citations_point_at_distinct_newsletters
+    cited = association(:citations).target.map(&:newsletter_id)
+    return if cited.length == cited.uniq.length
+
+    errors.add(:citations, :duplicate_newsletter)
   end
 end
