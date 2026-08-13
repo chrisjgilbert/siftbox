@@ -1,4 +1,12 @@
 FactoryBot.define do
+  factory :edition do
+    sequence(:number)
+    published_on { Date.current }
+    published_at { Time.current }
+    window_started_at { 1.day.ago }
+    window_ended_at { Time.current }
+  end
+
   factory :newsletter do
     sender_name { "Ruby Weekly" }
     sender_email { "peter@rubyweekly.com" }
