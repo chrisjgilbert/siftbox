@@ -43,6 +43,16 @@ RSpec.describe Newsletter::Prose do
     HTML
   end
 
+  # One sentence repeated is enough: the cap is about length, and a body that
+  # reaches it is several hundred paragraphs of something.
+  def sentence
+    "Figma filed its S-1 on Tuesday and the numbers surprised everyone. "
+  end
+
+  def issue_longer_than(characters)
+    "<p>#{sentence * ((characters / sentence.length) + 1)}</p>"
+  end
+
   it "reads the prose out of the markup" do
     html = "<h1>The Figma S-1</h1><p>Figma filed on Tuesday.</p>"
 
@@ -252,5 +262,45 @@ RSpec.describe Newsletter::Prose do
     result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
 
     expect(result).to include("Subscribe to The Diff to keep reading")
+  end
+
+  # Bodies run to hundreds of kilobytes and the window holds ten to twenty of
+  # them at once.
+  it "caps a body that runs past the limit" do
+    html = issue_longer_than(Newsletter::Prose::MAXIMUM_CHARACTERS)
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
+
+    expect(result.length).to be <= Newsletter::Prose::MAXIMUM_CHARACTERS
+  end
+
+  # A half word is a token the editor could quote as though the sender wrote
+  # it, and the last one before the cap is the one it is likeliest to reach
+  # for.
+  it "cuts the text on a word boundary" do
+    html = issue_longer_than(Newsletter::Prose::MAXIMUM_CHARACTERS)
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
+
+    expect(sentence.split).to include(result.lines.first.split.last)
+  end
+
+  # Truncation is one of the things the editor reads a paywalled stub by, so
+  # a cap that cut silently would have it report our own limit as the
+  # sender's paywall.
+  it "says where it cut" do
+    html = issue_longer_than(Newsletter::Prose::MAXIMUM_CHARACTERS)
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
+
+    expect(result).to end_with(Newsletter::Prose::OMISSION)
+  end
+
+  it "leaves a newsletter that fits alone" do
+    html = "<p>#{sentence}</p>"
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
+
+    expect(result).to eq(sentence.strip)
   end
 end

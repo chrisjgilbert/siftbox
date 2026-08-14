@@ -83,12 +83,27 @@ class Newsletter::Prose
   POSTCODE = /(?:[A-Z]{2}\s+\d{5}(?:-\d{4})?|[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})/
   ADDRESS = /\A.{0,120}\b#{POSTCODE}[.,]?\z/
 
+  # Roughly three thousand tokens at four characters to a token, which is the
+  # PRD's "a few thousand tokens" per newsletter: twenty of them is around
+  # sixty thousand tokens of input, tens of cents a day at claude-opus-5's
+  # $5 per million. Most issues come in under it whole — a 60KB body is
+  # mostly markup — so this is a ceiling on the outliers rather than a
+  # setting every newsletter meets. Raising it costs money linearly and
+  # buries the short newsletters in the middle of the window; lowering it
+  # starts cutting ordinary issues in half.
+  MAXIMUM_CHARACTERS = 12_000
+
+  # Named, and named as our doing. A cut that said nothing would be read as
+  # the sender's: the editor classifies a paywalled stub partly by where the
+  # text stops, and it would report this app's ceiling as somebody's paywall.
+  OMISSION = "\n[truncated for length]".freeze
+
   def initialize(body)
     @body = body
   end
 
   def text
-    @_text ||= lines.join("\n")
+    @_text ||= capped(lines.join("\n"))
   end
 
   private
@@ -123,6 +138,12 @@ class Newsletter::Prose
     return " " if node.name == "br"
 
     node.text
+  end
+
+  # On a space, so no word is handed over as a fragment the editor could
+  # quote as though the sender had written it.
+  def capped(prose)
+    prose.truncate(MAXIMUM_CHARACTERS, separator: " ", omission: OMISSION)
   end
 
   def clean(line)
