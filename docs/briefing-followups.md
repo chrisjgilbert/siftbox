@@ -4,6 +4,74 @@ Findings from the review passes that were deliberately not fixed at the time
 they were found, with the milestone that should pick each one up. Fixed
 findings are not listed; they are in the diff.
 
+## Milestone 2 — what an API key has still to prove
+
+The editor has never made a request. Every spec runs against `FakeAnthropic`,
+and the corpus in `lib/edition_corpus.rb` is answered by a fake that was handed
+the expected answer, so what is green here is the plumbing and nothing else.
+What that leaves unproven, in the order it will be found out:
+
+- **That claude-opus-5 accepts the request as built.** The `output_config`
+  shape, `system_`, the effort level, the JSON schema and the streaming call
+  have been checked against the SDK's own interface and the API reference,
+  never against the API. A 400 on the first real call is a live possibility,
+  and `Edition::Draft::Rejected` is what it will arrive as.
+
+- **That the schema is honoured.** Nothing has confirmed the model returns
+  `section` values from the enum, cites integers that are newsletter ids, or
+  keeps to `additionalProperties: false`. `Edition::Editor` catches an id that
+  was not in the window; it cannot catch a section word that is not a section,
+  which surfaces as a validation failure on the story.
+
+- **Everything Milestone 0 is for.** Clustering, attribution, selection and
+  classification are judged by a person reading `edition:backtest` output.
+  The corpus states what a good answer looks like — one story off three
+  senders, the tutorial on the reading list, the teaser's paywall named — but
+  the only evidence so far is that composition puts such an answer in the
+  right places, not that a model produces one.
+
+- **Whether regeneration converges.** The completeness check has never failed
+  against a real answer, so nobody knows if the first attempt usually passes.
+  A retry re-sends the identical prompt without saying which newsletter went
+  missing; if three blind rolls turn out not to be enough, the fix is a
+  correction in `Edition::Prompt` and a `VERSION` bump.
+
+- **The cost and the ceiling.** ~$0.45 a day is arithmetic over an assumed
+  60k input tokens, not a measurement, and `MAX_TOKENS = 32_000` has never
+  been tested against thinking plus a full edition — `Truncated` may be
+  routine on a catch-up window or may never fire. The backtest prints the real
+  figures per run, which is where the answer comes from. `EFFORT = "high"` has
+  never been compared with `medium` or `xhigh`; a sweep belongs in the same
+  session.
+
+- **Refusals and streaming.** `stop_details.category` has never been seen on a
+  real response, and `accumulated_message` was verified by reflection against
+  the installed gem rather than against a live stream.
+
+What the corpus itself does not cover, so a backtest over real mail is not
+optional:
+
+- **No newsletter in it carries more than one item.** "One newsletter may
+  carry five items" is exactly the case the corpus cannot check, and
+  link-roundup senders (AINews) are the ones the PRD already suspects. Real
+  mail is where that gets tested.
+- **Nothing in it is image-only, oversized, or non-English**, so the
+  per-source cap, the empty-prose path and the PRD's two-pass chunking for a
+  window that overflows are all untouched by it.
+
+Two smaller things this milestone found and left alone:
+
+- **`Newsletter::Prose` misses "Read in the app".** `CHROME_LABELS` matches
+  "read in app" and "read on the app" but not the article in between, so that
+  footer line reaches the editor as content. It is one junk line and the
+  anchored-label rule is deliberately conservative, but the pattern is worth a
+  word when someone next touches that list.
+- **`edition:backtest` cannot rehearse a day that already has an edition.**
+  The rehearsal is validated like the real thing, and `published_on` is
+  unique. Harmless until the schedule ships; after that, re-reading a window
+  wants the regenerate task the PRD sketches, which has to decide what happens
+  to the edition already sitting on that date.
+
 ## For Milestone 3 — publishing and the window
 
 - **The edition window is two-clause, and nothing enforces that yet.**
