@@ -27,9 +27,10 @@ class FakeAnthropic
     )
   end
 
-  def initialize(text: "{}", stop_reason: :end_turn, input_tokens: 0, output_tokens: 0, error: nil)
+  def initialize(text: "{}", stop_reason: :end_turn, category: nil,
+    input_tokens: 0, output_tokens: 0, error: nil)
     @messages = Messages.new(
-      message: message(text, stop_reason, input_tokens, output_tokens), error: error
+      message: message(text, stop_reason, category, input_tokens, output_tokens), error: error
     )
   end
 
@@ -39,12 +40,24 @@ class FakeAnthropic
 
   private
 
-  def message(text, stop_reason, input_tokens, output_tokens)
+  def message(text, stop_reason, category, input_tokens, output_tokens)
     Anthropic::Models::Message.new(
       id: "msg_01", content: content(text, stop_reason), model: :"claude-opus-5",
       role: :assistant, stop_reason: stop_reason, stop_sequence: nil, type: :message,
-      usage: { input_tokens: input_tokens, output_tokens: output_tokens }
+      usage: { input_tokens: input_tokens, output_tokens: output_tokens }, **details(category)
     )
+  end
+
+  # Carried on a refusal and null on every other stop reason, so a reader that
+  # takes it for granted fails here first. Left out of the arguments entirely
+  # rather than passed as nil, because the SDK's constructor is stricter than
+  # its own response parsing and refuses an explicit nil for a field that
+  # arrives null over the wire — a fact about building one of these by hand,
+  # not about what the API sends.
+  def details(category)
+    return {} if category.nil?
+
+    { stop_details: { type: "refusal", category: category } }
   end
 
   # A declined request answers 200 with nothing in it, which is the reason

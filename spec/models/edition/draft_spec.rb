@@ -145,6 +145,16 @@ RSpec.describe Edition::Draft do
       .to raise_error(Edition::Draft::Refused)
   end
 
+  # Which classifier declined is the difference between "one newsletter was
+  # about a breach" and no idea at all — and a missing edition says nothing on
+  # its own, so this is the whole of what there is to read afterwards.
+  it "says which classifier declined" do
+    client = FakeAnthropic.new(stop_reason: :refusal, category: :cyber)
+
+    expect { Edition::Draft.new(Edition::Prompt.new(newsletters), client: client).write }
+      .to raise_error(Edition::Draft::Refused, /cyber/)
+  end
+
   it "raises when the answer stopped before the JSON closed" do
     client = FakeAnthropic.new(text: %({"stories":[), stop_reason: :max_tokens)
 

@@ -96,10 +96,18 @@ class Edition::Draft
 
   # Both stop reasons come back as Symbols, not Strings.
   def answered(response)
-    raise Refused, "the model declined to write the edition" if response.stop_reason == :refusal
+    raise Refused, declined(response) if response.stop_reason == :refusal
     raise Truncated, "the edition ran past #{MAX_TOKENS} tokens" if response.stop_reason == :max_tokens
 
     copy(response)
+  end
+
+  # Which classifier declined, because a missing edition is otherwise silent
+  # and this is the only sentence anybody gets to read about why. The category
+  # is an open set and can be nil even on a refusal, so nothing here counts on
+  # a particular one being there.
+  def declined(response)
+    "the model declined to write the edition: #{response.stop_details&.category || "no reason given"}"
   end
 
   def copy(response)
