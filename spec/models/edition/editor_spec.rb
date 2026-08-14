@@ -155,4 +155,117 @@ RSpec.describe Edition::Editor do
 
     expect(edition).to be_persisted
   end
+
+  it "asks once when the first answer covers the window" do
+    source = newsletter
+    client = FakeAnthropic.new(text: answer(story(cites: [ source.id ])))
+
+    compose([ source ], client)
+
+    expect(client.messages.requests.length).to eq(1)
+  end
+
+  it "asks again when the answer left a newsletter uncited" do
+    levine = newsletter(subject: "Money Stuff")
+    diff = newsletter(subject: "The Diff")
+    client = FakeAnthropic.new(text: [
+      answer(story(cites: [ levine.id ])),
+      answer(story(cites: [ levine.id, diff.id ]))
+    ])
+
+    compose([ levine, diff ], client)
+
+    expect(client.messages.requests.length).to eq(2)
+  end
+
+  it "publishes the regenerated edition rather than the incomplete one" do
+    levine = newsletter(subject: "Money Stuff")
+    diff = newsletter(subject: "The Diff")
+    client = FakeAnthropic.new(text: [
+      answer(story(cites: [ levine.id ])),
+      answer(story(cites: [ levine.id, diff.id ]))
+    ])
+
+    compose([ levine, diff ], client)
+
+    expect(Edition.last.stories.first.newsletters).to contain_exactly(levine, diff)
+  end
+
+  it "gives up on an answer that never covers the window" do
+    levine = newsletter(subject: "Money Stuff")
+    diff = newsletter(subject: "The Diff")
+    client = FakeAnthropic.new(text: answer(story(cites: [ levine.id ])))
+
+    expect { compose([ levine, diff ], client) }
+      .to raise_error(Edition::Editor::Incomplete, /no story cited newsletter #{diff.id}\b/)
+  end
+
+  it "stops asking after the attempts it is allowed" do
+    levine = newsletter(subject: "Money Stuff")
+    diff = newsletter(subject: "The Diff")
+    client = FakeAnthropic.new(text: answer(story(cites: [ levine.id ])))
+
+    suppress(Edition::Editor::Incomplete) { compose([ levine, diff ], client) }
+
+    expect(client.messages.requests.length).to eq(Edition::Editor::ATTEMPTS)
+  end
+
+  # The whole point of failing loudly: half an edition, published, would read
+  # as a complete one, and the newsletter it dropped has no other surface left
+  # to be found on.
+  it "leaves no edition behind when it gives up" do
+    levine = newsletter(subject: "Money Stuff")
+    diff = newsletter(subject: "The Diff")
+    client = FakeAnthropic.new(text: answer(story(cites: [ levine.id ])))
+
+    suppress(Edition::Editor::Incomplete) { compose([ levine, diff ], client) }
+
+    expect(Edition.count).to eq(0)
+  end
+
+  # A background job's exception says composition failed and nothing about
+  # what was wrong with it, so this line is the entire diagnosis.
+  it "logs which newsletter went missing when it gives up" do
+    levine = newsletter(subject: "Money Stuff")
+    diff = newsletter(subject: "The Diff")
+    client = FakeAnthropic.new(text: answer(story(cites: [ levine.id ])))
+    allow(Rails.logger).to receive(:error)
+
+    suppress(Edition::Editor::Incomplete) { compose([ levine, diff ], client) }
+
+    expect(Rails.logger).to have_received(:error).with(/no story cited newsletter #{diff.id}\b/)
+  end
+
+  it "asks again when the answer cited a newsletter that was not in the window" do
+    source = newsletter
+    client = FakeAnthropic.new(text: [
+      answer(story(cites: [ source.id, source.id + 404 ])),
+      answer(story(cites: [ source.id ]))
+    ])
+
+    compose([ source ], client)
+
+    expect(Edition.last.stories.first.newsletters).to eq([ source ])
+  end
+
+  it "gives up rather than citing a newsletter that was not in the window" do
+    source = newsletter
+    client = FakeAnthropic.new(text: answer(story(cites: [ source.id, source.id + 404 ])))
+
+    expect { compose([ source ], client) }.to raise_error(
+      Edition::Editor::Incomplete, /cited newsletter #{source.id + 404}, which was not in the window/
+    )
+  end
+
+  # The graph is saved in one go, so a story the database or the model layer
+  # refuses takes the edition down with it rather than leaving a masthead with
+  # nothing under it.
+  it "leaves no edition behind when a story will not save" do
+    source = newsletter
+    client = FakeAnthropic.new(text: answer(story(cites: [ source.id ], body: "")))
+
+    suppress(ActiveRecord::RecordInvalid) { compose([ source ], client) }
+
+    expect(Edition.count).to eq(0)
+  end
 end

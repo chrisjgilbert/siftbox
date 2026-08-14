@@ -27,11 +27,17 @@ class FakeAnthropic
     )
   end
 
+  # An Array of texts for a caller that asks more than once and has to be
+  # given something different the second time — a regeneration after a failed
+  # check is the only thing that does, and a fake that could only repeat
+  # itself could not tell a converging one from a stuck one.
   def initialize(text: "{}", stop_reason: :end_turn, category: nil,
     input_tokens: 0, output_tokens: 0, error: nil)
-    @messages = Messages.new(
-      message: message(text, stop_reason, category, input_tokens, output_tokens), error: error
-    )
+    answers = Array(text).map do |answer|
+      message(answer, stop_reason, category, input_tokens, output_tokens)
+    end
+
+    @messages = Messages.new(answers: answers, error: error)
   end
 
   def request
@@ -72,17 +78,20 @@ class FakeAnthropic
   class Messages
     attr_reader :requests
 
-    def initialize(message:, error:)
-      @message = message
+    def initialize(answers:, error:)
+      @answers = answers
       @error = error
       @requests = []
     end
 
+    # One answer per request, in order, and the last of them for every request
+    # after that — so a fake given one text answers the same thing however
+    # often it is asked, exactly as it did before it could hold several.
     def stream(**request)
       @requests << request
       raise @error if @error
 
-      Stream.new(@message)
+      Stream.new(@answers.fetch(requests.length - 1, @answers.last))
     end
   end
 
