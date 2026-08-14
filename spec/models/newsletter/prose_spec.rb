@@ -303,4 +303,14 @@ RSpec.describe Newsletter::Prose do
 
     expect(result).to eq(sentence.strip)
   end
+
+  # A mail with neither part carrying anything stores an empty body_html, and
+  # the window has to hand the editor something rather than raise on it. What
+  # an edition does with a newsletter that says nothing is the composer's
+  # decision, not this one's.
+  it "answers with nothing for a body that holds no text" do
+    result = Newsletter::Prose.new(Newsletter::Body.new("")).text
+
+    expect(result).to eq("")
+  end
 end
