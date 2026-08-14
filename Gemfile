@@ -72,3 +72,6 @@ group :development do
 end
 
 gem "honeybadger", "~> 6.9"
+
+# The model that writes the edition [https://github.com/anthropics/anthropic-sdk-ruby]
+gem "anthropic", "~> 1.62"
