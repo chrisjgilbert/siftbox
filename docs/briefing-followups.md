@@ -59,8 +59,16 @@ optional:
   per-source cap, the empty-prose path and the PRD's two-pass chunking for a
   window that overflows are all untouched by it.
 
-One smaller thing this milestone found and left alone:
+Smaller things this milestone found and left alone:
 
+- **The chrome rules are still only proven against invented mail.** The review
+  found two ways they misfire — a UK postcode pattern that also matches
+  "an M2 8GB", and boilerplate that only matched a typewriter apostrophe — and
+  both were found by reading, not by the corpus, whose bodies were written to
+  the same assumptions as the rules. Both are fixed, but the pair is evidence
+  about the method rather than about those two lines: the next such bug is
+  found by dumping `Newsletter::Prose` over real stored bodies and reading the
+  output, which is Milestone 0's backtest.
 - **`edition:backtest` cannot rehearse a day that already has an edition.**
   The rehearsal is validated like the real thing, and `published_on` is
   unique. Harmless until the schedule ships; after that, re-reading a window

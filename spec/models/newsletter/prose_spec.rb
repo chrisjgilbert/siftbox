@@ -262,6 +262,24 @@ RSpec.describe Newsletter::Prose do
     expect(result).to include("500 Pearl Street")
   end
 
+  # "M2 8GB" is a well-formed Manchester postcode as well as a laptop, and a
+  # sentence ending in one is ordinary tech writing rather than a footer.
+  it "keeps a sentence that happens to end in a postcode-shaped phrase" do
+    html = "<p>The build runs fine on an M2 8GB</p>"
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
+
+    expect(result).to include("runs fine on an M2 8GB")
+  end
+
+  it "removes a footer written with a typographic apostrophe" do
+    html = "<p>You’re receiving this because you subscribed at example.com</p>"
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
+
+    expect(result).not_to include("You’re receiving this")
+  end
+
   # The truncation point and the upgrade prompt are how the editor tells a
   # paywalled stub from a full piece, and the PRD has it report a teaser
   # honestly rather than write it up. Strip the prompt as a subscribe CTA and

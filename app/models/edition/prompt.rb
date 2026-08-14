@@ -134,8 +134,10 @@ class Edition::Prompt
     INSTRUCTIONS
   end
 
+  # Memoised because a regeneration re-sends the identical prompt, and
+  # rebuilding it would parse every body in the window a second time.
   def sources
-    newsletters.map { |newsletter| quoted(newsletter) }.join("\n")
+    @_sources ||= newsletters.map { |newsletter| quoted(newsletter) }.join("\n")
   end
 
   private

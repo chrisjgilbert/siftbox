@@ -62,7 +62,7 @@ class Newsletter::Prose
   # mentions these phrases mid-sentence, footers open with them.
   CHROME_OPENERS = [
     /\Aforwarded this (email|message|newsletter)/,
-    /\Ayou'?(re| are) (receiving|getting) this/,
+    /\Ayou['’]?(re| are) (receiving|getting) this/,
     /\Ayou (received|are subscribed to)/,
     /\Athis (email|message) was sent to/,
     /\A(if you )?no longer wish to receive/,
@@ -80,8 +80,20 @@ class Newsletter::Prose
   # postcode. Ending there is the whole rule: a street address quoted inside
   # a story has the rest of the sentence after it, and matching on "looks
   # like an address" anywhere in the line would take the story with it.
-  POSTCODE = /(?:[A-Z]{2}\s+\d{5}(?:-\d{4})?|[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})/
-  ADDRESS = /\A.{0,120}\b#{POSTCODE}[.,]?\z/
+  #
+  # The UK form needs a second anchor. "M2 8GB" is a valid Manchester
+  # postcode and also a laptop, so the pattern alone deletes ordinary tech
+  # prose — and under the completeness guarantee a dropped line is one the
+  # edition can never report. A footer address is written in parts
+  # ("Dispatchmail, 41 Blackfriars Road, London SE1 8NZ"), so the comma is
+  # what separates it from a sentence that merely ends in the same shape.
+  # The US form is specific enough to stand on its own.
+  POSTCODE_UNITED_STATES = /[A-Z]{2}\s+\d{5}(?:-\d{4})?/
+  POSTCODE_UNITED_KINGDOM = /[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}/
+  ADDRESS = Regexp.union(
+    /\A.{0,120}\b#{POSTCODE_UNITED_STATES}[.,]?\z/,
+    /\A.{0,120},.{0,120}\b#{POSTCODE_UNITED_KINGDOM}[.,]?\z/
+  )
 
   # Roughly three thousand tokens at four characters to a token, which is the
   # PRD's "a few thousand tokens" per newsletter: twenty of them is around
