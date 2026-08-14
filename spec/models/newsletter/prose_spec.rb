@@ -1,6 +1,48 @@
 require "rails_helper"
 
 RSpec.describe Newsletter::Prose do
+  # The shape a Substack issue actually arrives in: the app bar above the
+  # masthead, the forwarding prompt, the reaction row under the post, and the
+  # footer the platform appends to every issue of every publication.
+  def substack_issue
+    <<~HTML
+      <table><tr><td>
+        <a href="https://open.substack.com/pub/moneystuff/p/figma?utm_source=email">READ IN APP</a>
+      </td></tr></table>
+      <p>Forwarded this email? <a href="https://moneystuff.substack.com/subscribe">Subscribe here</a> for more</p>
+      <h1>The Figma S-1</h1>
+      <p>Figma filed its S-1 on Tuesday, and the numbers are rather better
+      than anyone outside the company seems to have expected.</p>
+      <table><tr>
+        <td><a href="https://substack.com/like">Like</a></td>
+        <td><a href="https://substack.com/comment">Comment</a></td>
+        <td><a href="https://substack.com/restack">Restack</a></td>
+      </tr></table>
+      <div>
+        <p>You're receiving this because you subscribed to Money Stuff.</p>
+        <p><a href="https://substack.com/away">Unsubscribe</a> | <a href="https://substack.com/prefs">Update your preferences</a></p>
+        <p>228 Park Ave S, PMB 71196, New York, NY 10003</p>
+        <p>&copy; 2026 Matt Levine</p>
+      </div>
+    HTML
+  end
+
+  # A link roundup, the other common shape: a view-in-browser bar, items that
+  # are almost entirely link text, a share row and a plainer footer.
+  def link_roundup_issue
+    <<~HTML
+      <div><a href="https://mail.example.com/web/1">View this email in your browser</a></div>
+      <h2>Today's links</h2>
+      <ul>
+        <li><a href="https://example.com/sleep">The case against sleep</a> — a long argument, well made.</li>
+        <li><a href="https://example.com/figma">Figma's S-1, annotated</a></li>
+      </ul>
+      <p>Share: <a href="#">Twitter</a> &middot; <a href="#">Facebook</a> &middot; <a href="#">LinkedIn</a></p>
+      <p>No longer want these emails? <a href="https://mail.example.com/u/1">Unsubscribe</a>.</p>
+      <p>AI News, 2261 Market Street #4818, San Francisco, CA 94114</p>
+    HTML
+  end
+
   it "reads the prose out of the markup" do
     html = "<h1>The Figma S-1</h1><p>Figma filed on Tuesday.</p>"
 
@@ -97,5 +139,118 @@ RSpec.describe Newsletter::Prose do
     result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
 
     expect(result).to eq("Figma filed.\nNobody expected it.")
+  end
+
+  it "keeps the issue's own prose" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(substack_issue)).text
+
+    expect(result).to include("The Figma S-1", "Figma filed its S-1 on Tuesday")
+  end
+
+  it "removes the app bar above the masthead" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(substack_issue)).text
+
+    expect(result).not_to include("READ IN APP")
+  end
+
+  it "removes the forwarding prompt" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(substack_issue)).text
+
+    expect(result).not_to include("Forwarded this email")
+  end
+
+  it "removes the reaction row under the post" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(substack_issue)).text
+
+    expect(result).not_to include("Restack")
+  end
+
+  it "removes the line saying why the email arrived" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(substack_issue)).text
+
+    expect(result).not_to include("You're receiving this")
+  end
+
+  it "removes the unsubscribe and preferences footer" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(substack_issue)).text
+
+    expect(result).not_to include("Unsubscribe", "Update your preferences")
+  end
+
+  it "removes the address block" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(substack_issue)).text
+
+    expect(result).not_to include("228 Park Ave S")
+  end
+
+  it "removes the copyright line" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(substack_issue)).text
+
+    expect(result).not_to include("2026 Matt Levine")
+  end
+
+  it "removes the view-in-browser bar" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(link_roundup_issue)).text
+
+    expect(result).not_to include("View this email in your browser")
+  end
+
+  it "removes a row of share links" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(link_roundup_issue)).text
+
+    expect(result).not_to include("LinkedIn")
+  end
+
+  it "removes the opt-out line at the foot of a roundup" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(link_roundup_issue)).text
+
+    expect(result).not_to include("No longer want these emails")
+  end
+
+  it "keeps every item of a link roundup" do
+    result = Newsletter::Prose.new(Newsletter::Body.new(link_roundup_issue)).text
+
+    expect(result).to include("The case against sleep", "Figma's S-1, annotated")
+  end
+
+  # The chrome rules strip boilerplate every issue carries, not anything that
+  # looks promotional. Anything dropped here is something the editor cannot
+  # cite, and the completeness guarantee says every newsletter gets cited.
+  it "keeps prose that happens to mention unsubscribing" do
+    html = "<p>The complaint is that the unsubscribe link is buried three " \
+           "scrolls down, which is now a fineable offence in Germany.</p>"
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
+
+    expect(result).to include("unsubscribe link is buried")
+  end
+
+  it "keeps a sentence that opens by asking to be shared" do
+    html = "<p>Share this with the one person you know who still reads S-1s.</p>"
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
+
+    expect(result).to include("Share this with the one person")
+  end
+
+  it "keeps an address that is part of the story" do
+    html = "<p>The hearing is at 500 Pearl Street, New York, NY 10007, on Thursday.</p>"
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
+
+    expect(result).to include("500 Pearl Street")
+  end
+
+  # The truncation point and the upgrade prompt are how the editor tells a
+  # paywalled stub from a full piece, and the PRD has it report a teaser
+  # honestly rather than write it up. Strip the prompt as a subscribe CTA and
+  # the stub reads as a complete but strangely thin article.
+  it "keeps the upgrade prompt that marks a paywalled stub" do
+    html = "<p>Keep reading with a 7-day free trial.</p>" \
+           "<p>Subscribe to The Diff to keep reading this post.</p>"
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(html)).text
+
+    expect(result).to include("Subscribe to The Diff to keep reading")
   end
 end

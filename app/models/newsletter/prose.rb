@@ -32,6 +32,57 @@ class Newsletter::Prose
   # URL, which is a cheaper mistake than leaving half a tracking URL behind.
   URL = %r{\bhttps?://\S+|\bwww\.\S+}i
 
+  # Chrome is boilerplate every issue of every newsletter carries, and it is
+  # not the same thing as anything that reads promotionally. A newsletter
+  # whose actual subject is subscription businesses is content, and a
+  # paywalled stub's upgrade prompt is the evidence the editor classifies it
+  # by — the PRD has it report a teaser honestly rather than write it up, and
+  # a stub with its prompt cut out reads as a complete but thin article.
+  #
+  # So both rules below are anchored rather than a keyword search: a label
+  # has to be the whole line, and an opener has to start it. What that misses
+  # stays in, which is the right way round — the completeness guarantee means
+  # anything dropped here is something the editor can no longer cite.
+  #
+  # Both lists are matched against the line folded to lower case.
+  CHROME_LABELS = [
+    /\Aread (in|on the) app\z/,
+    /\A(view|read) (this )?(email |message )?(in|on) (your |the )?browser\z/,
+    /\A(view|read) (it |this )?online\z/,
+    /\Aunsubscribe( here| from this list| from these emails)?\z/,
+    /\A(update|manage|edit) (your )?(email |newsletter )?(preferences|subscription|settings)\z/,
+    /\A(email|subscription|notification) (preferences|settings)\z/,
+    /\Ashare( this)?( post| email| story| newsletter)?\z/,
+    /\A(tweet|forward|like|comment|restack|view comments)\z/,
+    /\A(facebook|twitter|linkedin|instagram|threads|mastodon|bluesky|whatsapp|telegram|youtube|tiktok|reddit|x)\z/
+  ].freeze
+
+  # Sentence-shaped boilerplate, which no length ceiling separates reliably
+  # from a short paragraph. Anchored to the start of the line instead: prose
+  # mentions these phrases mid-sentence, footers open with them.
+  CHROME_OPENERS = [
+    /\Aforwarded this (email|message|newsletter)/,
+    /\Ayou'?(re| are) (receiving|getting) this/,
+    /\Ayou (received|are subscribed to)/,
+    /\Athis (email|message) was sent to/,
+    /\A(if you )?no longer wish to receive/,
+    /\A(if you )?no longer want (to receive )?(these|this)/,
+    /\Ato (stop receiving|unsubscribe from)/,
+    /\A(copyright )?©\s*\d{4}/,
+    /\Aall rights reserved/
+  ].freeze
+
+  # What a line of labels is separated by. A hyphen only counts with spaces
+  # either side, so "opt-in" is one part rather than two.
+  SEPARATORS = %r{[|·•⋅/:,]|\s[-–—]\s}
+
+  # An address block ends with its postcode — US state and ZIP, or a UK
+  # postcode. Ending there is the whole rule: a street address quoted inside
+  # a story has the rest of the sentence after it, and matching on "looks
+  # like an address" anywhere in the line would take the story with it.
+  POSTCODE = /(?:[A-Z]{2}\s+\d{5}(?:-\d{4})?|[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})/
+  ADDRESS = /\A.{0,120}\b#{POSTCODE}[.,]?\z/
+
   def initialize(body)
     @body = body
   end
@@ -48,6 +99,7 @@ class Newsletter::Prose
     segments.chunk { |node| line_start(node) }
       .map { |_element, nodes| line(nodes) }
       .reject(&:blank?)
+      .reject { |line| chrome?(line) }
   end
 
   # Whitespace-only text nodes are kept, where Newsletter::Body#text drops
@@ -75,6 +127,37 @@ class Newsletter::Prose
 
   def clean(line)
     line.delete(ZERO_WIDTH).gsub(URL, "").squish
+  end
+
+  # The address is read off the line as written, because its postcode is a
+  # shape in capitals; everything else reads better folded.
+  def chrome?(line)
+    folded = line.downcase
+
+    labels_only?(folded) || opener?(folded) || ADDRESS.match?(line)
+  end
+
+  # Every part a label, not merely one of them: a footer stacks its links in
+  # one row — "Unsubscribe | Update your preferences" — and a sentence with a
+  # comma in it is several parts of which the first is prose.
+  def labels_only?(folded)
+    parts = parts_of(folded)
+
+    parts.any? && parts.all? { |part| label?(part) }
+  end
+
+  def parts_of(folded)
+    folded.split(SEPARATORS)
+      .map { |part| part.gsub(/\A\W+|\W+\z/, "") }
+      .reject(&:blank?)
+  end
+
+  def label?(part)
+    CHROME_LABELS.any? { |pattern| part.match?(pattern) }
+  end
+
+  def opener?(folded)
+    CHROME_OPENERS.any? { |pattern| folded.match?(pattern) }
   end
 
   # The nearest ancestor that is not inline markup — the block this run of
