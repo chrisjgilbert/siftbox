@@ -46,7 +46,7 @@ class Newsletter::Prose
   #
   # Both lists are matched against the line folded to lower case.
   CHROME_LABELS = [
-    /\Aread (in|on the) app\z/,
+    /\Aread (in|on)( the)? app\z/,
     /\A(view|read) (this )?(email |message )?(in|on) (your |the )?browser\z/,
     /\A(view|read) (it |this )?online\z/,
     /\Aunsubscribe( here| from this list| from these emails)?\z/,

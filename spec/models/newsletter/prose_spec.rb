@@ -163,6 +163,17 @@ RSpec.describe Newsletter::Prose do
     expect(result).not_to include("READ IN APP")
   end
 
+  it "removes the app bar whichever article the sender writes it with" do
+    body = <<~HTML
+      <div><a href="https://example.com/app">Read in the app</a></div>
+      <p>Halcyon relicensed Tessera on Tuesday.</p>
+    HTML
+
+    result = Newsletter::Prose.new(Newsletter::Body.new(body)).text
+
+    expect(result).not_to include("Read in the app")
+  end
+
   it "removes the forwarding prompt" do
     result = Newsletter::Prose.new(Newsletter::Body.new(substack_issue)).text
 

@@ -59,13 +59,8 @@ optional:
   per-source cap, the empty-prose path and the PRD's two-pass chunking for a
   window that overflows are all untouched by it.
 
-Two smaller things this milestone found and left alone:
+One smaller thing this milestone found and left alone:
 
-- **`Newsletter::Prose` misses "Read in the app".** `CHROME_LABELS` matches
-  "read in app" and "read on the app" but not the article in between, so that
-  footer line reaches the editor as content. It is one junk line and the
-  anchored-label rule is deliberately conservative, but the pattern is worth a
-  word when someone next touches that list.
 - **`edition:backtest` cannot rehearse a day that already has an edition.**
   The rehearsal is validated like the real thing, and `published_on` is
   unique. Harmless until the schedule ships; after that, re-reading a window
