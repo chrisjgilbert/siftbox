@@ -103,7 +103,6 @@ en:
         heading: New senders
   time:
     formats:
-      received_stamp: "%Y.%m.%d %H:%M"
       row_date: "%-d %b"
       row_day: "%a"
       row_time: "%H:%M"

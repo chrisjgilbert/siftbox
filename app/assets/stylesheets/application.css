@@ -116,10 +116,10 @@ a {
 
 /* Masthead ---------------------------------------------------------------- */
 
-/* The nameplate and the dateline, built in the shape the feed's header
-   already uses: brand and links on one ruled band, the edition's own line on
-   a second. Named apart from `.masthead` because that block belongs to the
-   feed.
+/* The nameplate and the line naming the page: brand and links on one ruled
+   band, the page's own line on a second. Every screen behind the gate wears
+   it, the archive of originals included — it took this block's name over from
+   the feed's old header when read state took the filter bar away.
 
    It wraps because the nav grew a third link. Nameplate and three mono links
    come to more than a 320px screen has once the gutters are paid for, and

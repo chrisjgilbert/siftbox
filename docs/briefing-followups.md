@@ -383,6 +383,35 @@ were covering the removed code rather than passing vacuously over it.
   content, so a rollback returns every newsletter as unread. `docs/deploying.md`
   carries the backup step; the rollback plan for this release is restore.
 
+- **A whole measure-and-size chain died with the reader and is still in the
+  tree.** The review after the teardown found it; it is the largest thing this
+  milestone leaves behind, and it is dead code rather than a bug, so nothing
+  was removed without a decision. What is orphaned, each verified by grep
+  rather than assumed:
+
+  - `Newsletter::ImageDimensions` — no caller outside its own spec.
+  - `Newsletter::IssueNumber` — no caller outside its own spec; the presenter
+    method it served went with the reader's data strip.
+  - `Newsletter::LeadImage#remainder`, `#alt`, `#caption` and their
+    figure-detection helpers — only `#url` is called now, by
+    `Newsletter#capture_lead_image`.
+  - `Newsletter::Body`'s `dimensions:` argument, `#sized`,
+    `#apply_stored_sizes`, `#strip_sender_sizes`, `SIZED_ATTRIBUTES`, and
+    `TAGS`/`ATTRIBUTES` (which existed for the deleted helper's `sanitize`).
+    All three surviving `Newsletter::Body.new` callers pass no dimensions.
+  - `lib/tasks/images.rake` (`images:analyze`) and the `image_processing`
+    gem behind it. The measured width and height reached a page only through
+    `Presenter#reading_body`, which is gone. `Newsletter::Source` does not use
+    `Body` at all, and the images controller serves blobs directly with no
+    variants, so nothing else needs the analysis.
+
+  Removing it would take a gem, a rake task and step 6's `images:analyze` out
+  of `docs/deploying.md`, which is why it is written down rather than done:
+  it is a second teardown with its own deploy note, not a tidy-up. The PRD's
+  "the image-serving and scrubbing pipeline stays" still holds — that is the
+  ingest side, which feeds the original frame and is untouched. What died is
+  only the sizing the reader needed to stop images shifting the article.
+
 ## Undecided design
 
 - **Deleting a newsletter guts the editions that cite it.**

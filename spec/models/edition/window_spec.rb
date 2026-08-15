@@ -149,9 +149,9 @@ RSpec.describe Edition::Window do
     expect(window.newsletters).to eq([ earlier, later ])
   end
 
-  # Edition::Prompt reads body_html. A column list here — FEED_COLUMNS or
-  # NEIGHBOUR_COLUMNS, which both omit it — would send the model an edition's
-  # worth of subject lines and nothing to write from.
+  # Edition::Prompt reads body_html. A column list here — FEED_COLUMNS omits
+  # it — would send the model an edition's worth of subject lines and nothing
+  # to write from.
   it "loads the bodies the editor has to read" do
     published_through(yesterday_morning)
     create(:newsletter, received_at: morning - 1.hour, body_html: "<p>The S-1 landed.</p>")

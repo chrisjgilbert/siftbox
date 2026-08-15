@@ -19,7 +19,7 @@ class Newsletter::Presenter
     older: :row_date
   }.freeze
 
-  delegate :lead_image?, :lead_image_url, :snippet, :subject,
+  delegate :held?, :lead_image?, :lead_image_url, :snippet, :subject,
     :to_param, to: :newsletter
 
   def initialize(newsletter)
@@ -37,11 +37,36 @@ class Newsletter::Presenter
     I18n.l(newsletter.received_at, format: TIMESTAMP_FORMATS.fetch(age.bucket))
   end
 
+  # Where an original's top bar goes back to. The archive for content, and the
+  # pen for anything the archive would refuse to list: Newsletter.content
+  # excludes dismissed mail, which is still reachable because the
+  # Subscriptions page's new-senders list is deliberately not content-scoped.
+  # Sending it to the archive would be a way back to a page without it.
+  def back_path
+    return routes.subscriptions_path if newsletter.dismissed?
+
+    routes.newsletters_path
+  end
+
+  # Named for where it goes, so the label cannot say "archive" over a link to
+  # the pen. Shares the pen bar's key rather than repeating its wording.
+  def back_label
+    return I18n.t("newsletters.original.pen.back") if newsletter.dismissed?
+
+    I18n.t("newsletters.original.back")
+  end
+
   private
 
   attr_reader :newsletter
 
   def age
     Newsletter::Age.new(newsletter.received_at)
+  end
+
+  # A presenter has no route helpers of its own, the way
+  # Edition::Story::Presenter has none either.
+  def routes
+    Rails.application.routes.url_helpers
   end
 end

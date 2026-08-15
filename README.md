@@ -219,9 +219,11 @@ redirects, bytes and time. Read `Destination` with the IPv6 forms in mind —
 `IPAddr`'s `loopback?` and `link_local?` do not see through it. That is why
 IPv6 gets an allowlist of global unicast rather than another denied prefix.
 
-**Opening a newsletter marks it read**, which means `GET /newsletters/:id`
-writes. Turbo's hover prefetching is therefore turned off in the layout;
-without that, hovering a feed row marks it read without opening it.
+**Turbo's hover prefetching is off in the layout.** It was there because
+opening a newsletter used to mark it read, so a prefetch wrote. Read state is
+retired and nothing writes on a GET now, but the tag stays for a different
+reason: an archive row points at an original, and prefetching one on hover
+pulls a body that runs to hundreds of kilobytes for a row nobody opened.
 
 **The feed is bounded to seven days**, which is what its end-of-feed copy
 claims. Showing more history needs a pagination design first.
@@ -231,9 +233,7 @@ claims. Showing more history needs a pagination design first.
 without loading a `body_html` to find one — `Newsletter::FEED_COLUMNS` exists
 precisely to keep the index off that column. Extraction runs *after*
 `Newsletter::InlineImages`, which rewrites `cid:` references to app paths;
-reading the lead first would store a URL no browser can resolve. The reader
-promotes the same image above the article and takes it out of the body, or it
-would appear twice.
+reading the lead first would store a URL no browser can resolve.
 
 **The landing page is the only public write path.** It is guarded four ways:
 an off-screen honeypot answered exactly like a real signup, a rate limit

@@ -1,13 +1,13 @@
 <%# The bar an original in the archive wears: the way back to the archive, and
     nothing else. Held mail wears the pen's bar instead.
 
-    It pointed at the reader until the reader was deleted. An original is
-    reached from three places now — a story's citation, an archive row, and
-    the pen — and only the pen has a back that differs, which it states in its
-    own bar. The other two share the archive, so this stays one link rather
-    than branching on where the reader came from. %>
+    It pointed at the reader until the reader was deleted. Where back goes now
+    depends on where the mail lives rather than on where the reader came from:
+    the archive for content, the pen for a dismissed confirmation, which
+    Newsletter.content keeps off the archive while the new-senders list still
+    links to it. The presenter owns that choice and the label with it. %>
 <header class="topbar">
-  <%= link_to t("newsletters.original.back"),
-        newsletters_path,
+  <%= link_to newsletter.back_label,
+        newsletter.back_path,
         class: "topbar__back" %>
 </header>

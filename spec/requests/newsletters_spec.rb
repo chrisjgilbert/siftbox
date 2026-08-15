@@ -118,14 +118,10 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("Subscribe with newsletters@example.com")
   end
 
-  # Promoting it means taking it out of the body. Rendering both is the bug
-  # this guards.
-  # A newsletter can carry <img src="/newsletters/5"> in its own body. It
-  # survives the scrubber and `sanitize`, and if it is the first image it is
-  # stored as lead_image_url, so the feed fetches it for every row with the
-  # reader's session attached — one sender marking another's issues read.
-  # Turbo prefetches on hover. Opening a newsletter writes, so a prefetch
-  # would mark a feed row read without the reader opening it.
+  # Nothing writes on a GET any more, so this is bandwidth rather than
+  # correctness: an archive row points at an original, and prefetching one on
+  # hover would pull a body that runs to hundreds of kilobytes, plus whatever
+  # images it references, for a row the reader only passed over.
   it "turns off Turbo's hover prefetching" do
     sign_in
     create(:newsletter)

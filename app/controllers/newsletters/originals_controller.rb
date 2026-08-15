@@ -2,6 +2,6 @@
 # chrome around a sandboxed iframe. The iframe loads Newsletters::SourcesController.
 class Newsletters::OriginalsController < ApplicationController
   def show
-    @newsletter = Newsletter.find(params[:newsletter_id])
+    @newsletter = Newsletter::Presenter.new(Newsletter.find(params[:newsletter_id]))
   end
 end

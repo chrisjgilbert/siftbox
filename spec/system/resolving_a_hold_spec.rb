@@ -51,6 +51,20 @@ RSpec.describe "Resolving a held confirmation" do
     expect(page).not_to have_button("Done")
   end
 
+  # Dismissed mail is off the archive — Newsletter.content excludes it — but
+  # still reachable from the new-senders list, so a back link to the archive
+  # would be a link to a page that does not list it.
+  it "sends a dismissed confirmation back to the pen rather than the archive" do
+    newsletter = create(:newsletter)
+    newsletter.hold
+    newsletter.dismiss
+    sign_in_through_the_form
+
+    visit newsletter_original_path(newsletter)
+
+    expect(page).to have_link("Back to subscriptions")
+  end
+
   # Nothing observes the confirm click — the frame is an opaque origin with no
   # scripts — so Done is the reader saying so, and the row leaving the pen is
   # the only receipt there is.

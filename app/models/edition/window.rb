@@ -30,8 +30,8 @@ class Edition::Window
   end
 
   # Whole rows, not a column list: Edition::Prompt reads body_html, and
-  # Newsletter::FEED_COLUMNS and NEIGHBOUR_COLUMNS both omit it, so either
-  # would send the model an edition's worth of subject lines to write from.
+  # Newsletter::FEED_COLUMNS omits it, so one would send the model an
+  # edition's worth of subject lines to write from.
   def newsletters
     @_newsletters ||= arrived.or(released).oldest_first.to_a
   end
