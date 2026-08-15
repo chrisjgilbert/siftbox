@@ -3,10 +3,10 @@
     second.
 
     The nav does not change shape from page to page, so the reader learns one
-    navigation and everything is always one click away — the same reason the
-    feed's filters both stay on screen. The nameplate is the way back to the
-    day's briefing, as a newspaper's is, which is what keeps an edition opened
-    out of the archive from being a page with no way forward.
+    navigation and everything is always one click away. The nameplate is the
+    way back to the day's briefing, as a newspaper's is, which is what keeps
+    an edition opened out of the archive from being a page with no way
+    forward.
 
     Subscriptions is in the nav rather than reached only from the edition
     page's badge. The badge shows while something is held, and the two
@@ -15,26 +15,28 @@
     arrive?". A page reachable only while something is waiting could not
     answer that.
 
-    The CSS block is still called edition-masthead: renaming it to masthead
-    would put two unrelated components under one block name, because the feed
-    already has .masthead__brand. Noted in docs/briefing-followups.md. %>
-<header class="edition-masthead">
-  <div class="edition-masthead__bar">
-    <%= link_to root_path, class: "edition-masthead__home" do %>
+    Every page behind the gate wears this one, the archive of originals
+    included — its own header was the read-state filter bar, and when that
+    went there was nothing left in it but the nameplate. That is also what
+    freed the block name: .masthead__brand belonged to the feed's header
+    until this replaced it. %>
+<header class="masthead">
+  <div class="masthead__bar">
+    <%= link_to root_path, class: "masthead__home" do %>
       <%= render "application/lockup", size: 24 %>
     <% end %>
 
-    <nav class="edition-masthead__nav">
+    <nav class="masthead__nav">
       <%= link_to t("application.masthead.archive"), editions_path,
-            class: "edition-masthead__link" %>
+            class: "masthead__link" %>
       <%= link_to t("application.masthead.originals"), newsletters_path,
-            class: "edition-masthead__link" %>
+            class: "masthead__link" %>
       <%= link_to t("application.masthead.subscriptions"), subscriptions_path,
-            class: "edition-masthead__link" %>
+            class: "masthead__link" %>
     </nav>
   </div>
 
   <%# Set in mono, so uppercased by CSS rather than shouted in the locale
       file. %>
-  <h1 class="edition-masthead__line"><%= line %></h1>
+  <h1 class="masthead__line"><%= line %></h1>
 </header>

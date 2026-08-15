@@ -196,15 +196,6 @@ states in its own caption. What is left:
   archive must not do. It reads three columns a row. Revisit when it is long
   enough to notice.
 
-- **The originals archive has no way back to the edition.** Root serves the
-  edition now, so the feed is reached by following `Originals` from an
-  edition — and its header is the filter bar, which offers nothing back. Its
-  nameplate is not a link the way the edition masthead's is. Milestone 6
-  rebuilds that header anyway when read state goes; the link home belongs in
-  the same pass. The same pass has to repoint `newsletters.original.back`,
-  which reads "Back to the reader" and points at the page Milestone 6
-  deletes — a reader arriving from a citation is offered it today.
-
 - **`Edition#reading_list?` has no caller** outside its own two specs. The
   presenter drops any empty section uniformly rather than special-casing the
   reading list. Left in place; it is Milestone 1's code and a plausible
@@ -355,16 +346,42 @@ open:
   measured five statements before this milestone and six after, whether the
   pen is empty or five deep, on `index_newsletters_on_held_at`.
 
-- **Held mail is still reachable in the reader** at `/newsletters/:id` if the
-  URL is known, and opening it marks it read. Nothing links there — the pen
-  and the archive both point at the original — and Milestone 6 deletes the
-  page. Worth knowing it is not the carve-out that keeps held mail off the
-  archive; that is `Newsletter.content`, and the reader's `find` is unscoped.
-
 - **The plural is English only.** `subscriptions.badge.line` has `one` and
   `other`, which is Rails' pluralisation doing the work rather than a
   conditional in a template, but a language with more plural forms would need
   the keys and nothing warns about that today.
+
+## Milestone 6 — what the teardown leaves behind
+
+The reader, its previous/next links, its reading time and read state are gone,
+the archive's rows open the original, and the shared masthead finally owns the
+`masthead` block name. `bin/ci` is green at 780 examples, down from 853: the
+count moved by roughly what was deleted, which is the check that the specs
+were covering the removed code rather than passing vacuously over it.
+
+- **`Newsletter::Presenter` survived, against the PRD's wording.** "The
+  presenter goes" was written before Milestones 4 and 5 gave it two consumers
+  the reader never had: `Subscriptions::Row` and `Edition::Story::Presenter`
+  both want a sender line that survives mail with no From header. What is left
+  is `#sender` and `#timestamp`; the article body, the promoted image, the
+  kicker, the issue number, the reading time and the neighbour wrappers went.
+  Deleting the class outright would have copied `#sender` into three places.
+
+- **The landing page's product shot still draws a read row.** `.shot__row--read`
+  and its muted number are a mock of the feed in the marketing artwork, and
+  the feed it mocks no longer dims anything. Left alone deliberately — it is
+  the landing page's own composition, not a stale reference to live code — but
+  it is now a picture of a screen that does not exist.
+
+- **Nothing verified the archive in a browser after the header changed.** The
+  system specs run under `rack_test`, which renders no CSS, so what is proven
+  is markup and links rather than layout. The archive wears the shared
+  masthead now instead of its own two-band header, and the two are not the
+  same height.
+
+- **`read_at` is gone for good.** The migration reverses in shape and not in
+  content, so a rollback returns every newsletter as unread. `docs/deploying.md`
+  carries the backup step; the rollback plan for this release is restore.
 
 ## Undecided design
 
@@ -381,13 +398,6 @@ open:
   there is any way to delete a newsletter from the app.
 
 ## Smaller, no particular milestone
-
-- **The shared masthead's CSS block is still called `edition-masthead`.** The
-  partial moved to `app/views/application/_masthead.html.erb` when a third
-  page wanted it, and the class names did not move with it. Renaming them to
-  `masthead__*` would put two unrelated components under one block name — the
-  feed's header is already `.masthead__brand` — so the rename waits for
-  Milestone 6, which rebuilds that header anyway.
 
 - **`Newsletter.content` scans when unbounded.** Verified with
   `EXPLAIN QUERY PLAN`: as the archive actually calls it, the `received_at`

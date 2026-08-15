@@ -1,6 +1,4 @@
-<header class="masthead">
-  <div class="masthead__brand"><%= render "application/lockup", size: 24 %></div>
-</header>
+<%= render "application/masthead", line: t(".line") %>
 
 <main class="feed">
   <% @feed.groups.each do |group| %>

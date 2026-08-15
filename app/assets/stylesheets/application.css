@@ -114,7 +114,7 @@ a {
   }
 }
 
-/* Edition masthead -------------------------------------------------------- */
+/* Masthead ---------------------------------------------------------------- */
 
 /* The nameplate and the dateline, built in the shape the feed's header
    already uses: brand and links on one ruled band, the edition's own line on
@@ -125,7 +125,7 @@ a {
    come to more than a 320px screen has once the gutters are paid for, and
    without this the page scrolls sideways rather than the links dropping to a
    second line. The gap does double duty as the row gap when they do. */
-.edition-masthead__bar {
+.masthead__bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -138,12 +138,12 @@ a {
 /* The nameplate is a link on every edition page — the way back to the day's
    briefing. It carries the mark, which is drawn in currentColor, so the link
    colour has to be put back to ink or the brackets turn blue. */
-.edition-masthead__home {
+.masthead__home {
   color: var(--ink);
   text-decoration: none;
 }
 
-.edition-masthead__nav {
+.masthead__nav {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -153,19 +153,19 @@ a {
   text-transform: uppercase;
 }
 
-.edition-masthead__link {
+.masthead__link {
   color: var(--mute);
   text-decoration: none;
 }
 
-.edition-masthead__link:hover {
+.masthead__link:hover {
   color: var(--ink);
 }
 
 /* An h1 set at 10px. What an edition is called is its number and the day it
    covers, and the line carries them the way a dateline does — mono, which
    also puts back the positive tracking every other heading gives up. */
-.edition-masthead__line {
+.masthead__line {
   margin: 0;
   padding: 14px var(--gutter);
   border-bottom: 1px solid var(--rule);
@@ -177,16 +177,16 @@ a {
 }
 
 @media (min-width: 720px) {
-  .edition-masthead__bar {
+  .masthead__bar {
     padding: 28px var(--gutter);
   }
 
-  .edition-masthead__nav {
+  .masthead__nav {
     gap: 26px;
     font-size: 11px;
   }
 
-  .edition-masthead__line {
+  .masthead__line {
     padding: 16px var(--gutter);
     font-size: 11px;
   }
@@ -411,8 +411,8 @@ a {
 /* Every edition there has been, at the same measure the edition itself is set
    at. One row per day: the day covered carries the row because it is what the
    list is ordered by, and the number rides beside it in mono at the index's
-   own scale. No blue on the number — in the feed blue means unread, and an
-   edition has no such state to claim. */
+   own scale. No blue on the number: the whole row is the link, and a second
+   thing in the accent colour would read as a second thing to click. */
 .archive {
   padding: 0 var(--gutter) 48px;
 }
@@ -658,31 +658,6 @@ a {
   }
 }
 
-/* Feed masthead ----------------------------------------------------------- */
-
-/* Below 720px the brand sits in its own band; from 720px the header is one
-   line under a single 2px rule. The filters that used to share it went with
-   read state. */
-.masthead__brand {
-  padding: 24px var(--gutter) 20px;
-  border-bottom: 2px solid var(--ink);
-}
-
-@media (min-width: 720px) {
-  .masthead {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 28px var(--gutter);
-    border-bottom: 2px solid var(--ink);
-  }
-
-  .masthead__brand {
-    padding: 0;
-    border-bottom: 0;
-  }
-}
-
 /* Feed -------------------------------------------------------------------- */
 
 .feed {
@@ -923,7 +898,8 @@ a {
   color: var(--mute);
 }
 
-/* The number replaces the unread dot: blue while unread, grey once read. */
+/* The index number, in the accent colour: it is what makes the archive read
+   as a numbered list rather than a stack of cards. */
 .row__number {
   grid-area: number;
   color: var(--blue);
@@ -1118,16 +1094,6 @@ a {
   display: inline;
 }
 
-/* Below 720px the bar keeps the way back and one action, so the labels never
-   collapse into an unreadable row. View original is the one that stays: it is
-   the escape hatch when the rebuilt reading view loses too much, where
-   marking unread again is housekeeping that can wait for a wider screen. */
-@media (max-width: 719px) {
-  .topbar__form--secondary {
-    display: none;
-  }
-}
-
 @media (min-width: 720px) {
   .topbar {
     font-size: 11px;
@@ -1144,10 +1110,9 @@ a {
    furniture at the same weights, with two differences that are both about the
    pen rather than about the look.
 
-   It wraps rather than hiding an action below 720px. The reader's bar drops
-   its second action on a narrow screen because marking something unread again
-   can wait; a misfire the reader cannot release from a phone stays in the pen
-   until they are at a desk, and a confirm link may not last that long.
+   It wraps rather than hiding an action below 720px. A phone is where mail
+   gets read, and a misfire the reader cannot release from one stays in the
+   pen until they are at a desk — which a confirm link may not outlast.
 
    Done is set in ink against the mute the other action keeps. It is the
    ending nearly every hold has and the one the reader came here to press. */

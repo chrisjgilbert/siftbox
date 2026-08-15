@@ -55,6 +55,7 @@ en:
       end_of_feed:
         one: End of feed — 1 issue
         other: End of feed — %{count} issues
+      line: Originals
       no_image: No image in email
       no_image_compact: No image
       subscribe: Subscribe with %{address}
