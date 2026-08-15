@@ -42,9 +42,11 @@ RSpec.describe Edition::CompositionJob do
   end
 
   # Composed for real, through Edition::Window and Edition::Editor, with only
-  # the SDK's client swapped out — the seam the job itself has no argument
-  # for. The key is set because Edition::Draft reads it to build the client it
-  # is about to be given instead of, and this container has none.
+  # the SDK's client swapped for the fake — a job takes serialisable arguments
+  # and cannot be handed a client, so this is the seam. The key is set and put
+  # back because Edition::Draft reads it on the way to building the client it
+  # is about to be given instead, and it fetches rather than reads: absent, as
+  # it is here, the example fails on a KeyError about the variable.
   it "publishes an edition covering the newsletters that have arrived" do
     newsletter = create(:newsletter, received_at: 1.hour.ago)
     key = ENV["ANTHROPIC_API_KEY"]
