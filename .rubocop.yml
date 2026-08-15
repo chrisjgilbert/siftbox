@@ -27,9 +27,11 @@ RSpec/ExampleLength:
 
 # The cop exempts spec/requests and the other Rails spec directories by path,
 # but db/seeds.rb is a script rather than a class, so its spec has no constant
-# to name either.
+# to name either. Nor does config/recurring.yml, whose spec checks a file the
+# scheduler reads in production and nothing loads in test.
 RSpec/DescribeClass:
   Exclude:
+    - spec/config/**/*
     - spec/db/**/*
 
 RSpec/MultipleExpectations:
