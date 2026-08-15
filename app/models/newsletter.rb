@@ -6,6 +6,13 @@ class Newsletter < ApplicationRecord
     lead_image_url
   ].freeze
 
+  # What a story's citation renders: the sender's name and a link to the
+  # original. Without this an edition of forty citations reads forty full
+  # bodies — tens of megabytes — to print forty names. The subject is here
+  # because EditionTranscript prints it beside the name when an edition is
+  # judged in a terminal.
+  CITATION_COLUMNS = %i[id sender_name sender_email subject].freeze
+
   # What the reader's previous/next links render. Without this the two
   # neighbour lookups pull a full body_html each, to show a sender and a
   # subject.
@@ -41,6 +48,10 @@ class Newsletter < ApplicationRecord
 
   def self.oldest_first
     order(received_at: :asc, id: :asc)
+  end
+
+  def self.for_citation
+    select(CITATION_COLUMNS)
   end
 
   def self.for_feed

@@ -20,7 +20,10 @@ class Edition::Story < ApplicationRecord
   # is edition_story_id, and Rails demodulises Edition::Story down to story_id
   # when it guesses.
   has_many :citations, foreign_key: :edition_story_id, dependent: :destroy, inverse_of: :story
-  has_many :newsletters, through: :citations
+  # Scoped to the columns a citation is drawn from, the way the feed and the
+  # neighbour chain are. Unscoped this selects newsletters.*, and an edition's
+  # citations then read every cited body in full to print a list of senders.
+  has_many :newsletters, -> { for_citation }, through: :citations
 
   validates :body, presence: true
   validates :position, presence: true, uniqueness: { scope: :edition }

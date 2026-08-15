@@ -59,6 +59,27 @@ RSpec.describe Edition::Story do
     expect(story.newsletters).to eq([ newsletter ])
   end
 
+  # A citation is rendered as a sender's name and a link. Bodies run to
+  # hundreds of kilobytes, and an edition's forty-odd citations would be tens
+  # of megabytes read to print forty names.
+  it "leaves the sender's own HTML out of a citation" do
+    story = create(:edition_story)
+    create(:edition_citation, story: story, newsletter: create(:newsletter, body_html: "<p>Hi</p>"))
+
+    cited = story.newsletters.sole
+
+    expect { cited.body_html }.to raise_error(ActiveModel::MissingAttributeError)
+  end
+
+  it "leaves the sender's own HTML out of a citation loaded ahead of time" do
+    story = create(:edition_story)
+    create(:edition_citation, story: story, newsletter: create(:newsletter, body_html: "<p>Hi</p>"))
+
+    cited = Edition::Story.includes(:newsletters).find(story.id).newsletters.sole
+
+    expect { cited.body_html }.to raise_error(ActiveModel::MissingAttributeError)
+  end
+
   it "takes its citations with it when destroyed" do
     story = create(:edition_story)
     create(:edition_citation, story: story)
