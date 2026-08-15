@@ -1,13 +1,26 @@
-<%# Placeholder markup, as show.html.erb. The one thing here that is not
-    provisional: the editor's words render through ordinary escaping, and
-    nothing on this page may ever change that. %>
+<%# The editor's words render through ordinary escaping and nothing on this
+    page may ever change that: no html_safe, no raw, no simple_format. A body
+    written in more than one paragraph keeps its breaks through
+    `white-space: pre-line`, which is CSS reading the text rather than markup
+    built out of it. See .claude/rules/security.md. %>
 <article class="story">
-  <h3 class="story__headline"><%= story.headline %></h3>
+  <% if story.headline? %>
+    <h3 class="story__headline"><%= story.headline %></h3>
+  <% end %>
+
   <p class="story__body"><%= story.body %></p>
 
-  <ul class="story__sources">
-    <% story.sources.each do |source| %>
-      <li class="story__source"><%= link_to source.sender, source.path %></li>
-    <% end %>
-  </ul>
+  <% if story.cited? %>
+    <footer class="story__sources">
+      <span class="story__sources-label"><%= story.sources_label %></span>
+
+      <ul class="story__list">
+        <% story.sources.each do |source| %>
+          <li class="story__source">
+            <%= link_to source.sender, source.path, class: "story__link" %>
+          </li>
+        <% end %>
+      </ul>
+    </footer>
+  <% end %>
 </article>

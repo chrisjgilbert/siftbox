@@ -13,6 +13,48 @@ RSpec.describe Edition::Story::Presenter do
     expect(Edition::Story::Presenter.new(story).body).to eq("Money Stuff and The Diff both read it.")
   end
 
+  # The column defaults to "" and a Briefly line is short enough that the
+  # editor can leave it at that. The page draws no empty heading over one.
+  it "has a headline when the editor wrote one" do
+    story = build_stubbed(:edition_story, headline: "Figma filed")
+
+    expect(Edition::Story::Presenter.new(story)).to be_headline
+  end
+
+  it "has no headline when the editor left it empty" do
+    story = build_stubbed(:edition_story, headline: "")
+
+    expect(Edition::Story::Presenter.new(story)).not_to be_headline
+  end
+
+  it "is cited when the editor named a source" do
+    story = create(:edition_story)
+    create(:edition_citation, story: story, newsletter: create(:newsletter))
+
+    expect(Edition::Story::Presenter.new(story)).to be_cited
+  end
+
+  it "is uncited when the editor named none" do
+    story = create(:edition_story)
+
+    expect(Edition::Story::Presenter.new(story)).not_to be_cited
+  end
+
+  it "labels a single source in the singular" do
+    story = create(:edition_story)
+    create(:edition_citation, story: story, newsletter: create(:newsletter))
+
+    expect(Edition::Story::Presenter.new(story).sources_label).to eq("Source")
+  end
+
+  it "labels several sources in the plural" do
+    story = create(:edition_story)
+    create(:edition_citation, story: story, newsletter: create(:newsletter))
+    create(:edition_citation, story: story, newsletter: create(:newsletter))
+
+    expect(Edition::Story::Presenter.new(story).sources_label).to eq("Sources")
+  end
+
   it "names the sender behind each citation" do
     story = create(:edition_story)
     create(:edition_citation, story: story, newsletter: create(:newsletter, sender_name: "Money Stuff"))

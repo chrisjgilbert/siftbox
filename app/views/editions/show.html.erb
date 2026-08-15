@@ -1,20 +1,24 @@
-<%# Placeholder markup. The edition page's real shape and styling belong to
-    the next commit in this milestone; this renders the presenter's fields and
-    nothing else, so the read path can be proved. %>
 <% content_for :title, @edition.masthead %>
 
+<header class="edition-masthead">
+  <div class="edition-masthead__bar">
+    <%= render "application/lockup", size: 24 %>
+
+    <nav class="edition-masthead__nav">
+      <%= link_to t("editions.show.archive"), editions_path,
+            class: "edition-masthead__link" %>
+      <%= link_to t("editions.show.originals"), newsletters_path,
+            class: "edition-masthead__link" %>
+    </nav>
+  </div>
+
+  <%# The number and the day covered, which is what an edition is called. Set
+      in mono, so uppercased by CSS rather than shouted in the locale file. %>
+  <h1 class="edition-masthead__line"><%= @edition.masthead %></h1>
+</header>
+
 <main class="edition">
-  <header class="edition__masthead">
-    <p class="edition__number"><%= @edition.masthead %></p>
-  </header>
-
   <% @edition.sections.each do |section| %>
-    <section class="edition__section edition__section--<%= section.name %>">
-      <h2 class="edition__heading"><%= section.heading %></h2>
-
-      <% section.stories.each do |story| %>
-        <%= render "editions/story", story: story %>
-      <% end %>
-    </section>
+    <%= render "editions/section", section: section %>
   <% end %>
 </main>

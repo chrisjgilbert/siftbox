@@ -1,0 +1,11 @@
+<%# Lead stories, Briefly, the reading list. One shape at three registers: the
+    section's own name is on the wrapper and the type scale hangs off it in
+    CSS, so no template asks which section it is drawing. A section the
+    edition has nothing for never reaches here. %>
+<section class="edition__section edition__section--<%= section.name %>">
+  <h2 class="edition__heading"><%= section.heading %></h2>
+
+  <% section.stories.each do |story| %>
+    <%= render "editions/story", story: story %>
+  <% end %>
+</section>

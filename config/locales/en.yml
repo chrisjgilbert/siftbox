@@ -23,6 +23,13 @@ en:
       briefly: Briefly
       lead: Lead stories
       reading_list: The reading list
+    show:
+      archive: Archive
+      originals: Originals
+    story:
+      sources:
+        one: Source
+        other: Sources
   feed:
     groups:
       earlier: Earlier

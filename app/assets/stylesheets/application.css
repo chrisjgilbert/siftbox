@@ -114,6 +114,245 @@ a {
   }
 }
 
+/* Edition masthead -------------------------------------------------------- */
+
+/* The nameplate and the dateline, built in the shape the feed's header
+   already uses: brand and links on one ruled band, the edition's own line on
+   a second. Named apart from `.masthead` because that block belongs to the
+   feed. */
+.edition-masthead__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px var(--gutter) 20px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.edition-masthead__nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.edition-masthead__link {
+  color: var(--mute);
+  text-decoration: none;
+}
+
+.edition-masthead__link:hover {
+  color: var(--ink);
+}
+
+/* An h1 set at 10px. What an edition is called is its number and the day it
+   covers, and the line carries them the way a dateline does — mono, which
+   also puts back the positive tracking every other heading gives up. */
+.edition-masthead__line {
+  margin: 0;
+  padding: 14px var(--gutter);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 720px) {
+  .edition-masthead__bar {
+    padding: 28px var(--gutter);
+  }
+
+  .edition-masthead__nav {
+    gap: 26px;
+    font-size: 11px;
+  }
+
+  .edition-masthead__line {
+    padding: 16px var(--gutter);
+    font-size: 11px;
+  }
+}
+
+/* Edition ----------------------------------------------------------------- */
+
+/* One column at the reading measure, centred the way the reader's article is.
+   The section heading takes the 2px rule and the stories under it take the
+   1px one, which is the whole of the hierarchy on the page. */
+.edition {
+  padding: 0 var(--gutter) 48px;
+}
+
+.edition__section {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding-top: 32px;
+}
+
+.edition__heading {
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 720px) {
+  .edition {
+    padding-bottom: 96px;
+  }
+
+  .edition__section {
+    padding-top: 56px;
+  }
+
+  .edition__heading {
+    padding-bottom: 10px;
+    font-size: 11px;
+  }
+}
+
+/* Story ------------------------------------------------------------------- */
+
+/* A lead story, a Briefly line and a reading list entry are one shape at
+   three lengths, so the type scale is all that separates them and it hangs
+   off the section rather than off a partial each. */
+.story {
+  padding: 24px 0 28px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.story__headline {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  text-wrap: pretty;
+}
+
+/* pre-line rather than a paragraph per line: the editor's copy arrives as
+   text and stays text, so a break in it is honoured by CSS reading the string
+   and never by markup assembled out of what a model wrote. */
+.story__body {
+  margin: 12px 0 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--body);
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+.edition__section--lead .story__headline {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+}
+
+.edition__section--briefly .story__headline {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.edition__section--briefly .story__body {
+  font-size: 16px;
+}
+
+/* Where the claim came from, and the one place it can be checked. */
+.story__sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.story__sources-label {
+  color: var(--mute);
+}
+
+.story__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.story__source {
+  color: var(--mute);
+}
+
+/* The separator belongs to the layout rather than to the copy, so it is drawn
+   here — the same slash the feed's mono line draws between its fields. */
+.story__source:not(:last-child)::after {
+  content: "\00a0/";
+}
+
+.story__link {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.story__link:hover {
+  color: var(--ink);
+}
+
+@media (min-width: 720px) {
+  .story {
+    padding: 32px 0 36px;
+  }
+
+  .story__headline {
+    font-size: 26px;
+    letter-spacing: -0.03em;
+  }
+
+  .story__body {
+    margin-top: 14px;
+    font-size: 19px;
+    line-height: 1.65;
+  }
+
+  .edition__section--lead .story__headline {
+    font-size: 36px;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+
+  .edition__section--briefly .story__headline {
+    font-size: 18px;
+  }
+
+  .edition__section--briefly .story__body {
+    font-size: 17px;
+  }
+
+  .story__sources {
+    gap: 14px;
+    margin-top: 20px;
+    font-size: 11px;
+  }
+
+  .story__list {
+    gap: 14px;
+  }
+}
+
 /* Feed masthead ----------------------------------------------------------- */
 
 /* Below 720px the brand and the filters are two stacked bands with their own

@@ -16,11 +16,31 @@ class Edition::Story::Presenter
     @story = story
   end
 
+  # The headline column defaults to "", and a Briefly line is short enough
+  # that the editor can leave it there. The page draws no heading over an
+  # empty string.
+  def headline?
+    headline.present?
+  end
+
   # The link every claim carries. Its destination is the original — the
   # sender's own HTML in the sandboxed frame — because the edition is the app's
   # words and the only honest way to check them is the mail itself.
+  #
+  # Memoised because the page asks three times per story — whether there are
+  # any, what to call them, and then for each one.
   def sources
-    story.newsletters.map { |newsletter| source(newsletter) }
+    @_sources ||= story.newsletters.map { |newsletter| source(newsletter) }
+  end
+
+  def cited?
+    sources.any?
+  end
+
+  # "Source" over one name and "Sources" over three. The line is furniture:
+  # without it a row of sender names under a paragraph is only a row of names.
+  def sources_label
+    I18n.t("editions.story.sources", count: sources.length)
   end
 
   private
