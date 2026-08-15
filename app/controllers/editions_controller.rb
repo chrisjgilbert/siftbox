@@ -7,6 +7,6 @@ class EditionsController < ApplicationController
   end
 
   def show
-    @edition = Edition::Presenter.new(Edition.find(params[:id]))
+    @edition = Edition::Presenter.new(Edition.for_reading.find(params[:id]))
   end
 end

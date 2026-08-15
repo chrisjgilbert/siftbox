@@ -142,6 +142,22 @@ RSpec.describe "Editions" do
     expect(response.body).not_to include("<script>alert(1)</script>")
   end
 
+  # Each story's citations used to fire a query of their own the first time
+  # the page touched them, so an edition of fifteen stories cost fifteen extra
+  # queries. What is being held here is that the cost does not move with the
+  # size of the edition; the absolute number belongs to Rails.
+  it "reads an edition of any size in the same number of queries" do
+    sign_in
+    quiet_day = edition_of(1)
+    busy_day = edition_of(6)
+    get edition_path(quiet_day)
+
+    counted = [ count_queries { get edition_path(quiet_day) },
+                count_queries { get edition_path(busy_day) } ]
+
+    expect(counted.last).to eq(counted.first)
+  end
+
   it "answers 404 for an edition that was never published" do
     sign_in
 
@@ -157,5 +173,17 @@ RSpec.describe "Editions" do
     get edition_path(edition)
 
     expect(response.body).to include(%(<meta name="robots" content="noindex, nofollow">))
+  end
+
+  # An edition whose every story cites a newsletter of its own, which is the
+  # shape the citation queries scale with.
+  def edition_of(stories)
+    edition = create(:edition)
+    stories.times do |index|
+      story = create(:edition_story, edition: edition, position: index + 1)
+      create(:edition_citation, story: story, newsletter: create(:newsletter))
+    end
+
+    edition
   end
 end

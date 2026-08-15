@@ -43,6 +43,16 @@ class Edition < ApplicationRecord
     select(ARCHIVE_COLUMNS)
   end
 
+  # What the page renders, loaded flat. The section readers below partition
+  # one load of the stories, but each story's citations would still fire a
+  # query of their own on first touch — a query per story on a page that draws
+  # every story there is. Preloading keeps the in_position_order scope on the
+  # association and costs the same handful of queries whatever the edition's
+  # size.
+  def self.for_reading
+    includes(stories: :newsletters)
+  end
+
   # The high-water mark the next window starts from, and nil before the first
   # edition — the floor for that one is Edition::Window's to choose, because
   # it is the thing that knows when composition started.
