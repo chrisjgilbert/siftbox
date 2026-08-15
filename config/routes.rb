@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  resources :editions, only: :show
   resources :newsletters, only: [ :index, :show ] do
     resources :images, only: :show, module: :newsletters
     resource :original, only: :show, module: :newsletters

@@ -12,7 +12,14 @@ en:
               duplicate_newsletter: name the same newsletter twice.
   date:
     formats:
+      edition_masthead: "%A %-d %B"
       feed_group: "%A %-d %B"
+  editions:
+    masthead: "No. %{number} · %{date}"
+    sections:
+      briefly: Briefly
+      lead: Lead stories
+      reading_list: The reading list
   feed:
     groups:
       earlier: Earlier

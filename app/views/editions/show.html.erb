@@ -1,0 +1,20 @@
+<%# Placeholder markup. The edition page's real shape and styling belong to
+    the next commit in this milestone; this renders the presenter's fields and
+    nothing else, so the read path can be proved. %>
+<% content_for :title, @edition.masthead %>
+
+<main class="edition">
+  <header class="edition__masthead">
+    <p class="edition__number"><%= @edition.masthead %></p>
+  </header>
+
+  <% @edition.sections.each do |section| %>
+    <section class="edition__section edition__section--<%= section.name %>">
+      <h2 class="edition__heading"><%= section.heading %></h2>
+
+      <% section.stories.each do |story| %>
+        <%= render "editions/story", story: story %>
+      <% end %>
+    </section>
+  <% end %>
+</main>

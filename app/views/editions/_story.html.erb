@@ -1,0 +1,13 @@
+<%# Placeholder markup, as show.html.erb. The one thing here that is not
+    provisional: the editor's words render through ordinary escaping, and
+    nothing on this page may ever change that. %>
+<article class="story">
+  <h3 class="story__headline"><%= story.headline %></h3>
+  <p class="story__body"><%= story.body %></p>
+
+  <ul class="story__sources">
+    <% story.sources.each do |source| %>
+      <li class="story__source"><%= link_to source.sender, source.path %></li>
+    <% end %>
+  </ul>
+</article>
