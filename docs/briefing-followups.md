@@ -307,7 +307,11 @@ states in its own caption. What is left:
   have to open both. Revisit if Milestone 5 adds materially to it. If line
   count alone ever forces the issue, the cleaner seam is the pre-existing
   neighbour chain (`NEIGHBOUR_COLUMNS`, `.neighbour`, `#newer`, `#older`),
-  which is self-contained and shares no state with the rest.
+  which is self-contained and shares no state with the rest. Milestone 5 has
+  since taken the name for something else — `Newsletter::Confirmation` is the
+  ingest detector, which reads a subject and a sender and writes nothing — so
+  what was rejected here is specifically moving the pen's timestamps, verbs
+  and predicates off `Newsletter`.
 
 - **Replacing `dismissed_at`/`released_at` with `resolved_at` plus a
   `resolution` string.** It would make the illegal both-set state
