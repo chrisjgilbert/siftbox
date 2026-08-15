@@ -246,6 +246,21 @@ bulk write, and it leaves mail a published edition cites alone — the window an
 edition covered is history, and `Edition::Window`'s released clause would
 otherwise carry such a newsletter into a second edition.
 
+Two things a browser found that the suite could not. The nav grew a third link
+and stopped fitting a 320px screen, scrolling every page sideways rather than
+wrapping — fixed here. And the public landing page overflows between roughly
+768px and 900px: `.waitlist--inverted` keeps a fixed 620px width at a left
+offset that assumes more room than a tablet has, so it is correct at 719px and
+at 1280px and broken in the middle. That one is pre-existing, untouched by
+Milestones 1–5, and left alone deliberately — the dark closing band is a
+deliberate part of the landing design per `docs/siftbox-redesign.md` §9, so the
+fix wants whoever owns that page rather than a guess from here.
+
+Neither was catchable by the specs as they stand: Capybara runs under
+`rack_test`, which renders no CSS, so no system spec in this repo can see a
+layout overflow. A JavaScript driver would be the thing that closes that gap,
+and nothing here has one.
+
 What none of that is, is evidence from real mail. What the milestone leaves
 open:
 

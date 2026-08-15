@@ -120,8 +120,13 @@ a {
    already uses: brand and links on one ruled band, the edition's own line on
    a second. Named apart from `.masthead` because that block belongs to the
    feed. */
+/* Wraps because the nav grew a third link. Nameplate and three mono links
+   come to more than a 320px screen has once the gutters are paid for, and
+   without this the page scrolls sideways rather than the links dropping to a
+   second line. The gap does double duty as the row gap when they do. */
 .edition-masthead__bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
