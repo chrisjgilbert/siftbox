@@ -160,6 +160,38 @@ RSpec.describe "Editions" do
     expect(counted.last).to eq(counted.first)
   end
 
+  # The notice is app chrome and has to be unmistakably that: it sits outside
+  # the edition, above everything the editor wrote, where the masthead and the
+  # nav are. Nothing the model produced reaches it — it is a count and a
+  # locale string — and nothing about it may ever read as a story.
+  it "carries the pen notice outside the edition itself" do
+    sign_in
+    edition = create(:edition)
+    create(:newsletter, held_at: 1.hour.ago)
+
+    get edition_path(edition)
+
+    expect(response.body.index("awaiting confirmation"))
+      .to be < response.body.index(%(<main class="edition">))
+  end
+
+  # Milestone 4 measured this page at five statements. The notice adds one —
+  # a COUNT riding index_newsletters_on_held_at, which is partial on exactly
+  # the rows it counts — and six is what an empty pen, one hold and five holds
+  # all cost. What is held here is that the cost does not move with the pen;
+  # the absolute number belongs to Rails.
+  it "reads a pen of any depth in the same number of queries" do
+    sign_in
+    edition = create(:edition)
+    create(:newsletter, held_at: 1.hour.ago)
+    get edition_path(edition)
+    shallow = count_queries { get edition_path(edition) }
+
+    5.times { create(:newsletter, held_at: 1.hour.ago) }
+
+    expect(count_queries { get edition_path(edition) }).to eq(shallow)
+  end
+
   it "answers 404 for an edition that was never published" do
     sign_in
 

@@ -97,6 +97,10 @@ en:
       submit: Sign in
       title: Sign in
   subscriptions:
+    badge:
+      line:
+        one: 1 subscription awaiting confirmation
+        other: "%{count} subscriptions awaiting confirmation"
     index:
       awaiting:
         empty: Nothing waiting. A subscription confirmation is held here the moment

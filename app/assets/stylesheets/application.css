@@ -186,6 +186,45 @@ a {
   }
 }
 
+/* Pen notice -------------------------------------------------------------- */
+
+/* App chrome, and it has to look like nothing else on the page: a mono band
+   the full width of the screen, sitting in the masthead's register rather
+   than the edition's measure, so it can never be mistaken for a story. Blue
+   because it is the one thing here to act on, and the arrow is direction
+   rather than copy, so it is drawn here and not translated.
+
+   One rule below and the masthead's rule above — the two it sits between. A
+   border-top of its own would sit flush against that one and read as a single
+   2px rule, which is the weight a section heading takes and this is not one. */
+.badge {
+  display: block;
+  padding: 13px var(--gutter);
+  border-bottom: 1px solid var(--rule);
+  color: var(--blue);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.badge::after {
+  content: "\00a0\00a0→";
+}
+
+.badge:hover {
+  background: var(--hover);
+}
+
+@media (min-width: 720px) {
+  .badge {
+    padding: 15px var(--gutter);
+    font-size: 11px;
+  }
+}
+
 /* Edition ----------------------------------------------------------------- */
 
 /* One column at the reading measure, centred the way the reader's article is.
