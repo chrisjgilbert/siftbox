@@ -100,6 +100,17 @@ RSpec.describe Edition do
     expect(Edition.latest).to be_nil
   end
 
+  # The archive prints a line per edition and nothing else. raw_response holds
+  # the model's whole answer, so a year of mastheads would otherwise read
+  # megabytes to print a date.
+  it "leaves the model's stored answer out of what the archive reads" do
+    create(:edition, raw_response: %({"stories":[]}))
+
+    edition = Edition.for_archive.sole
+
+    expect { edition.raw_response }.to raise_error(ActiveModel::MissingAttributeError)
+  end
+
   it "keeps its stories in the order the editor put them in" do
     edition = create(:edition)
     second = create(:edition_story, edition: edition, position: 2)

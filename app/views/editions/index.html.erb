@@ -1,0 +1,15 @@
+<%# Placeholder markup. The archive's real shape and styling are the next
+    commit's; this proves the read path and nothing more. %>
+<main class="archive">
+  <% if @archive.any? %>
+    <ul class="archive__list">
+      <% @archive.editions.each do |edition| %>
+        <li class="archive__row">
+          <%= link_to edition.masthead, edition_path(edition), class: "archive__link" %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="archive__empty"><%= t("editions.index.empty") %></p>
+  <% end %>
+</main>

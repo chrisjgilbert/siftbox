@@ -1,6 +1,45 @@
 require "rails_helper"
 
 RSpec.describe "Editions" do
+  it "keeps a signed-out reader away from the archive" do
+    create(:edition)
+
+    get editions_path
+
+    expect(response).to redirect_to(new_session_path)
+  end
+
+  it "lists every edition in the archive" do
+    sign_in
+    create(:edition, number: 1, published_on: Date.new(2026, 8, 11))
+    create(:edition, number: 2, published_on: Date.new(2026, 8, 12))
+
+    get editions_path
+
+    expect(response.body).to include("No. 1 · Tuesday 11 August")
+      .and include("No. 2 · Wednesday 12 August")
+  end
+
+  it "opens each archive line onto its edition" do
+    sign_in
+    edition = create(:edition)
+
+    get editions_path
+
+    expect(response.body).to include(edition_path(edition))
+  end
+
+  # Before the first morning, and after a run that found nothing to compose,
+  # there is no edition at all. The page says so rather than drawing an empty
+  # list.
+  it "says so when no edition has been published yet" do
+    sign_in
+
+    get editions_path
+
+    expect(response.body).to include("No editions yet")
+  end
+
   it "keeps a signed-out reader away from an edition" do
     edition = create(:edition)
 

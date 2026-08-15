@@ -15,6 +15,9 @@ en:
       edition_masthead: "%A %-d %B"
       feed_group: "%A %-d %B"
   editions:
+    index:
+      empty: No editions yet. The first one is written at 07:00, from whatever has
+        arrived by then.
     masthead: "No. %{number} · %{date}"
     sections:
       briefly: Briefly

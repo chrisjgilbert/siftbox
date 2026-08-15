@@ -5,6 +5,12 @@
 # one account, and the authentication gate is the scope. See README.md on what
 # multiple users would take.
 class Edition < ApplicationRecord
+  # What a line of the archive renders. raw_response holds the model's whole
+  # answer — the stories, their citations and the prose, as JSON — so a year
+  # of mastheads reads megabytes without this. The house pattern is
+  # Newsletter::FEED_COLUMNS.
+  ARCHIVE_COLUMNS = %i[id number published_on].freeze
+
   # Ordered through Edition::Story's own method rather than an inline order
   # here, so the position ordering has one owner. Declared dependent even
   # though the foreign key already cascades: the constraint is the floor that
@@ -31,6 +37,10 @@ class Edition < ApplicationRecord
 
   def self.latest
     newest_first.first
+  end
+
+  def self.for_archive
+    select(ARCHIVE_COLUMNS)
   end
 
   # The high-water mark the next window starts from, and nil before the first
