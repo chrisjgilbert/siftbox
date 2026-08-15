@@ -11,7 +11,7 @@ class WaitlistSignupsController < ApplicationController
   rate_limit to: 5, within: 1.minute, only: :create, with: -> { too_many_signups }
 
   def new
-    return redirect_to newsletters_url if authenticated?
+    return redirect_to reader_home_url if authenticated?
 
     @waitlist_signup = WaitlistSignup.new
   end
@@ -27,6 +27,22 @@ class WaitlistSignupsController < ApplicationController
   end
 
   private
+
+  # Home for a signed-in reader is the day's briefing: root serves the latest
+  # edition, and the originals are an archive behind it rather than the first
+  # thing the app shows.
+  #
+  # Before the first edition is composed there is nothing to serve, and the
+  # editions archive is where the app says when to expect one. Sending a
+  # reader to the inbox instead would make the empty morning look like the
+  # design. Read through for_archive because a redirect wants an id, not the
+  # model's whole answer in raw_response.
+  def reader_home_url
+    edition = Edition.for_archive.latest
+    return editions_url unless edition
+
+    edition_url(edition)
+  end
 
   # Rails answers a bare `head :too_many_requests` by default, and Turbo drops
   # a response carrying no body — the submit button would simply stop doing

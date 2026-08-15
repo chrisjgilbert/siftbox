@@ -13,13 +13,27 @@ RSpec.describe "Waitlist signups" do
     expect(response.body).to include("Your news feed")
   end
 
-  # Opening the app should land on the feed, not on a page selling it.
-  it "sends a signed-in reader to the feed" do
+  # Opening the app should land on the day's briefing, not on a page selling
+  # it. The edition is the app; the originals are an archive behind it.
+  it "sends a signed-in reader to the latest edition" do
+    sign_in
+    create(:edition, published_on: Date.new(2026, 8, 11))
+    today = create(:edition, published_on: Date.new(2026, 8, 12))
+
+    get root_path
+
+    expect(response).to redirect_to(edition_url(today))
+  end
+
+  # Day one, and any morning after a run that found nothing to compose: there
+  # is no edition to serve. The archive is the page that says when to expect
+  # one, which is a better answer than the inbox the edition replaced.
+  it "sends a signed-in reader to the archive before there is an edition" do
     sign_in
 
     get root_path
 
-    expect(response).to redirect_to(newsletters_url)
+    expect(response).to redirect_to(editions_url)
   end
 
   # The one page in this app meant to be found. Everything behind the sign-in

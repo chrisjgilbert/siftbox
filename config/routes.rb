@@ -19,6 +19,8 @@ Rails.application.routes.draw do
 
   # The landing page is the new-signup form, so the public root and the
   # waitlist are one resource rather than a pages controller with a verb for
-  # a name. A signed-in reader is sent on to the feed.
+  # a name. A signed-in reader is sent on to the latest edition — the edition
+  # is the app — or to the editions archive on a morning before the first one
+  # has been composed.
   root "waitlist_signups#new"
 end
