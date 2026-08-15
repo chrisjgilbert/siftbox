@@ -1,5 +1,13 @@
 <%= render "application/masthead", line: t(".line") %>
 
+<%# The archive carries the notice for the same reason the edition does, and
+    for one of its own: root serves this page on a morning before the first
+    edition exists, which is exactly the morning a reader is subscribing to
+    things. %>
+<% if badge.pending? %>
+  <%= render "application/badge", badge: badge %>
+<% end %>
+
 <main class="archive">
   <% if @archive.any? %>
     <%# What the list holds and which way it runs. The order is stated because

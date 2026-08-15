@@ -64,6 +64,19 @@ RSpec.describe "The edition page's pen notice" do
     expect(page).not_to have_text("awaiting confirmation")
   end
 
+  # Root serves the editions archive on a morning before the first edition
+  # exists — which is exactly the morning a reader is subscribing to things
+  # and the pen is at its busiest. The notice follows them there rather than
+  # being absent on the one day it is most needed.
+  it "carries the notice on the archive before any edition exists" do
+    create(:newsletter, held_at: 1.hour.ago)
+    sign_in_through_the_form
+
+    visit root_path
+
+    expect(page).to have_text("1 subscription awaiting confirmation")
+  end
+
   it "says nothing on a morning with nothing waiting" do
     edition = create(:edition)
     create(:newsletter)
