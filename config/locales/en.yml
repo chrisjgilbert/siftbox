@@ -64,6 +64,10 @@ en:
     original:
       back: Back to the reader
       caption: Original HTML, sandboxed in an iframe. Styling is the sender's.
+      pen:
+        back: Back to subscriptions
+        done: Done
+        release: This is a newsletter
     show:
       back: Index
       issue: Issue %{number}

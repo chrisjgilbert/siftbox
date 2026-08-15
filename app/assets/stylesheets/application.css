@@ -1152,6 +1152,28 @@ a {
   }
 }
 
+/* Pen top bar ------------------------------------------------------------- */
+
+/* What a held confirmation wears in place of the archive's bar: the same
+   furniture at the same weights, with two differences that are both about the
+   pen rather than about the look.
+
+   It wraps rather than hiding an action below 720px. The reader's bar drops
+   its second action on a narrow screen because marking something unread again
+   can wait; a misfire the reader cannot release from a phone stays in the pen
+   until they are at a desk, and a confirm link may not last that long.
+
+   Done is set in ink against the mute the other action keeps. It is the
+   ending nearly every hold has and the one the reader came here to press. */
+.topbar--pen {
+  flex-wrap: wrap;
+  row-gap: 12px;
+}
+
+.topbar__action--done {
+  color: var(--ink);
+}
+
 /* Reader masthead --------------------------------------------------------- */
 
 .article {
