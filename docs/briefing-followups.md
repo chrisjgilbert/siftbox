@@ -266,6 +266,13 @@ states in its own caption. What is left:
 
 ## Smaller, no particular milestone
 
+- **The shared masthead's CSS block is still called `edition-masthead`.** The
+  partial moved to `app/views/application/_masthead.html.erb` when a third
+  page wanted it, and the class names did not move with it. Renaming them to
+  `masthead__*` would put two unrelated components under one block name — the
+  feed's header is already `.masthead__brand` — so the rename waits for
+  Milestone 6, which rebuilds that header anyway.
+
 - **`Newsletter.content` scans when unbounded.** Verified with
   `EXPLAIN QUERY PLAN`: as the archive actually calls it, the `received_at`
   index carries the query and the hold predicates are evaluated over a narrow

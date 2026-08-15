@@ -2,7 +2,7 @@
 
 <%# The number and the day covered, which is what an edition is called, and
     so is the page's own heading. %>
-<%= render "editions/header", line: @edition.masthead %>
+<%= render "application/masthead", line: @edition.masthead %>
 
 <main class="edition">
   <% @edition.sections.each do |section| %>

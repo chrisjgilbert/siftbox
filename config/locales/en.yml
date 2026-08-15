@@ -10,14 +10,15 @@ en:
           attributes:
             citations:
               duplicate_newsletter: name the same newsletter twice.
+  application:
+    masthead:
+      archive: Archive
+      originals: Originals
   date:
     formats:
       edition_masthead: "%A %-d %B"
       feed_group: "%A %-d %B"
   editions:
-    header:
-      archive: Archive
-      originals: Originals
     index:
       count:
         one: 1 edition
