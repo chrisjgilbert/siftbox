@@ -52,6 +52,20 @@ class Newsletter::InboundMessage
         # the hotlinked images too. This one is what the feed shows until
         # then — the sender's own URL, which is where the body still points.
         stored.capture_lead_image
+
+        # At ingest rather than at composition, so a confirmation surfaces
+        # the moment it lands: its links expire in a day or two, and the next
+        # edition is a morning away. Inside the transaction, because a
+        # newsletter stored without the hold it earned is a confirmation in
+        # the archive and in tomorrow's edition.
+        #
+        # Asked after the insert, which is safe only because
+        # Newsletter::Confirmation's guard counts content received strictly
+        # earlier: the row cannot make itself an established sender. Nothing
+        # here re-asks for a redelivery — #save returns the stored newsletter
+        # before reaching this — so a hold the reader has already resolved
+        # stays resolved.
+        stored.hold if Newsletter::Confirmation.new(stored).detected?
       end
     end
 

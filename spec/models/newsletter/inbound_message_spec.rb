@@ -142,6 +142,35 @@ RSpec.describe Newsletter::InboundMessage do
     expect(Newsletter.count).to eq(2)
   end
 
+  it "holds a confirmation from a first-time sender" do
+    message = Newsletter::InboundMessage.new(
+      mail: inbound_mail(from: "no-reply@substack.com", subject: "Confirm your subscription")
+    )
+
+    newsletter = message.save
+
+    expect(newsletter.reload).to be_held
+  end
+
+  it "leaves an ordinary newsletter out of the pen" do
+    message = Newsletter::InboundMessage.new(mail: inbound_mail)
+
+    newsletter = message.save
+
+    expect(newsletter.reload).not_to be_held
+  end
+
+  # The guard is asked after the insert, and the newsletter must not count as
+  # its own established sender.
+  it "leaves confirmation-shaped mail from an established sender out of the pen" do
+    create(:newsletter, sender_email: "peter@rubyweekly.com", received_at: 3.days.ago)
+    message = Newsletter::InboundMessage.new(mail: inbound_mail(subject: "Confirmation bias"))
+
+    newsletter = message.save
+
+    expect(newsletter.reload).not_to be_held
+  end
+
   it "queues the remote image download after storing" do
     message = Newsletter::InboundMessage.new(mail: inbound_mail)
 
