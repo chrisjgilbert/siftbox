@@ -164,6 +164,18 @@ Reads the lead image out of every newsletter stored before the column
 existed. Without it the whole archive renders the feed's "no image in email"
 box. Idempotent, so it is safe to run again.
 
+```bash
+bin/rails confirmations:preview
+bin/rails confirmations:backfill
+```
+
+Holds the subscription confirmations sitting in mail stored before detection
+existed — detection runs at ingest, so without this the pen is empty on the
+first morning while every confirmation the reader has ever received is behind
+it in the archive. Idempotent. Run the preview first: it is the same walk
+inside a transaction that rolls back, and it prints what would be held. Mail
+a published edition already cites is left alone, whatever its subject says.
+
 The app was called `newsbox` until recently. If you are upgrading a running
 deployment, rename its `NEWSBOX_*` variables to `SIFTBOX_*` in the same
 release as the code, or the app boots on placeholder values. The Kamal

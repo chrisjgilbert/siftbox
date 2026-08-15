@@ -96,6 +96,22 @@ class Newsletter < ApplicationRecord
     where(held_at: nil).or(released)
   end
 
+  # Mail the pen has never touched, which is the half of the archive the
+  # backfill has anything to say about. Deliberately not .content: released
+  # mail carries a held_at too, and re-flagging something the reader has
+  # already called a newsletter would be the app arguing with them.
+  def self.never_held
+    where(held_at: nil)
+  end
+
+  # Nothing a published edition has quoted. Holding a cited newsletter hides
+  # it from the archive the citation links to, and releasing it later would
+  # carry it into a second edition — so the backfill leaves the window an
+  # edition covered exactly as it found it.
+  def self.uncited
+    where.not(id: Edition::Citation.select(:newsletter_id))
+  end
+
   def read?
     read_at.present?
   end

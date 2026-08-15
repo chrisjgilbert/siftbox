@@ -375,4 +375,30 @@ RSpec.describe Newsletter do
 
     expect(Newsletter.where(received_at: 1.week.ago..).content).to eq([ inside ])
   end
+
+  # What the backfill walks. Not .content: released mail carries a held_at
+  # and the reader has already ruled on it.
+  it "finds the mail the pen has never flagged" do
+    never = create(:newsletter, held_at: nil)
+    create(:newsletter, held_at: 1.hour.ago)
+    create(:newsletter, held_at: 2.days.ago, dismissed_at: 1.day.ago)
+    create(:newsletter, held_at: 2.days.ago, released_at: 1.day.ago)
+
+    expect(Newsletter.never_held).to eq([ never ])
+  end
+
+  it "finds the mail no edition has cited" do
+    uncited = create(:newsletter)
+    create(:edition_citation, newsletter: create(:newsletter))
+
+    expect(Newsletter.uncited).to eq([ uncited ])
+  end
+
+  it "counts a newsletter cited twice as cited" do
+    newsletter = create(:newsletter)
+    create(:edition_citation, newsletter: newsletter)
+    create(:edition_citation, newsletter: newsletter)
+
+    expect(Newsletter.uncited).to be_empty
+  end
 end
