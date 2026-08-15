@@ -20,12 +20,24 @@ class Edition::Presenter
     @edition = edition
   end
 
-  # "No. 1 · Tuesday 11 August" — the number and the day covered, never the
-  # wall clock that composed it. Sentence case here and uppercased in CSS,
-  # because JetBrains Mono is always uppercase and the locale file is not the
-  # place to shout: docs/siftbox-redesign.md §2.
+  # "No. 1 · Tuesday 11 August" — what an edition is called. Sentence case here
+  # and uppercased in CSS, because JetBrains Mono is always uppercase and the
+  # locale file is not the place to shout: docs/siftbox-redesign.md §2.
   def masthead
-    I18n.t("editions.masthead", number: edition.number, date: date)
+    I18n.t("editions.masthead", number: number, date: date)
+  end
+
+  # The two halves the masthead is built from, because the archive draws them
+  # in columns of their own: the number is the edition's name, and the day is
+  # what the list is ordered by and what a reader scans down.
+  def number
+    I18n.t("editions.number", number: edition.number)
+  end
+
+  # The day covered, never the wall clock that composed it. An edition
+  # composed late is still the earlier day's edition.
+  def date
+    I18n.l(edition.published_on, format: :edition_masthead)
   end
 
   # Lead stories, then Briefly, then the reading list. A section with nothing
@@ -38,10 +50,6 @@ class Edition::Presenter
   private
 
   attr_reader :edition
-
-  def date
-    I18n.l(edition.published_on, format: :edition_masthead)
-  end
 
   def lead
     section(Edition::Story::LEAD, edition.lead_stories)

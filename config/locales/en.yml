@@ -15,17 +15,23 @@ en:
       edition_masthead: "%A %-d %B"
       feed_group: "%A %-d %B"
   editions:
+    header:
+      archive: Archive
+      originals: Originals
     index:
+      count:
+        one: 1 edition
+        other: "%{count} editions"
       empty: No editions yet. The first one is written at 07:00, from whatever has
         arrived by then.
-    masthead: "No. %{number} · %{date}"
+      line: Archive
+      order: By the day covered
+    masthead: "%{number} · %{date}"
+    number: No. %{number}
     sections:
       briefly: Briefly
       lead: Lead stories
       reading_list: The reading list
-    show:
-      archive: Archive
-      originals: Originals
     story:
       sources:
         one: Source

@@ -1,0 +1,27 @@
+<%# The masthead both edition pages wear: the nameplate and the two ways off
+    the page on one ruled band, the line naming this page on a second.
+
+    The nav does not change shape between the edition and the archive, so the
+    reader learns one navigation and the archive is always one click away —
+    the same reason the feed's filters both stay on screen. The nameplate is
+    the way back to the day's briefing, as a newspaper's is, which is what
+    keeps an edition opened out of the archive from being a page with no way
+    forward. %>
+<header class="edition-masthead">
+  <div class="edition-masthead__bar">
+    <%= link_to root_path, class: "edition-masthead__home" do %>
+      <%= render "application/lockup", size: 24 %>
+    <% end %>
+
+    <nav class="edition-masthead__nav">
+      <%= link_to t("editions.header.archive"), editions_path,
+            class: "edition-masthead__link" %>
+      <%= link_to t("editions.header.originals"), newsletters_path,
+            class: "edition-masthead__link" %>
+    </nav>
+  </div>
+
+  <%# Set in mono, so uppercased by CSS rather than shouted in the locale
+      file. %>
+  <h1 class="edition-masthead__line"><%= line %></h1>
+</header>

@@ -9,6 +9,8 @@ RSpec.describe "Editions" do
     expect(response).to redirect_to(new_session_path)
   end
 
+  # The archive prints the number and the day in columns of their own rather
+  # than as the one masthead line the edition page carries.
   it "lists every edition in the archive" do
     sign_in
     create(:edition, number: 1, published_on: Date.new(2026, 8, 11))
@@ -16,8 +18,8 @@ RSpec.describe "Editions" do
 
     get editions_path
 
-    expect(response.body).to include("No. 1 · Tuesday 11 August")
-      .and include("No. 2 · Wednesday 12 August")
+    expect(response.body).to include("No. 1").and include("Tuesday 11 August")
+      .and include("No. 2").and include("Wednesday 12 August")
   end
 
   it "opens each archive line onto its edition" do

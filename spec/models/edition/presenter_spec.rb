@@ -7,6 +7,20 @@ RSpec.describe Edition::Presenter do
     expect(Edition::Presenter.new(edition).masthead).to eq("No. 1 · Tuesday 11 August")
   end
 
+  # The archive prints the two halves in their own columns, because the day
+  # covered is what the list is ordered by and what a reader scans for.
+  it "names the edition by its number" do
+    edition = build_stubbed(:edition, number: 4)
+
+    expect(Edition::Presenter.new(edition).number).to eq("No. 4")
+  end
+
+  it "dates the edition by the day it covers" do
+    edition = build_stubbed(:edition, published_on: Date.new(2026, 8, 11))
+
+    expect(Edition::Presenter.new(edition).date).to eq("Tuesday 11 August")
+  end
+
   it "reads the sections in the order the page prints them" do
     edition = create(:edition)
     create(:edition_story, edition: edition, section: Edition::Story::READING_LIST, position: 1)

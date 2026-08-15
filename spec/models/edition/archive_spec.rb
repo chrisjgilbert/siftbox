@@ -25,6 +25,16 @@ RSpec.describe Edition::Archive do
     expect(editions.map(&:masthead).last).to eq("No. 1 · Tuesday 11 August")
   end
 
+  # Counted off the editions already loaded rather than a second query, the
+  # way Feed#issue_count is, so the figure at the head of the list cannot
+  # disagree with the list under it.
+  it "counts the editions it lists" do
+    create(:edition)
+    create(:edition)
+
+    expect(Edition::Archive.new.count).to eq(2)
+  end
+
   it "has nothing to list before the first edition is published" do
     expect(Edition::Archive.new).not_to be_any
   end

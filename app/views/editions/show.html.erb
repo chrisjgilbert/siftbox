@@ -1,21 +1,8 @@
 <% content_for :title, @edition.masthead %>
 
-<header class="edition-masthead">
-  <div class="edition-masthead__bar">
-    <%= render "application/lockup", size: 24 %>
-
-    <nav class="edition-masthead__nav">
-      <%= link_to t("editions.show.archive"), editions_path,
-            class: "edition-masthead__link" %>
-      <%= link_to t("editions.show.originals"), newsletters_path,
-            class: "edition-masthead__link" %>
-    </nav>
-  </div>
-
-  <%# The number and the day covered, which is what an edition is called. Set
-      in mono, so uppercased by CSS rather than shouted in the locale file. %>
-  <h1 class="edition-masthead__line"><%= @edition.masthead %></h1>
-</header>
+<%# The number and the day covered, which is what an edition is called, and
+    so is the page's own heading. %>
+<%= render "editions/header", line: @edition.masthead %>
 
 <main class="edition">
   <% @edition.sections.each do |section| %>

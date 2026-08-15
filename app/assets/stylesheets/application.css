@@ -129,6 +129,14 @@ a {
   border-bottom: 2px solid var(--ink);
 }
 
+/* The nameplate is a link on every edition page — the way back to the day's
+   briefing. It carries the mark, which is drawn in currentColor, so the link
+   colour has to be put back to ink or the brackets turn blue. */
+.edition-masthead__home {
+  color: var(--ink);
+  text-decoration: none;
+}
+
 .edition-masthead__nav {
   display: flex;
   align-items: center;
@@ -350,6 +358,118 @@ a {
 
   .story__list {
     gap: 14px;
+  }
+}
+
+/* Archive of editions ----------------------------------------------------- */
+
+/* Every edition there has been, at the same measure the edition itself is set
+   at. One row per day: the day covered carries the row because it is what the
+   list is ordered by, and the number rides beside it in mono at the index's
+   own scale. No blue on the number — in the feed blue means unread, and an
+   edition has no such state to claim. */
+.archive {
+  padding: 0 var(--gutter) 48px;
+}
+
+.archive__caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 32px 0 8px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.archive__order {
+  color: var(--mute);
+}
+
+.archive__list {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.archive__link {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 14px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  color: inherit;
+}
+
+.archive__number {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.archive__date {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.archive__empty {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 48px 0;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .archive {
+    padding-bottom: 96px;
+  }
+
+  .archive__caption {
+    padding: 56px 0 10px;
+    font-size: 11px;
+  }
+
+  /* The row grows a hover tint and the padding to hold it, as the feed's rows
+     do above the same breakpoint and for the same reason: below it there is
+     no pointer to answer. */
+  .archive__link {
+    grid-template-columns: 72px 1fr;
+    column-gap: 24px;
+    padding: 22px 14px;
+    margin: 0 -14px;
+  }
+
+  .archive__link:hover {
+    background: var(--hover);
+  }
+
+  .archive__number {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .archive__date {
+    font-size: 23px;
+  }
+
+  .archive__empty {
+    padding: 72px 0;
   }
 }
 

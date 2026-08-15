@@ -59,6 +59,29 @@ RSpec.describe "Reading an edition" do
     expect(page).to have_text("Anything under <2GB is a rounding error.")
   end
 
+  it "reaches the archive of editions" do
+    edition = create(:edition)
+    sign_in_through_the_form
+    visit edition_path(edition)
+
+    click_link "Archive"
+
+    expect(page).to have_current_path(editions_path)
+  end
+
+  # The nameplate is the way back to today, the way a newspaper's is, so an
+  # edition read out of the archive is never a page with no way forward.
+  it "returns to the day's briefing from the nameplate" do
+    old = create(:edition, number: 1, published_on: Date.new(2026, 8, 11))
+    create(:edition, number: 2, published_on: Date.new(2026, 8, 12))
+    sign_in_through_the_form
+    visit edition_path(old)
+
+    click_link "siftbox"
+
+    expect(page).to have_text("No. 2 · Wednesday 12 August")
+  end
+
   it "names the section a story was filed under" do
     story = create(:edition_story, section: Edition::Story::BRIEFLY)
     sign_in_through_the_form

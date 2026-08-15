@@ -19,6 +19,13 @@ class Edition::Archive
     editions.any?
   end
 
+  # Counted off the editions already loaded rather than asked of the table
+  # again, the way Feed#issue_count is, so the figure at the head of the list
+  # cannot disagree with the list under it.
+  def count
+    editions.length
+  end
+
   private
 
   def present(edition)
