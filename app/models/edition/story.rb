@@ -21,7 +21,7 @@ class Edition::Story < ApplicationRecord
   # when it guesses.
   has_many :citations, foreign_key: :edition_story_id, dependent: :destroy, inverse_of: :story
   # Scoped to the columns a citation is drawn from, the way the feed and the
-  # neighbour chain are. Unscoped this selects newsletters.*, and an edition's
+  # pen are. Unscoped this selects newsletters.*, and an edition's
   # citations then read every cited body in full to print a list of senders.
   has_many :newsletters, -> { for_citation }, through: :citations
 

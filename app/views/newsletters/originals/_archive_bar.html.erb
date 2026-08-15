@@ -1,7 +1,13 @@
-<%# The bar an original in the archive wears: the way back to the reader it
-    was opened from, and nothing else. Held mail wears the pen's bar instead. %>
+<%# The bar an original in the archive wears: the way back to the archive, and
+    nothing else. Held mail wears the pen's bar instead.
+
+    It pointed at the reader until the reader was deleted. An original is
+    reached from three places now — a story's citation, an archive row, and
+    the pen — and only the pen has a back that differs, which it states in its
+    own bar. The other two share the archive, so this stays one link rather
+    than branching on where the reader came from. %>
 <header class="topbar">
   <%= link_to t("newsletters.original.back"),
-        newsletter_path(newsletter),
+        newsletters_path,
         class: "topbar__back" %>
 </header>

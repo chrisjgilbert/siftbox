@@ -1,7 +1,10 @@
 <%# Every part is a direct child of the grid: the number and the time sit in
     their own columns on desktop and fold into the meta line on mobile, which
-    grid areas can do and nested markup cannot. %>
-<%= link_to newsletter_path(row),
+    grid areas can do and nested markup cannot.
+
+    The row opens the original, not the reader: the reader is gone, and a
+    story's citation and an archive row share the one destination. %>
+<%= link_to newsletter_original_path(row),
       class: class_names("row", "row--read" => row.read?) do %>
   <span class="row__number"><%= row.number %></span>
   <span class="row__sender"><%= row.sender %></span>

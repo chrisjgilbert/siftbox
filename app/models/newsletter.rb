@@ -13,15 +13,8 @@ class Newsletter < ApplicationRecord
   # judged in a terminal.
   CITATION_COLUMNS = %i[id sender_name sender_email subject].freeze
 
-  # What the reader's previous/next links render. Without this the two
-  # neighbour lookups pull a full body_html each, to show a sender and a
-  # subject.
-  NEIGHBOUR_COLUMNS = %i[id sender_name sender_email subject received_at].freeze
-
   # What a row of the Subscriptions page renders: who sent it, what they
-  # called it, and how long ago it landed. The same five columns the neighbour
-  # links need, listed again rather than shared, because the two answer to
-  # different screens and neither should reshape when the other's does.
+  # called it, and how long ago it landed.
   PEN_COLUMNS = %i[id sender_name sender_email subject received_at].freeze
 
   # One row per address: the mail that introduced the sender. A correlated
@@ -90,10 +83,6 @@ class Newsletter < ApplicationRecord
 
   def self.first_from_sender
     where(EARLIEST_FROM_SENDER)
-  end
-
-  def self.neighbour
-    select(NEIGHBOUR_COLUMNS)
   end
 
   def self.unread
@@ -239,25 +228,6 @@ class Newsletter < ApplicationRecord
     return "" unless sender_email.include?("@")
 
     sender_email.split("@").last.to_s
-  end
-
-  # Ordered through the scopes rather than inline, so the tie-break on id has
-  # one owner. Stated in three places it would drift, and the chain silently
-  # dropping a newsletter is exactly what the tie-break exists to prevent.
-  #
-  # Through .content for the same reason the archive is: the chain walks the
-  # archive, and a confirmation the archive refuses to list is not something
-  # to hand the reader a link to.
-  def newer
-    Newsletter.content.neighbour.oldest_first
-      .where("(received_at, id) > (?, ?)", received_at, id)
-      .first
-  end
-
-  def older
-    Newsletter.content.neighbour.newest_first
-      .where("(received_at, id) < (?, ?)", received_at, id)
-      .first
   end
 
   # Where the rewritten image references in body_html point. Written by

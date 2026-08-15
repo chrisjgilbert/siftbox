@@ -1,6 +1,6 @@
 <%# The newest item in the feed, when it has an image to lead with. Same
     fields as a standard row, at full frame width. %>
-<%= link_to newsletter_path(row),
+<%= link_to newsletter_original_path(row),
       class: class_names("lead", "lead--read" => row.read?) do %>
   <img class="lead__image" src="<%= row.lead_image_url %>" alt="" loading="lazy">
 

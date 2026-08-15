@@ -64,51 +64,12 @@ RSpec.describe Newsletter do
     expect(newsletter.sender_domain).to eq("")
   end
 
-  it "finds the newsletter received just after it" do
-    newsletter = create(:newsletter, received_at: 2.days.ago)
-    newer = create(:newsletter, received_at: 1.day.ago)
-    create(:newsletter, received_at: 3.days.ago)
-
-    expect(newsletter.newer).to eq(newer)
-  end
-
-  it "finds the newsletter received just before it" do
-    newsletter = create(:newsletter, received_at: 2.days.ago)
-    older = create(:newsletter, received_at: 3.days.ago)
-    create(:newsletter, received_at: 1.day.ago)
-
-    expect(newsletter.older).to eq(older)
-  end
-
-  it "reaches a newsletter that shares its received time" do
-    shared = Time.zone.parse("2026-08-05 09:02:00")
-    first = create(:newsletter, received_at: shared)
-    second = create(:newsletter, received_at: shared)
-
-    expect(first.newer).to eq(second)
-  end
-
-  it "reaches back to a newsletter that shares its received time" do
-    shared = Time.zone.parse("2026-08-05 09:02:00")
-    first = create(:newsletter, received_at: shared)
-    second = create(:newsletter, received_at: shared)
-
-    expect(second.older).to eq(first)
-  end
-
   it "orders newsletters sharing a received time consistently" do
     shared = Time.zone.parse("2026-08-05 09:02:00")
     first = create(:newsletter, received_at: shared)
     second = create(:newsletter, received_at: shared)
 
     expect(Newsletter.newest_first).to eq([ second, first ])
-  end
-
-  it "has no newer newsletter when it is the most recent" do
-    create(:newsletter, received_at: 3.days.ago)
-    newsletter = create(:newsletter, received_at: 1.day.ago)
-
-    expect(newsletter.newer).to be_nil
   end
 
   it "requires a received time" do

@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   resources :editions, only: [ :index, :show ]
-  resources :newsletters, only: [ :index, :show ] do
+  resources :newsletters, only: :index do
     # The two ways out of the pen, as nouns: creating a dismissal is the
     # reader saying the confirmation is dealt with, creating a release is them
     # saying it was content all along. Verbs on the newsletter would be the

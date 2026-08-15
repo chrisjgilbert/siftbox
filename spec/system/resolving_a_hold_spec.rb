@@ -38,7 +38,7 @@ RSpec.describe "Resolving a held confirmation" do
     visit newsletter_original_path(newsletter)
 
     expect(page).to have_link("Back to subscriptions", href: subscriptions_path)
-    expect(page).not_to have_link("Back to the reader")
+    expect(page).not_to have_link("Back to the archive")
   end
 
   it "keeps the archive's bar on an original that was never held" do
@@ -47,7 +47,7 @@ RSpec.describe "Resolving a held confirmation" do
 
     visit newsletter_original_path(newsletter)
 
-    expect(page).to have_link("Back to the reader")
+    expect(page).to have_link("Back to the archive")
     expect(page).not_to have_button("Done")
   end
 

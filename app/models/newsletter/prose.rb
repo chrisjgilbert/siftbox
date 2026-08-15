@@ -2,11 +2,10 @@
 # off and the boilerplate every issue carries taken out.
 #
 # Built on Newsletter::Body rather than on body_html, the same way
-# Newsletter::LeadImage and Newsletter::ReadingTime are, so the editor pays
-# for one Loofah pass over a body that runs to hundreds of kilobytes — and so
-# the tracking pixels are already gone when this reads it. Nothing here
-# mutates the tree; Body#document is shared, and LeadImage detaches nodes
-# from it.
+# Newsletter::LeadImage is, so the editor pays for one Loofah pass over a body
+# that runs to hundreds of kilobytes — and so the tracking pixels are already
+# gone when this reads it. Nothing here mutates the tree; Body#document is
+# shared, and LeadImage detaches nodes from it.
 class Newsletter::Prose
   # Everything not named here starts a new line. An allowlist of block
   # elements would read better, but it fails in the wrong direction: an

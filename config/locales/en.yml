@@ -62,22 +62,12 @@ en:
       no_image_compact: No image
       subscribe: Subscribe with %{address}
     original:
-      back: Back to the reader
+      back: Back to the archive
       caption: Original HTML, sandboxed in an iframe. Styling is the sender's.
       pen:
         back: Back to subscriptions
         done: Done
         release: This is a newsletter
-    show:
-      back: Index
-      issue: Issue %{number}
-      kicker: "%{sender} / %{domain}"
-      mark_unread: Mark unread
-      newer: Newer
-      older: Older
-      reading_time: "%{minutes} min"
-      received: Received %{stamp}
-      view_original: View original
     unknown_sender: Unknown sender
   passwords:
     edit:
