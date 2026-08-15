@@ -1,9 +1,15 @@
 Rails.application.routes.draw do
   resources :editions, only: [ :index, :show ]
   resources :newsletters, only: [ :index, :show ] do
+    # The two ways out of the pen, as nouns: creating a dismissal is the
+    # reader saying the confirmation is dealt with, creating a release is them
+    # saying it was content all along. Verbs on the newsletter would be the
+    # missing nouns .claude/rules/controllers.md warns about.
+    resource :dismissal, only: :create, module: :newsletters
     resources :images, only: :show, module: :newsletters
     resource :original, only: :show, module: :newsletters
     resource :read, only: :destroy, module: :newsletters
+    resource :release, only: :create, module: :newsletters
     resource :source, only: :show, module: :newsletters
   end
   # Singular, and the token travels as a parameter rather than a path
