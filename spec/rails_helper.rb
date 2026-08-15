@@ -26,6 +26,10 @@ RSpec.configure do |config|
 
   config.include FactoryBot::Syntax::Methods
   config.include ActionMailbox::TestHelper, type: :mailbox
+  # For the jobs that retry: perform_enqueued_jobs runs the retry the way the
+  # worker would, so a spec can count what a failing job actually costs rather
+  # than read the number off its own declaration.
+  config.include ActiveJob::TestHelper, type: :job
   config.include ActiveSupport::Testing::TimeHelpers
 
   # The waitlist's rate limit counts in Rails.cache, which the test
