@@ -232,6 +232,56 @@ states in its own caption. What is left:
   what root did until this milestone. Left as the record of that work; the
   PRD supersedes it.
 
+## Milestone 5 — what the Subscriptions page leaves open
+
+The page is built and green: an index at `/subscriptions`, three sections, and
+a link to it in the shared masthead. Dismiss, release, the pen top bar on the
+original and the edition-page badge are not in it. What the page itself leaves
+open:
+
+- **Nothing has been looked at in a browser**, for the same reason Milestone 4
+  could not be: none is installed. The pen's three-column grid, its 720px
+  breakpoint and the step-down on the bounced section have been read and not
+  seen.
+
+- **The bounced section is capped at twenty rows and says nothing when it
+  truncates.** The cap is real — each row downloads and parses a stored raw
+  email, and a spam flood is exactly when the section fills — but a reader
+  looking for their own eaten confirmation in row twenty-one has no way to
+  know it is there. An "and N more" line needs a count query the section does
+  not otherwise pay for. Revisit the first time it truncates.
+
+- **Nothing holds the bounce list's file reads.** The query-count spec on
+  `/subscriptions` counts SQL, and the blob download `Subscriptions::Bounce`
+  does per row is a file read. `with_attached_raw_email` keeps the *queries*
+  flat; the reads scale with the section and only the cap bounds them.
+
+- **A held confirmation from a first-time sender is listed twice**, once under
+  Awaiting confirmation and once under New senders. Deliberate — the PRD asks
+  for first-time senders "flagged or not", and the second section is the net
+  for the case where the first one is wrong — but it is the first thing a
+  reader will ask about, and it makes `click_link` ambiguous in a system spec.
+
+- **`Newsletter::Age` now includes `ActionView::Helpers::DateHelper`** to say
+  "4 minutes ago". A model reaching into ActionView for a phrase; the
+  alternative was writing the distance table again, or putting the one thing
+  the pen most needs into a helper the presenter cannot reach.
+  `Subscriptions::Bounce` then hands it an `ActionMailbox::InboundEmail`'s
+  `created_at`, which is not a newsletter's `received_at` — the class is named
+  for the narrower of the two things it now measures.
+
+- **`Newsletter.first_from_sender` is only ever called with a date bound.**
+  With one it rides `index_newsletters_on_received_at` and the correlated
+  subquery rides `index_newsletters_on_sender_email` — both verified with
+  `EXPLAIN QUERY PLAN`. Unbounded it scans, the same caveat `Newsletter.content`
+  already carries below.
+
+- **The window and the wording cannot drift, but the window itself is a
+  guess.** `Subscriptions::NEW_SENDER_WINDOW` is fourteen days because the PRD
+  says "the last couple of weeks", and the empty line interpolates the number
+  out of the constant. Whether a fortnight is the right amount of memory is
+  something only a real archive can say.
+
 ## For Milestone 2 and 5 — the confirmation pen
 
 - **The backfill must go through `#hold`.** The state machine is held
