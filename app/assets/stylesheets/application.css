@@ -473,6 +473,146 @@ a {
   }
 }
 
+/* Subscriptions ----------------------------------------------------------- */
+
+/* The pen and the two nets around it, at the measure every page behind the
+   gate is set to. Three sections in one shape, built the way the edition's
+   are: the heading takes the 2px rule, the rows under it take the 1px one,
+   and nothing else separates them. */
+.pen {
+  padding: 0 var(--gutter) 48px;
+}
+
+.pen__section {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding-top: 32px;
+}
+
+.pen__heading {
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pen__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The rule belongs to the item and the grid to the line inside it, so a row
+   that is a link and a row that is not sit on exactly the same rails and the
+   rule keeps to the measure whatever the line does with its own margins. */
+.pen__item {
+  border-bottom: 1px solid var(--rule);
+}
+
+.pen__line {
+  display: grid;
+  grid-template-columns: 1fr;
+  row-gap: 4px;
+  padding: 16px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pen__sender {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.pen__subject {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+/* The one thing on this page that ages. How long a confirmation has been
+   waiting is what the reader is judging it on, so it is set in ink rather
+   than in the mute the rest of the mono furniture takes. */
+.pen__freshness {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* Recently bounced is an audit trail rather than a list to act on, so it
+   steps down the way Briefly steps down from a lead story — the type scale
+   hangs off the section, and no partial asks which one it is in. */
+.pen__section--bounced .pen__subject {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--body);
+}
+
+.pen__empty {
+  margin: 0;
+  padding: 24px 0 4px;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .pen {
+    padding-bottom: 96px;
+  }
+
+  .pen__section {
+    padding-top: 56px;
+  }
+
+  .pen__heading {
+    padding-bottom: 10px;
+    font-size: 11px;
+  }
+
+  /* Sender and freshness take columns of their own and the subject holds the
+     middle. The line grows a hover tint and the padding to hold it, as the
+     archive's row does and for the same reason: below this width there is no
+     pointer to answer. */
+  .pen__line {
+    grid-template-columns: 150px 1fr auto;
+    align-items: baseline;
+    column-gap: 24px;
+    row-gap: 0;
+    padding: 18px 14px;
+    margin: 0 -14px;
+  }
+
+  .pen__line--open:hover {
+    background: var(--hover);
+  }
+
+  .pen__sender,
+  .pen__freshness {
+    font-size: 11px;
+  }
+
+  .pen__subject {
+    font-size: 19px;
+  }
+
+  .pen__empty {
+    padding: 32px 0 8px;
+  }
+}
+
 /* Feed masthead ----------------------------------------------------------- */
 
 /* Below 720px the brand and the filters are two stacked bands with their own

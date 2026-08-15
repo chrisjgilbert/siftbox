@@ -1,0 +1,13 @@
+<%# Sender, subject, freshness. Every part is a direct child of the grid, the
+    way a feed row's is, so the freshness takes a column of its own on desktop
+    and folds under the subject on mobile.
+
+    The whole line is the link, and it opens the sender's own email rather
+    than the reader's rendering of it: their confirm button is in there. %>
+<li class="pen__item">
+  <%= link_to row.path, class: "pen__line pen__line--open" do %>
+    <span class="pen__sender"><%= row.sender %></span>
+    <span class="pen__subject"><%= row.subject %></span>
+    <span class="pen__freshness"><%= row.freshness %></span>
+  <% end %>
+</li>

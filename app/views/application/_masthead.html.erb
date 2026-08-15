@@ -8,6 +8,13 @@
     day's briefing, as a newspaper's is, which is what keeps an edition opened
     out of the archive from being a page with no way forward.
 
+    Subscriptions is in the nav rather than reached only from the edition
+    page's badge. The badge shows while something is held, and the two
+    sections a reader wants when nothing is held — new senders, recently
+    bounced — are the ones that answer "did the thing I subscribed to ever
+    arrive?". A page reachable only while something is waiting could not
+    answer that.
+
     The CSS block is still called edition-masthead: renaming it to masthead
     would put two unrelated components under one block name, because the feed
     already has .masthead__brand. Noted in docs/briefing-followups.md. %>
@@ -21,6 +28,8 @@
       <%= link_to t("application.masthead.archive"), editions_path,
             class: "edition-masthead__link" %>
       <%= link_to t("application.masthead.originals"), newsletters_path,
+            class: "edition-masthead__link" %>
+      <%= link_to t("application.masthead.subscriptions"), subscriptions_path,
             class: "edition-masthead__link" %>
     </nav>
   </div>

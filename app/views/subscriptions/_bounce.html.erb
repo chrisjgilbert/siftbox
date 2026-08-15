@@ -1,0 +1,11 @@
+<%# The same three parts on the same rails, and no link on them. Mail the gate
+    refused never became a newsletter, so there is no page to open — and
+    rendering a stranger's refused HTML is the last thing this app should
+    offer to do. %>
+<li class="pen__item">
+  <div class="pen__line">
+    <span class="pen__sender"><%= bounce.sender %></span>
+    <span class="pen__subject"><%= bounce.subject %></span>
+    <span class="pen__freshness"><%= bounce.freshness %></span>
+  </div>
+</li>

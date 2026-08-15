@@ -14,6 +14,7 @@ en:
     masthead:
       archive: Archive
       originals: Originals
+      subscriptions: Subscriptions
   date:
     formats:
       edition_masthead: "%A %-d %B"
@@ -91,6 +92,19 @@ en:
       password: Password
       submit: Sign in
       title: Sign in
+  subscriptions:
+    index:
+      awaiting:
+        empty: Nothing waiting. A subscription confirmation is held here the moment
+          it arrives, and stays until you deal with it.
+        heading: Awaiting confirmation
+      bounced:
+        empty: Nothing refused in the last %{days} days.
+        heading: Recently bounced
+      line: Subscriptions
+      new_senders:
+        empty: No address has written for the first time in the last %{days} days.
+        heading: New senders
   time:
     formats:
       received_stamp: "%Y.%m.%d %H:%M"

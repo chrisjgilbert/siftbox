@@ -1,0 +1,7 @@
+<%= render "application/masthead", line: t(".line") %>
+
+<main class="pen">
+  <% @subscriptions.sections.each do |section| %>
+    <%= render "subscriptions/section", section: section %>
+  <% end %>
+</main>
