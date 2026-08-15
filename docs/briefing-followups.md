@@ -163,43 +163,74 @@ composed by a scheduler, and none has been composed at all outside a spec.
   `ENV.fetch("ANTHROPIC_API_KEY")` and the deploy doc now wires it as a Kamal
   secret to match the code. One of the two should give.
 
-## For Milestone 4 — the edition pages
+## Milestone 4 — what the pages leave open
 
-- **`number` and `published_on` can disagree about order, and the archive
-  shows it.** Numbering follows composition order (`Edition.next_number`),
-  which under a watermark agrees with the date in normal operation — a missed
-  day makes the next window bigger rather than leaving a gap. A manual
-  backfill is the case where they diverge: an edition composed late for an
-  earlier day takes the higher number and sorts below the day that beat it
-  out, so the archive reads No. 1, No. 3, No. 2. Decided rather than open, but
-  the page is where it becomes visible.
+The edition page, the archive and root are built and green. The five findings
+this section used to hold are all closed: the citations preload
+(`Edition.for_reading`, held by a query-count spec), the column list on the
+citation association (`Newsletter::CITATION_COLUMNS` — the newsletters query
+reads four columns and no `body_html`), the section readers wrapped by
+`Edition::Presenter` rather than duplicated, `Section#name` as the
+view-facing section word, and the number/date ordering, which the archive now
+states in its own caption. What is left:
 
-- **N+1 on citations.** `Edition#lead_stories`, `#briefly` and `#reading_list`
-  correctly load the stories once and partition in Ruby, but each story's
-  `newsletters` fires its own query on first touch. An edition of ~15 stories
-  costs 15 extra queries. The read site needs
-  `Edition.newest_first.includes(stories: :newsletters).first`, which keeps
-  the `in_position_order` association scope and flattens it to four queries
-  regardless of story count.
+- **Nothing has been looked at in a browser.** There is none on the machine
+  the work was done on (`chromium`, `chrome`, `firefox` all absent), so the
+  system specs run under rack_test and prove words, links and order — never
+  appearance. The type scale, the two ruled bands of the masthead, the
+  archive row's grid and both 720px breakpoints have been read and not seen,
+  and no screenshot exists. First person with a browser should open an
+  edition and the archive at both widths.
 
-- **Citation links pull full `body_html`.** `has_many :newsletters, through:
-  :citations` selects `newsletters.*`, and bodies run to hundreds of
-  kilobytes — 45 citations is tens of megabytes read to render source names.
-  The house pattern is a column list (`Newsletter::FEED_COLUMNS`,
-  `NEIGHBOUR_COLUMNS`); this wants the same, scoped on the association, once
-  the view has settled which columns it actually needs.
+- **Root's empty morning is a decision, not a requirement.** The PRD says
+  root serves the latest edition and says nothing about the day before there
+  is one. A signed-in reader now gets the editions archive, whose one line
+  says the first edition is written at 07:00. The alternatives were an empty
+  edition page (a masthead over nothing, and no number to put on it) and the
+  originals feed (the surface the edition is meant to demote). Cheap to
+  overrule; it is one method, `WaitlistSignupsController#reader_home_url`.
 
-- **The section readers are layout, and they live on the record.**
-  `lead_stories` / `briefly` / `reading_list` / `reading_list?` decide what
-  the page draws, which `.claude/rules/views.md` puts in a presenter. This
-  milestone needs an edition presenter anyway for the masthead, so it should
-  either wrap these or take them over rather than duplicate them.
+- **The archive is unpaginated**, knowingly against
+  `.claude/rules/database.md`, with the reason on `Edition::Archive`: one row
+  a day, and an archive that hides its oldest entries is the one thing an
+  archive must not do. It reads three columns a row. Revisit when it is long
+  enough to notice.
 
-- **Section names have no view-facing accessor.** The template cannot say
-  `Edition::Story::LEAD` — a view never references a model class. The
-  codebase already solved this once: `Feed#unread_filter` exists purely so a
-  template need not name `Feed::UNREAD`, and cites the rule in its comment.
-  The edition presenter needs the equivalent.
+- **The originals archive has no way back to the edition.** Root serves the
+  edition now, so the feed is reached by following `Originals` from an
+  edition — and its header is the filter bar, which offers nothing back. Its
+  nameplate is not a link the way the edition masthead's is. Milestone 6
+  rebuilds that header anyway when read state goes; the link home belongs in
+  the same pass. The same pass has to repoint `newsletters.original.back`,
+  which reads "Back to the reader" and points at the page Milestone 6
+  deletes — a reader arriving from a citation is offered it today.
+
+- **`Edition#reading_list?` has no caller** outside its own two specs. The
+  presenter drops any empty section uniformly rather than special-casing the
+  reading list. Left in place; it is Milestone 1's code and a plausible
+  caller may yet appear.
+
+- **`Edition.for_reading` still selects `editions.*`**, so the show page
+  reads one edition's `raw_response` — the model's whole answer — to render a
+  masthead. One row, so it was left alone rather than given the
+  `ARCHIVE_COLUMNS` treatment: a column list here is a `MissingAttributeError`
+  waiting for whatever Milestone 5 adds to the page.
+
+- **`EditionTranscript` does not use the section readers**, contrary to the
+  reason recorded on `Edition::Presenter` for wrapping rather than moving
+  them: it partitions `edition.stories` itself against its own `HEADINGS`.
+  The reason still holds on `Edition::Editor`'s specs and the corpus, which
+  do call them. Two places now know the order the sections read in.
+
+- **The archive row says nothing about what an edition held** — no story
+  count, no senders. It would cost a join or a counter cache, and the archive
+  is for finding a day rather than judging one, so it prints the day and the
+  number. Reconsider if the reader scrolls it looking for something.
+
+- **`docs/siftbox-redesign.md`'s decision table still says a signed-in reader
+  redirects to the feed.** It was written before this feature and describes
+  what root did until this milestone. Left as the record of that work; the
+  PRD supersedes it.
 
 ## For Milestone 2 and 5 — the confirmation pen
 
