@@ -660,44 +660,12 @@ a {
 
 /* Feed masthead ----------------------------------------------------------- */
 
-/* Below 720px the brand and the filters are two stacked bands with their own
-   rules; from 720px they sit on one line under a single 2px rule. */
+/* Below 720px the brand sits in its own band; from 720px the header is one
+   line under a single 2px rule. The filters that used to share it went with
+   read state. */
 .masthead__brand {
   padding: 24px var(--gutter) 20px;
   border-bottom: 2px solid var(--ink);
-}
-
-.filters {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px var(--gutter);
-  border-bottom: 1px solid var(--rule);
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.filters__link {
-  color: var(--mute);
-  text-decoration: none;
-}
-
-.filters__link:hover {
-  color: var(--ink);
-}
-
-/* The number is the unread marker in the feed, so the active filter is the
-   only place blue fills a shape rather than colouring type. */
-.filters__link--active {
-  background: var(--blue);
-  color: var(--paper);
-  padding: 4px 7px;
-}
-
-.filters__link--active:hover {
-  color: var(--paper);
 }
 
 @media (min-width: 720px) {
@@ -712,17 +680,6 @@ a {
   .masthead__brand {
     padding: 0;
     border-bottom: 0;
-  }
-
-  .filters {
-    gap: 26px;
-    padding: 0;
-    border-bottom: 0;
-    font-size: 11px;
-  }
-
-  .filters__link--active {
-    padding: 4px 8px;
   }
 }
 
@@ -827,10 +784,6 @@ a {
   color: inherit;
 }
 
-.lead--read {
-  opacity: 0.66;
-}
-
 .lead__image {
   grid-area: image;
   display: block;
@@ -854,10 +807,6 @@ a {
 .lead__number {
   grid-area: number;
   color: var(--blue);
-}
-
-.lead--read .lead__number {
-  color: var(--read);
 }
 
 /* The mono line reads "01 / RUBY WEEKLY / 06:12" on mobile. The separators
@@ -964,10 +913,6 @@ a {
   color: inherit;
 }
 
-.row--read {
-  opacity: 0.66;
-}
-
 .row__number,
 .row__sender,
 .row__timestamp {
@@ -982,10 +927,6 @@ a {
 .row__number {
   grid-area: number;
   color: var(--blue);
-}
-
-.row--read .row__number {
-  color: var(--read);
 }
 
 .row__number::after {

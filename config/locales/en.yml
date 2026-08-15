@@ -50,9 +50,6 @@ en:
       wordmark: siftbox
   newsletters:
     age: "%{duration} ago"
-    filters:
-      everything: Everything
-      unread: Unread [%{count}]
     index:
       empty: Nothing yet. Point a subscription at %{address} and it will show up here.
       end_of_feed:

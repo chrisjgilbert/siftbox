@@ -2,7 +2,7 @@ class Newsletter < ApplicationRecord
   # What a feed row renders. Bodies run to hundreds of kilobytes and the
   # index never touches them.
   FEED_COLUMNS = %i[
-    id sender_name sender_email subject snippet received_at read_at
+    id sender_name sender_email subject snippet received_at
     lead_image_url
   ].freeze
 
@@ -85,10 +85,6 @@ class Newsletter < ApplicationRecord
     where(EARLIEST_FROM_SENDER)
   end
 
-  def self.unread
-    where(read_at: nil)
-  end
-
   def self.without_lead_image
     where(lead_image_url: "")
   end
@@ -135,10 +131,6 @@ class Newsletter < ApplicationRecord
     where.not(id: Edition::Citation.select(:newsletter_id))
   end
 
-  def read?
-    read_at.present?
-  end
-
   def lead_image?
     lead_image_url.present?
   end
@@ -171,16 +163,6 @@ class Newsletter < ApplicationRecord
   # run again: the same body gives the same answer.
   def capture_lead_image
     update!(lead_image_url: Newsletter::LeadImage.new(Newsletter::Body.new(body_html)).url)
-  end
-
-  def mark_read
-    return if read?
-
-    update!(read_at: Time.current)
-  end
-
-  def mark_unread
-    update!(read_at: nil)
   end
 
   # Idempotent because the heuristic gets pointed at stored rows again: the

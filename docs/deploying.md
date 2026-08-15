@@ -359,6 +359,16 @@ illustrated newsletter costs real disk, bounded per newsletter by
 `Newsletter::RemoteImages::MAX_IMAGES` and
 `Newsletter::ImageDownload::MAX_BYTES`.
 
+### Take one before the read-state migration
+
+`RemoveReadAtFromNewsletters` drops `newsletters.read_at`. It reverses in
+shape — rolling back adds the column back — but not in content: the
+timestamps are gone, and every newsletter comes back as unread. Nothing in
+the app reads them any more, so what is lost is only the record of which mail
+had been opened, but it is lost for good. Back the volume up before the
+staging deploy and again before the production one, and expect the rollback
+plan for this release to be "restore", not "roll back the migration".
+
 ## Still open
 
 - `Feed` is not scoped to a user. With one account the authentication gate is

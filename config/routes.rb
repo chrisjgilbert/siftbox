@@ -8,7 +8,6 @@ Rails.application.routes.draw do
     resource :dismissal, only: :create, module: :newsletters
     resources :images, only: :show, module: :newsletters
     resource :original, only: :show, module: :newsletters
-    resource :read, only: :destroy, module: :newsletters
     resource :release, only: :create, module: :newsletters
     resource :source, only: :show, module: :newsletters
   end

@@ -18,35 +18,6 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("Ruby 3.4 lands")
   end
 
-  it "shows the unread count in the filter bar" do
-    sign_in
-    create(:newsletter, read_at: nil)
-
-    get newsletters_path
-
-    expect(response.body).to include("Unread [1]")
-  end
-
-  it "hides read newsletters when filtered to unread" do
-    sign_in
-    create(:newsletter, subject: "Already read", read_at: 1.hour.ago)
-    create(:newsletter, subject: "Not yet read", read_at: nil)
-
-    get newsletters_path(filter: "unread")
-
-    expect(response.body).not_to include("Already read")
-  end
-
-  it "keeps unread newsletters when filtered to unread" do
-    sign_in
-    create(:newsletter, subject: "Already read", read_at: 1.hour.ago)
-    create(:newsletter, subject: "Not yet read", read_at: nil)
-
-    get newsletters_path(filter: "unread")
-
-    expect(response.body).to include("Not yet read")
-  end
-
   # Without the guard this row reads "—" with nothing either side.
   it "shows no dangling separator for a newsletter with no sender at all" do
     sign_in
@@ -187,15 +158,6 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include(%(<meta name="referrer" content="same-origin">))
   end
 
-  it "marks a newsletter unread again on request" do
-    sign_in
-    newsletter = create(:newsletter, read_at: 1.hour.ago)
-
-    delete newsletter_read_path(newsletter)
-
-    expect(newsletter.reload).not_to be_read
-  end
-
   it "frames the sender's own HTML on the view-original screen" do
     sign_in
     newsletter = create(:newsletter)
@@ -248,23 +210,6 @@ RSpec.describe "Newsletters" do
     get newsletter_original_path(newsletter)
 
     expect(response).to redirect_to(new_session_path)
-  end
-
-  it "keeps a signed-out visitor from changing read state" do
-    newsletter = create(:newsletter, read_at: 1.hour.ago)
-
-    delete newsletter_read_path(newsletter)
-
-    expect(newsletter.reload).to be_read
-  end
-
-  it "sends the reader back to the feed after marking unread" do
-    sign_in
-    newsletter = create(:newsletter, read_at: 1.hour.ago)
-
-    delete newsletter_read_path(newsletter)
-
-    expect(response).to redirect_to(newsletters_url)
   end
 
   it "sandboxes the source response itself, not just the frame around it" do

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_210735) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_15_134702) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "message_checksum", null: false
@@ -93,7 +93,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_210735) do
     t.datetime "held_at"
     t.string "lead_image_url", default: "", null: false
     t.string "message_id", default: "", null: false
-    t.datetime "read_at"
     t.datetime "received_at", null: false
     t.datetime "released_at"
     t.string "sender_email", default: "", null: false
@@ -103,7 +102,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_210735) do
     t.datetime "updated_at", null: false
     t.index ["held_at"], name: "index_newsletters_on_held_at", where: "held_at IS NOT NULL"
     t.index ["message_id"], name: "index_newsletters_on_present_message_id", unique: true, where: "message_id <> ''"
-    t.index ["read_at"], name: "index_newsletters_on_read_at"
     t.index ["received_at"], name: "index_newsletters_on_received_at"
     t.index ["released_at"], name: "index_newsletters_on_released_at", where: "released_at IS NOT NULL"
     t.index ["sender_email"], name: "index_newsletters_on_sender_email"

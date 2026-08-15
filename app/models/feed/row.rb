@@ -1,12 +1,11 @@
 # One line of the feed: a newsletter, and where it sits in the index.
 #
 # The number belongs here rather than on Newsletter::Presenter because it is a
-# property of the position, not of the newsletter — the reader renders the
-# same newsletter with no number at all. It runs continuously across the whole
-# feed rather than restarting per group, and it doubles as the unread marker:
-# blue when unread, grey when read.
+# property of the position, not of the newsletter. It runs continuously across
+# the whole feed rather than restarting per group, so the archive reads as an
+# index.
 class Feed::Row
-  delegate :lead_image?, :lead_image_url, :read?, :sender, :snippet, :subject,
+  delegate :lead_image?, :lead_image_url, :sender, :snippet, :subject,
     :timestamp, :to_param, to: :presenter
 
   def initialize(presenter, position)

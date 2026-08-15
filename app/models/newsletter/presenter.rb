@@ -19,7 +19,7 @@ class Newsletter::Presenter
     older: :row_date
   }.freeze
 
-  delegate :lead_image?, :lead_image_url, :read?, :snippet, :subject,
+  delegate :lead_image?, :lead_image_url, :snippet, :subject,
     :to_param, to: :newsletter
 
   def initialize(newsletter)

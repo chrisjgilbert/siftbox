@@ -8,50 +8,6 @@ RSpec.describe Newsletter do
     expect(Newsletter.newest_first).to eq([ newer, older ])
   end
 
-  it "counts only newsletters that have not been read as unread" do
-    unread = create(:newsletter, read_at: nil)
-    create(:newsletter, read_at: 1.hour.ago)
-
-    expect(Newsletter.unread).to eq([ unread ])
-  end
-
-  it "is read once read_at is set" do
-    newsletter = build_stubbed(:newsletter, read_at: 1.hour.ago)
-
-    expect(newsletter).to be_read
-  end
-
-  it "is not read while read_at is blank" do
-    newsletter = build_stubbed(:newsletter, read_at: nil)
-
-    expect(newsletter).not_to be_read
-  end
-
-  it "records the time when marked read" do
-    newsletter = create(:newsletter, read_at: nil)
-
-    newsletter.mark_read
-
-    expect(newsletter.reload.read_at).to be_present
-  end
-
-  it "keeps the original time when marked read a second time" do
-    first_read = 3.days.ago
-    newsletter = create(:newsletter, read_at: first_read)
-
-    newsletter.mark_read
-
-    expect(newsletter.reload.read_at).to be_within(1.second).of(first_read)
-  end
-
-  it "clears the time when marked unread" do
-    newsletter = create(:newsletter, read_at: 1.hour.ago)
-
-    newsletter.mark_unread
-
-    expect(newsletter.reload.read_at).to be_nil
-  end
-
   it "takes the sender domain from the sender address" do
     newsletter = build_stubbed(:newsletter, sender_email: "peter@rubyweekly.com")
 

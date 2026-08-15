@@ -6,13 +6,7 @@
 # theatre. See .claude/rules/security.md, and the note in README.md on what
 # multiple users would take.
 class Feed
-  UNREAD = "unread".freeze
-
   Group = Struct.new(:label, :sublabel, :newsletters)
-
-  def initialize(filter: nil)
-    @filter = filter
-  end
 
   # Memoised because the view asks twice: once to render, once to decide
   # between the end-of-list line and the empty state.
@@ -24,31 +18,7 @@ class Feed
     newsletters.length
   end
 
-  # Counted off the rows already loaded rather than a second query, so the
-  # figure in the filter link cannot disagree with the list beside it. Under
-  # the unread filter the loaded set is the unread set; without it, the whole
-  # window — read? is right either way, and read_at is in FEED_COLUMNS.
-  def unread_count
-    newsletters.reject(&:read?).length
-  end
-
-  def unread_only?
-    filter == UNREAD
-  end
-
-  # Named here rather than reached for as Feed::UNREAD from the template.
-  # See .claude/rules/views.md on a view referencing a model class.
-  def unread_filter
-    UNREAD
-  end
-
-  def everything?
-    !unread_only?
-  end
-
   private
-
-  attr_reader :filter
 
   # group_by rather than a range filter per bucket, so the buckets cannot
   # overlap: inclusive ranges that met at midnight put a newsletter into the
@@ -105,13 +75,7 @@ class Feed
 
   # Loaded once and partitioned in Ruby: three date groups off one query.
   def newsletters
-    @_newsletters ||= filtered.for_feed.newest_first.to_a
-  end
-
-  def filtered
-    return within_window.unread if unread_only?
-
-    within_window
+    @_newsletters ||= within_window.for_feed.newest_first.to_a
   end
 
   # .content, not a bare Newsletter: a subscription confirmation sitting in

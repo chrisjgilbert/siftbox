@@ -96,7 +96,6 @@ module SampleData
         snippet: "Multi-column indexes just got considerably more useful for " \
                  "queries that skip the leading column.",
         body_html: PLAIN_BODY,
-        read_at: 1.hour.ago,
         received_at: 1.day.ago
       },
       {
