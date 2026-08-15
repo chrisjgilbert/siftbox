@@ -232,17 +232,44 @@ states in its own caption. What is left:
   what root did until this milestone. Left as the record of that work; the
   PRD supersedes it.
 
-## Milestone 5 — what the Subscriptions page leaves open
+## Milestone 5 — what the confirmation pen leaves open
 
-The page is built and green: an index at `/subscriptions`, three sections, and
-a link to it in the shared masthead. Dismiss, release, the pen top bar on the
-original and the edition-page badge are not in it. What the page itself leaves
+The feature is built and green, end to end in code: detection at ingest
+(`Newsletter::Confirmation`, asked inside the storing transaction), the
+backfill for mail stored before it existed, the Subscriptions page and its
+three sections, both resolutions as nested `only: :create` resources, the pen's
+own top bar on the original, and the notice on the edition page. Every bullet
+of the PRD's "Subscription confirmations" section has code behind it and specs
+over it, and the two findings the "For Milestone 2 and 5" section used to hold
+are closed with it: the backfill goes through `Newsletter#hold` rather than a
+bulk write, and it leaves mail a published edition cites alone — the window an
+edition covered is history, and `Edition::Window`'s released clause would
+otherwise carry such a newsletter into a second edition.
+
+What none of that is, is evidence from real mail. What the milestone leaves
 open:
 
 - **Nothing has been looked at in a browser**, for the same reason Milestone 4
   could not be: none is installed. The pen's three-column grid, its 720px
   breakpoint and the step-down on the bounced section have been read and not
-  seen.
+  seen, and so have the two things this milestone added to the visual system:
+  the pen top bar, which wraps rather than hiding an action on a narrow
+  screen, and the notice band, which relies on the masthead's rule above it to
+  be the second of the two rules it sits between. Both `button_to` forms have
+  only ever been posted by rack_test; no real Turbo has driven them.
+
+- **Nothing has been through a real double-opt-in.** No live subscription has
+  been confirmed through this app: the chain webhook → hold → pen row →
+  sender's confirm button in the sandboxed frame → Done has never run outside
+  the suite, and the confirm click is the one link in it the app cannot
+  observe even when it does. The deploy's smoke test now ends with it.
+
+- **The phrase set has never met real mail**, and the backfill has never
+  walked a real archive. Run `bin/rails confirmations:preview` before
+  `confirmations:backfill` on the first deploy — a hold's only undo is a
+  release, and releasing three-week-old mail carries it into tomorrow's
+  edition. Known gaps a real archive may show: "Almost there", "Action
+  required", "One more step" and "Welcome to X" match nothing.
 
 - **The bounced section is capped at twenty rows and says nothing when it
   truncates.** The cap is real — each row downloads and parses a stored raw
@@ -282,23 +309,47 @@ open:
   out of the constant. Whether a fortnight is the right amount of memory is
   something only a real archive can say.
 
-## For Milestone 2 and 5 — the confirmation pen
+- **A resolution posted for mail that is not in the pen is silently a
+  redirect.** Both controllers act only `if newsletter.held?`, because the
+  state machine raises on the contradictions — dismissing released mail,
+  releasing dismissed mail — and a second tab open on the same original is not
+  worth a 500. The reader gets the pen and no explanation of why nothing
+  happened. The pen does answer it, in that the row is not there; whether that
+  is enough is a question for the first time it happens by accident.
 
-- **The backfill must go through `#hold`.** The state machine is held
-  together by two validations rather than a database CHECK constraint, so
-  the bulk-write path the backtests want (`update_all`, `insert_all`) would
-  walk straight past it. The PRD's backfill task has to call the verb.
+- **Nothing in the app behind the gate flashes.** A resolution's only receipt
+  is the pen it lands on with the row gone, which is deliberate — the design
+  system has no notice component but the notice band, and that one is state
+  rather than a message. A reader who opens a held original from a bookmark
+  rather than from the pen is therefore sent, on Done, to a page they did not
+  come from. Cheap to revisit, and it would want a surface in the redesign
+  first.
 
-- **Undecided in the PRD:** whether a newsletter already cited in a published
-  edition may be held retroactively by the backfill. Nothing currently
-  prevents it, and the citation would then point at mail the archive hides.
-  Worth deciding before the backfill is written. Two things now turn on it:
-  `Edition::Window`'s released clause would put such a newsletter into a
-  second edition when it is released again, and `EditionRegeneration` composes
-  from an edition's citations rather than from `Newsletter.content`, so a
-  rewrite still sends held mail to the model. Both are deliberate — the window
-  an edition covered is history — but both are only defensible if the backfill
-  leaves cited mail alone.
+- **The notice counts every hold, however old.** That is failure path 4
+  working as written — it cannot scroll away, and an expired confirm link just
+  means subscribing again, which flows through the pen — but it also means one
+  confirmation nobody ever resolves keeps the band on the edition page for
+  good. The only way to clear it is to resolve the mail.
+
+- **The notice is on the two edition pages and nowhere else.** The PRD asks
+  for the edition page; the archive carries it too because root serves the
+  archive on a morning before No. 1 exists, which is exactly when a reader is
+  subscribing to things. The originals archive and the Subscriptions page
+  itself do not, and the masthead's Subscriptions link is what reaches the pen
+  from those. It costs one `COUNT` per page load either way: the edition page
+  measured five statements before this milestone and six after, whether the
+  pen is empty or five deep, on `index_newsletters_on_held_at`.
+
+- **Held mail is still reachable in the reader** at `/newsletters/:id` if the
+  URL is known, and opening it marks it read. Nothing links there — the pen
+  and the archive both point at the original — and Milestone 6 deletes the
+  page. Worth knowing it is not the carve-out that keeps held mail off the
+  archive; that is `Newsletter.content`, and the reader's `find` is unscoped.
+
+- **The plural is English only.** `subscriptions.badge.line` has `one` and
+  `other`, which is Rails' pluralisation doing the work rather than a
+  conditional in a template, but a language with more plural forms would need
+  the keys and nothing warns about that today.
 
 ## Undecided design
 

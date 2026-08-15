@@ -268,6 +268,16 @@ ip -4 addr show | grep -E "docker0|br-"
    webhook accepted, mailbox routed, job ran, images fetched and rewritten.
 4. Check "View original" renders too — it is the sandboxed frame, and it
    embeds images as data URIs rather than fetching them.
+5. Subscribe to something that double-opts-in, and follow the confirmation
+   the whole way: it should be held out of the feed, listed under **Awaiting
+   confirmation** on `/subscriptions`, and announced on the edition page as
+   "1 subscription awaiting confirmation". Open it, click the sender's own
+   confirm button inside the frame, then press **Done**. The app cannot see
+   that click — the frame has an opaque origin — so Done is what clears the
+   row and the notice. Nothing here has been through a real double-opt-in
+   yet; this is the step that finds out whether the phrase set recognises one
+   in the wild. If it does not, the mail is in the feed instead and the fix is
+   `Newsletter::Confirmation::PHRASES`.
 
 The ingress is armed in production only, so the webhook endpoint answers 404
 in development by design. Locally, use the conductor at
