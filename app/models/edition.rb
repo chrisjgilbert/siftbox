@@ -33,6 +33,33 @@ class Edition < ApplicationRecord
     newest_first.first
   end
 
+  # The high-water mark the next window starts from, and nil before the first
+  # edition — the floor for that one is Edition::Window's to choose, because
+  # it is the thing that knows when composition started.
+  #
+  # maximum rather than latest.window_ended_at: newest_first sorts by the day
+  # covered, so an edition backfilled for an earlier day would sit at the top
+  # with a cutoff weeks behind the real one, and the next window would
+  # re-compose everything since. This is what index_editions_on_window_ended_at
+  # is for.
+  def self.watermark
+    maximum(:window_ended_at)
+  end
+
+  # Numbering follows composition order rather than the day covered. Under a
+  # watermark the two agree: a missed day does not leave a gap, it makes the
+  # next window bigger, so editions can only be composed in date order in
+  # normal operation. They diverge only under a manual backfill, which takes
+  # the next number and sorts below the day that beat it out.
+  #
+  # Read and written in two statements, so two runs at once allocate the same
+  # number and the second insert fails on the unique index — a
+  # ActiveRecord::RecordNotUnique rather than two editions numbered 4.
+  # Whatever composes has to be ready to see it.
+  def self.next_number
+    maximum(:number).to_i + 1
+  end
+
   # The page renders the three sections separately, but it is one edition's
   # worth of stories either way. Sifted in Ruby off the loaded association
   # rather than asked for in three queries: Relation#select takes a block, so

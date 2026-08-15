@@ -37,6 +37,41 @@ RSpec.describe Edition do
     expect(edition).not_to be_valid
   end
 
+  # Two runs at once read the same maximum and both allocate the same number.
+  # The unique index is what makes that a failed insert rather than two
+  # editions numbered 4, so whatever composes has to expect it.
+  it "refuses a duplicate number at the database as well as in Ruby" do
+    create(:edition, number: 4, published_on: Date.new(2026, 8, 11))
+
+    second = build(:edition, number: 4, published_on: Date.new(2026, 8, 12))
+
+    expect { second.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+  end
+
+  it "starts its numbering at No. 1" do
+    expect(Edition.next_number).to eq(1)
+  end
+
+  # The highest number, not the count and not the newest edition's: a gap left
+  # by a failed insert must not be handed out to two editions.
+  it "numbers the next edition above every number so far" do
+    create(:edition, number: 9, published_on: Date.new(2026, 8, 11))
+    create(:edition, number: 3, published_on: Date.new(2026, 8, 12))
+
+    expect(Edition.next_number).to eq(10)
+  end
+
+  it "has no watermark before the first edition" do
+    expect(Edition.watermark).to be_nil
+  end
+
+  it "marks the watermark where the newest window closed" do
+    create(:edition, published_on: Date.new(2026, 8, 11), window_ended_at: Time.utc(2026, 8, 11, 6))
+    create(:edition, published_on: Date.new(2026, 8, 12), window_ended_at: Time.utc(2026, 8, 12, 6))
+
+    expect(Edition.watermark).to eq(Time.utc(2026, 8, 12, 6))
+  end
+
   it "orders newest first" do
     older = create(:edition, published_on: Date.new(2026, 8, 11))
     newer = create(:edition, published_on: Date.new(2026, 8, 12))
