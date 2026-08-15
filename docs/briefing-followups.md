@@ -69,48 +69,110 @@ Smaller things this milestone found and left alone:
   about the method rather than about those two lines: the next such bug is
   found by dumping `Newsletter::Prose` over real stored bodies and reading the
   output, which is Milestone 0's backtest.
-- **`edition:backtest` cannot rehearse a day that already has an edition.**
-  The rehearsal is validated like the real thing, and `published_on` is
-  unique. Harmless until the schedule ships; after that, re-reading a window
-  wants the regenerate task the PRD sketches, which has to decide what happens
-  to the edition already sitting on that date.
 
-## For Milestone 3 — publishing and the window
+## Milestone 3 — what a deploy has still to prove
 
-- **The edition window is two-clause, and nothing enforces that yet.**
-  Three separate review agents flagged this independently, which is a good
-  sign it is easy to get wrong. The window is *not*
-  `received_at BETWEEN a AND b` — it is that OR `released_at BETWEEN a AND b`,
-  because a newsletter released out of the confirmation pen has a
-  `received_at` behind the watermark by the time it is released. Getting it
-  wrong silently drops released mail from every edition. `Newsletter.released`
-  exists for the second clause. Consequence worth a comment wherever the
-  window ends up: `window_started_at`/`window_ended_at` describe the
-  `received_at` axis only, so a released newsletter can legitimately sit
-  outside the recorded window of the edition citing it.
+The window, the numbering, the job, the schedule and the two dev tools are
+written and green. What is green is again the plumbing: no edition has been
+composed by a scheduler, and none has been composed at all outside a spec.
 
-- **Nothing allocates `Edition#number`.** It is required and uniquely
-  indexed, but no default, callback or class method assigns it — only the
-  factory's sequence. The composer will need `maximum(:number) + 1`, and a
-  retried composition job has to tolerate `ActiveRecord::RecordNotUnique`,
-  since the unique index is what turns a race into a failed insert rather
-  than two editions numbered 4. Allocation belongs on `Edition`, not on
-  whoever happens to create one.
+- **Nothing has run under a real scheduler.** `spec/config/recurring_spec.rb`
+  reads `config/recurring.yml` the way `SolidQueue::RecurringTask` does and
+  reproduces its two validations rather than calling them — the queue database
+  is not part of the test schema, so the class cannot be instantiated in test.
+  Whether the scheduler boots inside Puma with this entry, picks the task up
+  and runs it at 07:00 is a fact about the deploy, and the first evidence
+  either way is an edition, or no edition, on the first morning after it.
+  `docs/deploying.md` step 9 is what makes that a step somebody takes rather
+  than a thing that was supposed to happen by itself.
 
-- **`number` and `published_on` can disagree about order.** `newest_first`
-  sorts by `published_on`, and nothing ties the masthead number to that
-  sequence. `maximum(:number) + 1` inverts them in exactly the case the model
-  is built around: an edition composed late for an earlier day takes the
-  higher number but sorts below the day that beat it out, so the archive
-  reads No. 1, No. 3, No. 2. Decide whether the number follows the date or
-  the composition order — and if the date, allocation cannot simply be a max
-  plus one.
+- **No run has crossed a DST boundary.** The cron carries the zone
+  (`every day at 7am Europe/London`) and Fugit resolves it to 07:00 +0000 in
+  January and 07:00 +0100 in July, which is the whole of the evidence. Nothing
+  has travelled to 25 October. The window compares absolute instants either
+  way, so the exposure is the firing time and `published_on`, not the
+  selection.
 
-- **`index_editions_on_window_ended_at` is unpaid-for until this milestone.**
-  It exists for the watermark query (`maximum(:window_ended_at)`), which does
-  not ship until here.
+- **Nothing watches a failed job.** `Edition::Draft::Unavailable` past four
+  attempts, `ActiveRecord::RecordInvalid` from a section word the model
+  invented, and any unforeseen `Edition::Draft::Error` land in
+  `solid_queue_failed_executions`. There is no `mission_control-jobs` in the
+  `Gemfile` and no alerting, so "loud" means a line in a container log nobody
+  is subscribed to, and the monitoring plan is one reader noticing a missing
+  edition. Worth deciding before the first outage rather than after it.
+
+- **The pre-feature archive belongs to no edition.** `FIRST_WINDOW = 1.day`,
+  so No. 1 reaches back twenty-four hours and the weeks of mail stored before
+  editions existed are covered by nothing, ever. Deliberate — an unbounded
+  first window is one prompt several times over the token ceiling — and
+  written down in the deploy doc so the operator reads it before the first
+  morning. If that is not acceptable, the answer is a backfill task composing
+  historic windows in chunks, and this doc line changes with it.
+
+- **`edition:backtest` can no longer read more than the last edition left
+  over.** It asks `Edition::Window` now, so the `DAYS` argument is gone with
+  the hand-picked range it built. On a development database whose newest mail
+  is older than a day — any production dump read the following afternoon —
+  the rehearsal is empty and the tools left are `edition:corpus` and
+  `edition:regenerate`. If iterating over a chosen span turns out to be
+  wanted, it should be an explicit start on `Edition::Window` rather than a
+  second window definition rebuilt inside the task.
+
+- **`edition:regenerate` destroys the edition it rewrites, and the guard is
+  the environment rather than the data.** The row goes, and its stored
+  `raw_response` — the only copy of the old answer — goes with it; there is no
+  undo and nothing writes it out first. `Rails.env.development?` is the whole
+  of the protection, and a development database restored from a production
+  dump is production data. If comparing two answers side by side becomes part
+  of iterating, the task needs to dump the old response somewhere before it
+  destroys the row.
+
+- **The corpus still cannot exercise the window.** `edition:corpus` picks its
+  newsletters by name and builds its own unsaved edition, which is the point
+  of it, so the watermark, the two-clause selection, the empty-window skip and
+  the numbering are exercised by specs and by `edition:backtest` only. In
+  particular **nothing rehearses the released clause**: the corpus holds a
+  confirmation and never releases it, so the one path three review agents
+  called easy to get wrong is covered by specs and by whatever real mail
+  happens to be released into a backtest's window.
+
+- **Whether a regeneration converges is the same unknown as before.** The
+  round trip — destroy, re-compose, replace — is specced against
+  `FakeAnthropic`. Whether a second pass over the same window with a changed
+  prompt passes the completeness check on the first attempt, and what a round
+  of iteration costs at a full-price request per attempt, is answered by
+  running it.
+
+- **The rake tasks are not in the suite.** `lib/tasks/editions.rake` is
+  outside the autoload path, so `Backtest` and `Regeneration` cannot be
+  reached from a spec; what could be specced was put in
+  `lib/edition_regeneration.rb`, which is. Left unspecced: the printing, the
+  `Rails.env.development?` guards, and the date argument. All of it was run by
+  hand against the test database with a fake client — empty window, real
+  two-clause window, a date already published, a date with no edition, and a
+  full regeneration — and none of it is guarded against regression.
+
+- **`Edition.newest_first`'s comment is stale.** "A run that fails at 07:00
+  and retries the next morning still publishes the earlier day's edition"
+  describes something `Edition::CompositionJob` cannot produce: retries stop
+  after forty-five minutes and a late run dates itself today. The conclusion
+  still holds for a manual backfill; the example is wrong.
+
+- **The PRD and the deploy doc disagree about where the API key lives.** The
+  PRD says credentials; `Edition::Draft#client` reads
+  `ENV.fetch("ANTHROPIC_API_KEY")` and the deploy doc now wires it as a Kamal
+  secret to match the code. One of the two should give.
 
 ## For Milestone 4 — the edition pages
+
+- **`number` and `published_on` can disagree about order, and the archive
+  shows it.** Numbering follows composition order (`Edition.next_number`),
+  which under a watermark agrees with the date in normal operation — a missed
+  day makes the next window bigger rather than leaving a gap. A manual
+  backfill is the case where they diverge: an edition composed late for an
+  earlier day takes the higher number and sorts below the day that beat it
+  out, so the archive reads No. 1, No. 3, No. 2. Decided rather than open, but
+  the page is where it becomes visible.
 
 - **N+1 on citations.** `Edition#lead_stories`, `#briefly` and `#reading_list`
   correctly load the stories once and partition in Ruby, but each story's
@@ -149,7 +211,13 @@ Smaller things this milestone found and left alone:
 - **Undecided in the PRD:** whether a newsletter already cited in a published
   edition may be held retroactively by the backfill. Nothing currently
   prevents it, and the citation would then point at mail the archive hides.
-  Worth deciding before the backfill is written.
+  Worth deciding before the backfill is written. Two things now turn on it:
+  `Edition::Window`'s released clause would put such a newsletter into a
+  second edition when it is released again, and `EditionRegeneration` composes
+  from an edition's citations rather than from `Newsletter.content`, so a
+  rewrite still sends held mail to the model. Both are deliberate — the window
+  an edition covered is history — but both are only defensible if the backfill
+  leaves cited mail alone.
 
 ## Undecided design
 
