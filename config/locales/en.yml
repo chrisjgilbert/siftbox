@@ -48,6 +48,7 @@ en:
       title: siftbox
       wordmark: siftbox
   newsletters:
+    age: "%{duration} ago"
     filters:
       everything: Everything
       unread: Unread [%{count}]

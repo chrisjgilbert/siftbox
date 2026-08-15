@@ -18,6 +18,32 @@ class Newsletter < ApplicationRecord
   # subject.
   NEIGHBOUR_COLUMNS = %i[id sender_name sender_email subject received_at].freeze
 
+  # What a row of the Subscriptions page renders: who sent it, what they
+  # called it, and how long ago it landed. The same five columns the neighbour
+  # links need, listed again rather than shared, because the two answer to
+  # different screens and neither should reshape when the other's does.
+  PEN_COLUMNS = %i[id sender_name sender_email subject received_at].freeze
+
+  # One row per address: the mail that introduced the sender. A correlated
+  # NOT EXISTS rather than a GROUP BY, because the page wants the newsletter
+  # itself — the row links to it — and grouping hands back an aggregate that
+  # only SQLite would let a bare column ride along with.
+  #
+  # Ordered on (received_at, id) for the same reason every ordering here is:
+  # Date headers carry whole seconds, so a batch send ties, and without the
+  # id both tied rows read as earliest and the sender is listed twice.
+  #
+  # No content carve-out. This is the net for a confirmation the phrase set
+  # missed and for a subscription that never arrived, so a sender whose only
+  # mail is sitting in the pen is precisely the sender to show.
+  EARLIEST_FROM_SENDER = <<~SQL.squish
+    NOT EXISTS (
+      SELECT 1 FROM newsletters earlier
+      WHERE earlier.sender_email = newsletters.sender_email
+      AND (earlier.received_at, earlier.id) < (newsletters.received_at, newsletters.id)
+    )
+  SQL
+
   has_many_attached :inline_images
 
   # SQLite stops reading a string literal at a NUL, so one stray byte fails
@@ -56,6 +82,14 @@ class Newsletter < ApplicationRecord
 
   def self.for_feed
     select(FEED_COLUMNS)
+  end
+
+  def self.for_pen
+    select(PEN_COLUMNS)
+  end
+
+  def self.first_from_sender
+    where(EARLIEST_FROM_SENDER)
   end
 
   def self.neighbour

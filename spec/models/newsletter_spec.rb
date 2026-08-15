@@ -401,4 +401,52 @@ RSpec.describe Newsletter do
 
     expect(Newsletter.uncited).to be_empty
   end
+
+  # What the Subscriptions page's New senders section lists: one row per
+  # address, and the row is the mail that introduced it.
+  it "finds the earliest mail from each sender" do
+    first = create(:newsletter, sender_email: "hi@stratechery.com",
+      received_at: 3.days.ago)
+    create(:newsletter, sender_email: "hi@stratechery.com", received_at: 1.day.ago)
+
+    expect(Newsletter.first_from_sender).to eq([ first ])
+  end
+
+  it "finds the earliest mail from each of two senders" do
+    create(:newsletter, sender_email: "hi@stratechery.com", received_at: 3.days.ago)
+    create(:newsletter, sender_email: "peter@rubyweekly.com", received_at: 2.days.ago)
+
+    expect(Newsletter.first_from_sender.count).to eq(2)
+  end
+
+  # The section is the net for a confirmation the phrase set missed, so it
+  # cannot be filtered to content the way the archive is: a sender whose only
+  # mail is sitting in the pen is exactly the sender to show.
+  it "counts a first email still waiting in the pen as the earliest" do
+    held = create(:newsletter, sender_email: "no-reply@substack.com",
+      received_at: 1.hour.ago, held_at: 1.hour.ago)
+
+    expect(Newsletter.first_from_sender).to eq([ held ])
+  end
+
+  # Date headers carry whole seconds, so a batch send lands two on the same
+  # instant. Without the tie-break on id both rows read as earliest and the
+  # sender appears twice.
+  it "picks one of two arriving on the same instant as the earliest" do
+    arrival = 2.days.ago
+    create(:newsletter, sender_email: "hi@stratechery.com", received_at: arrival)
+    create(:newsletter, sender_email: "hi@stratechery.com", received_at: arrival)
+
+    expect(Newsletter.first_from_sender.count).to eq(1)
+  end
+
+  # A pen row prints a sender, a subject and a time. Bodies run to hundreds of
+  # kilobytes and three sections of them would be read to print none.
+  it "leaves the body behind when read for the pen" do
+    create(:newsletter, body_html: "<p>Morning</p>")
+
+    row = Newsletter.for_pen.first
+
+    expect { row.body_html }.to raise_error(ActiveModel::MissingAttributeError)
+  end
 end
