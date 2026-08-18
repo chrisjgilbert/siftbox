@@ -1,0 +1,35 @@
+<%= render "application/masthead", line: t(".line") %>
+
+<%# The archive carries the notice for the same reason the edition does, and
+    for one of its own: root serves this page on a morning before the first
+    edition exists, which is exactly the morning a reader is subscribing to
+    things. %>
+<% if badge.pending? %>
+  <%= render "application/badge", badge: badge %>
+<% end %>
+
+<main class="archive">
+  <% if @archive.any? %>
+    <%# What the list holds and which way it runs. The order is stated because
+        it is the one thing about this page a reader could get wrong: the
+        numbers can read No. 1, No. 3, No. 2 where an edition was composed
+        late for an earlier day, and the day covered is what it sorts by. %>
+    <div class="archive__caption">
+      <span class="archive__count"><%= t(".count", count: @archive.count) %></span>
+      <span class="archive__order"><%= t(".order") %></span>
+    </div>
+
+    <ol class="archive__list">
+      <% @archive.editions.each do |edition| %>
+        <li class="archive__row">
+          <%= link_to edition_path(edition), class: "archive__link" do %>
+            <span class="archive__number"><%= edition.number %></span>
+            <span class="archive__date"><%= edition.date %></span>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <p class="archive__empty"><%= t(".empty") %></p>
+  <% end %>
+</main>

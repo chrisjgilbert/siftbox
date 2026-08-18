@@ -1,15 +1,4 @@
-<header class="masthead">
-  <div class="masthead__brand"><%= render "application/lockup", size: 24 %></div>
-
-  <nav class="filters">
-    <%= link_to t("newsletters.filters.everything"),
-          newsletters_path,
-          class: class_names("filters__link", "filters__link--active" => @feed.everything?) %>
-    <%= link_to t("newsletters.filters.unread", count: @feed.unread_count),
-          newsletters_path(filter: @feed.unread_filter),
-          class: class_names("filters__link", "filters__link--active" => @feed.unread_only?) %>
-  </nav>
-</header>
+<%= render "application/masthead", line: t(".line") %>
 
 <main class="feed">
   <% @feed.groups.each do |group| %>

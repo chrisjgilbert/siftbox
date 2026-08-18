@@ -130,7 +130,12 @@ The two secrets that live neither in credentials nor on disk go in
 ```bash
 KAMAL_REGISTRY_PASSWORD=...
 POSTMARK_SMTP_TOKEN=...
+ANTHROPIC_API_KEY=...
 ```
+
+`ANTHROPIC_API_KEY` is what the morning edition is written with, and it is
+named in `env.secret` so Kamal passes it into the container. It spends money
+every day the job runs — see step 9.
 
 Do not restate those two in `.kamal/secrets`. That file is merged over the
 top, so a `KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD` passthrough
@@ -263,10 +268,85 @@ ip -4 addr show | grep -E "docker0|br-"
    webhook accepted, mailbox routed, job ran, images fetched and rewritten.
 4. Check "View original" renders too — it is the sandboxed frame, and it
    embeds images as data URIs rather than fetching them.
+5. Subscribe to something that double-opts-in, and follow the confirmation
+   the whole way: it should be held out of the feed, listed under **Awaiting
+   confirmation** on `/subscriptions`, and announced on the edition page as
+   "1 subscription awaiting confirmation". Open it, click the sender's own
+   confirm button inside the frame, then press **Done**. The app cannot see
+   that click — the frame has an opaque origin — so Done is what clears the
+   row and the notice. Nothing here has been through a real double-opt-in
+   yet; this is the step that finds out whether the phrase set recognises one
+   in the wild. If it does not, the mail is in the feed instead and the fix is
+   `Newsletter::Confirmation::PHRASES`.
 
 The ingress is armed in production only, so the webhook endpoint answers 404
 in development by design. Locally, use the conductor at
 `/rails/conductor/action_mailbox/inbound_emails` instead — see `README.md`.
+
+## 9. The morning edition
+
+`config/recurring.yml` schedules `Edition::CompositionJob` for `every day at
+7am Europe/London`. The zone is named in the schedule itself, so the reader
+gets the edition at seven on both sides of a clock change rather than at
+seven-in-whatever-offset-it-was-written-in.
+
+Solid Queue's scheduler is what fires it, and the scheduler starts inside
+Puma alongside the workers because `SOLID_QUEUE_IN_PUMA` is already set — so
+there is no extra process to run. **But the task does not install itself.**
+The row in `solid_queue_recurring_tasks` is written when the scheduler boots,
+which means the schedule only exists after a deploy that carries it. Confirm
+it once, after that deploy:
+
+```bash
+bin/kamal app exec --reuse "bin/rails runner 'puts SolidQueue::RecurringTask.all.map(&:to_s)'"
+```
+
+Two entries, one of them `Edition::CompositionJob.perform_later() [ 0 7 * * *
+Europe/London ]`. Nothing there means the scheduler did not start; the app
+logs say why.
+
+The first firing has three possible outcomes and they read differently in
+the log:
+
+- **An edition.** A minute or two of model time and a row in `editions`. The
+  PRD's arithmetic says about $0.45; nobody has measured a real run yet, and
+  the token counts stored on each edition are where the real figure comes
+  from.
+- **`no newsletters since the last edition closed; nothing to compose`.** An
+  empty window skips silently by design — no edition, no error. The line
+  exists so that a quiet inbox and a scheduler that never fired do not look
+  identical from here.
+- **`no edition composed: …`**, at error level. Something the run cannot fix
+  by trying again: the model declined the window, the edition ran past the
+  token ceiling, or the API refused the request. A model that could not be
+  reached is the one failure that does retry, four times, fifteen minutes
+  apart, and is recorded as a failed job if it never lands.
+
+Whatever happens, nothing is lost. The window is a high-water mark, so a
+morning that produces no edition leaves its newsletters above the mark and
+tomorrow's window covers them.
+
+Worth knowing on the first deploy only: **No. 1 reaches back one day**
+(`Edition::Window::FIRST_WINDOW`), not over the whole archive. Mail stored
+before that belongs to no edition and stays where it is, in the originals
+archive.
+
+To compose one by hand — a morning missed while the key was wrong, say:
+
+```bash
+bin/kamal app exec --reuse "bin/rails runner 'Edition::CompositionJob.perform_now'"
+```
+
+It covers everything since the last edition closed, so on a day that already
+has one it usually finds an empty window and skips. It also costs the same as
+the scheduled run.
+
+If this app ever moves job processing onto its own host — the commented-out
+`job:` role in `config/deploy.yml` — take care that only one supervisor runs
+the scheduler, or two of them fire at 07:00. Solid Queue's unique index on
+`(task_key, run_at)` already collapses that into one enqueue, and the unique
+indexes on `editions.number` and `editions.published_on` are the backstop
+under it, but neither is a reason to run two.
 
 ## Backups
 
@@ -278,6 +358,16 @@ Worth knowing that it now grows: self-hosting images means a heavily
 illustrated newsletter costs real disk, bounded per newsletter by
 `Newsletter::RemoteImages::MAX_IMAGES` and
 `Newsletter::ImageDownload::MAX_BYTES`.
+
+### Take one before the read-state migration
+
+`RemoveReadAtFromNewsletters` drops `newsletters.read_at`. It reverses in
+shape — rolling back adds the column back — but not in content: the
+timestamps are gone, and every newsletter comes back as unread. Nothing in
+the app reads them any more, so what is lost is only the record of which mail
+had been opened, but it is lost for good. Back the volume up before the
+staging deploy and again before the production one, and expect the rollback
+plan for this release to be "restore", not "roll back the migration".
 
 ## Still open
 

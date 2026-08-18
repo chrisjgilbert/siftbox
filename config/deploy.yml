@@ -65,12 +65,20 @@ registry:
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
   secret:
-    # The only secret the container needs. It decrypts credentials, which
-    # carry action_mailbox.ingress_password — what Action Mailbox
-    # authenticates the Postmark webhook against — and postmark.smtp_token,
-    # which sends password-reset mail. Without this the ingress rejects every
-    # delivery and newsletters are lost once Postmark gives up retrying.
+    # Decrypts credentials, which carry action_mailbox.ingress_password —
+    # what Action Mailbox authenticates the Postmark webhook against — and
+    # postmark.smtp_token, which sends password-reset mail. Without this the
+    # ingress rejects every delivery and newsletters are lost once Postmark
+    # gives up retrying.
     - RAILS_MASTER_KEY
+
+    # What the AI editor authenticates with, read at 07:00 by
+    # Edition::CompositionJob and by nothing else in the app. Missing, it is
+    # not a boot failure or a broken page: it is one KeyError in the worker
+    # log and no edition that morning. The raw value goes in
+    # .kamal/secrets-common beside KAMAL_REGISTRY_PASSWORD — do not restate
+    # it in .kamal/secrets, for the reason given there.
+    - ANTHROPIC_API_KEY
   clear:
     # The address subscriptions are pointed at, shown in the feed header and
     # the empty state. Without it, a deployed siftbox tells the reader to

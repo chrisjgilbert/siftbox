@@ -1,0 +1,33 @@
+<%# The bar a held confirmation wears in place of the archive's: the way back
+    to the pen, and the two endings a hold has.
+
+    Done is a button the reader presses, and it has to stay one. The confirm
+    link belongs to the sender and is in the frame below, whose sandbox grants
+    allow-popups precisely so it works — but that frame has an opaque origin
+    and no scripts, so nothing here can see the click, the navigation, or the
+    page it lands on. Anything that dismissed a hold on its own would be
+    guessing: a reader who opened the email and read it is indistinguishable
+    from one who confirmed. A wrong guess loses the subscription silently,
+    which is the failure this whole feature exists to prevent. Do not automate
+    it. Nothing that arrives later — a first issue from the same sender, a
+    timeout, a scroll depth — is evidence either.
+
+    Both endings are POSTs, so both are button_to. Neither is hidden below
+    720px the way the reader's second action is: a phone is where mail gets
+    read, and a misfire the reader cannot release from one stays in the pen. %>
+<header class="topbar topbar--pen">
+  <%= link_to t("newsletters.original.pen.back"),
+        subscriptions_path,
+        class: "topbar__back" %>
+
+  <div class="topbar__actions">
+    <%= button_to t("newsletters.original.pen.release"),
+          newsletter_release_path(newsletter),
+          class: "topbar__action",
+          form_class: "topbar__form" %>
+    <%= button_to t("newsletters.original.pen.done"),
+          newsletter_dismissal_path(newsletter),
+          class: "topbar__action topbar__action--done",
+          form_class: "topbar__form" %>
+  </div>
+</header>

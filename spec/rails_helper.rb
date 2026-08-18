@@ -26,7 +26,14 @@ RSpec.configure do |config|
 
   config.include FactoryBot::Syntax::Methods
   config.include ActionMailbox::TestHelper, type: :mailbox
+  # For the jobs that retry: perform_enqueued_jobs runs the retry the way the
+  # worker would, so a spec can count what a failing job actually costs rather
+  # than read the number off its own declaration.
+  config.include ActiveJob::TestHelper, type: :job
   config.include ActiveSupport::Testing::TimeHelpers
+  # Nothing on these pages is drawn by JavaScript, so rack_test reads them
+  # exactly as a browser would and costs no driver, no server and no wait.
+  config.before(:each, type: :system) { driven_by :rack_test }
 
   # The waitlist's rate limit counts in Rails.cache, which the test
   # environment keeps in memory for the whole run. Without this, one example

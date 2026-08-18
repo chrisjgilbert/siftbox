@@ -164,6 +164,18 @@ Reads the lead image out of every newsletter stored before the column
 existed. Without it the whole archive renders the feed's "no image in email"
 box. Idempotent, so it is safe to run again.
 
+```bash
+bin/rails confirmations:preview
+bin/rails confirmations:backfill
+```
+
+Holds the subscription confirmations sitting in mail stored before detection
+existed — detection runs at ingest, so without this the pen is empty on the
+first morning while every confirmation the reader has ever received is behind
+it in the archive. Idempotent. Run the preview first: it is the same walk
+inside a transaction that rolls back, and it prints what would be held. Mail
+a published edition already cites is left alone, whatever its subject says.
+
 The app was called `newsbox` until recently. If you are upgrading a running
 deployment, rename its `NEWSBOX_*` variables to `SIFTBOX_*` in the same
 release as the code, or the app boots on placeholder values. The Kamal
@@ -207,9 +219,11 @@ redirects, bytes and time. Read `Destination` with the IPv6 forms in mind —
 `IPAddr`'s `loopback?` and `link_local?` do not see through it. That is why
 IPv6 gets an allowlist of global unicast rather than another denied prefix.
 
-**Opening a newsletter marks it read**, which means `GET /newsletters/:id`
-writes. Turbo's hover prefetching is therefore turned off in the layout;
-without that, hovering a feed row marks it read without opening it.
+**Turbo's hover prefetching is off in the layout.** It was there because
+opening a newsletter used to mark it read, so a prefetch wrote. Read state is
+retired and nothing writes on a GET now, but the tag stays for a different
+reason: an archive row points at an original, and prefetching one on hover
+pulls a body that runs to hundreds of kilobytes for a row nobody opened.
 
 **The feed is bounded to seven days**, which is what its end-of-feed copy
 claims. Showing more history needs a pagination design first.
@@ -219,9 +233,7 @@ claims. Showing more history needs a pagination design first.
 without loading a `body_html` to find one — `Newsletter::FEED_COLUMNS` exists
 precisely to keep the index off that column. Extraction runs *after*
 `Newsletter::InlineImages`, which rewrites `cid:` references to app paths;
-reading the lead first would store a URL no browser can resolve. The reader
-promotes the same image above the article and takes it out of the body, or it
-would appear twice.
+reading the lead first would store a URL no browser can resolve.
 
 **The landing page is the only public write path.** It is guarded four ways:
 an off-screen honeypot answered exactly like a real signup, a rate limit

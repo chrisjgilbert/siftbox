@@ -3,6 +3,10 @@ namespace :sample_data do
   task load: :environment do
     raise "Development only" unless Rails.env.development?
 
+    # Editions first, and not only for tidiness: a newsletter's citations
+    # cascade with it, so clearing newsletters alone would leave yesterday's
+    # sample editions standing with stories that cite nothing.
+    Edition.destroy_all
     Newsletter.destroy_all
     SampleData.newsletters.each do |attributes|
       Newsletter.create!(attributes).capture_lead_image
@@ -92,7 +96,6 @@ module SampleData
         snippet: "Multi-column indexes just got considerably more useful for " \
                  "queries that skip the leading column.",
         body_html: PLAIN_BODY,
-        read_at: 1.hour.ago,
         received_at: 1.day.ago
       },
       {

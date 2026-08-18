@@ -16,12 +16,6 @@ RSpec.describe Newsletter::Presenter do
     expect(Newsletter::Presenter.new(newsletter).sender).to eq("Unknown sender")
   end
 
-  it "has no sender domain when the address is missing" do
-    newsletter = build_stubbed(:newsletter, sender_name: "", sender_email: "")
-
-    expect(Newsletter::Presenter.new(newsletter).sender_domain).to be_nil
-  end
-
   it "falls back to the address when the sender has no display name" do
     newsletter = build_stubbed(
       :newsletter,
@@ -78,33 +72,6 @@ RSpec.describe Newsletter::Presenter do
     end
   end
 
-  # `sender` is the presenter's own — a Newsletter carries sender_name and
-  # sender_email and nothing called `sender` — so this fails if the neighbour
-  # comes back unwrapped, which `subject` alone could not tell apart.
-  it "wraps the newer neighbour in a presenter" do
-    create(:newsletter, received_at: 2.days.ago)
-    create(:newsletter, received_at: 1.day.ago, sender_name: "Ruby Weekly",
-      subject: "Later one")
-    presenter = Newsletter::Presenter.new(Newsletter.order(:received_at).first)
-
-    expect(presenter.newer.sender).to eq("Ruby Weekly")
-  end
-
-  it "wraps the older neighbour in a presenter" do
-    create(:newsletter, received_at: 2.days.ago, sender_name: "Ruby Weekly",
-      subject: "Earlier one")
-    create(:newsletter, received_at: 1.day.ago)
-    presenter = Newsletter::Presenter.new(Newsletter.order(:received_at).last)
-
-    expect(presenter.older.sender).to eq("Ruby Weekly")
-  end
-
-  it "has no older neighbour when it is the oldest" do
-    newsletter = create(:newsletter, received_at: 1.day.ago)
-
-    expect(Newsletter::Presenter.new(newsletter).older).to be_nil
-  end
-
   it "shows the date for a newsletter older than the feed's window" do
     travel_to Time.zone.parse("2026-08-06 18:00") do
       newsletter = build_stubbed(
@@ -114,120 +81,5 @@ RSpec.describe Newsletter::Presenter do
 
       expect(Newsletter::Presenter.new(newsletter).timestamp).to eq("1 Jun")
     end
-  end
-
-  it "has no newer neighbour when it is the most recent" do
-    newsletter = create(:newsletter, received_at: 1.day.ago)
-
-    expect(Newsletter::Presenter.new(newsletter).newer).to be_nil
-  end
-
-  it "heads the reader with the sender and the source domain" do
-    newsletter = build_stubbed(
-      :newsletter,
-      sender_name: "This Week in Rails",
-      sender_email: "editors@weblog.rubyonrails.org"
-    )
-
-    presenter = Newsletter::Presenter.new(newsletter)
-
-    expect(presenter.kicker).to eq("This Week in Rails / weblog.rubyonrails.org")
-  end
-
-  it "drops the separator along with a missing domain" do
-    newsletter = build_stubbed(:newsletter, sender_name: "Ruby Weekly", sender_email: "")
-
-    expect(Newsletter::Presenter.new(newsletter).kicker).to eq("Ruby Weekly")
-  end
-
-  it "stamps the received time for the data strip" do
-    newsletter = build_stubbed(
-      :newsletter,
-      received_at: Time.zone.parse("2026-08-05 09:02")
-    )
-
-    presenter = Newsletter::Presenter.new(newsletter)
-
-    expect(presenter.received_line).to eq("Received 2026.08.05 09:02")
-  end
-
-  it "shows the issue number when the subject carries one" do
-    newsletter = build_stubbed(:newsletter, subject: "#742: A faster CSV parser")
-
-    expect(Newsletter::Presenter.new(newsletter).issue).to eq("Issue 742")
-  end
-
-  it "has no issue field when the subject carries no number" do
-    newsletter = build_stubbed(:newsletter, subject: "Five articles worth your evening")
-
-    expect(Newsletter::Presenter.new(newsletter).issue).to be_nil
-  end
-
-  it "estimates the reading time from the body" do
-    body = "<p>#{Array.new(600, 'word').join(' ')}</p>"
-    newsletter = build_stubbed(:newsletter, body_html: body)
-
-    expect(Newsletter::Presenter.new(newsletter).reading_time).to eq("3 min")
-  end
-
-  # The data strip and the article share one Newsletter::Body, and #body
-  # removes the promoted image from the tree the word count then walks. The
-  # view renders the strip first, but nothing enforces that, and a reading
-  # time that depended on the order would be wrong on whichever render
-  # changed it.
-  it "estimates the same reading time after the body has been rendered" do
-    body = %(<img src="https://cdn.example/hero.png"><p>#{Array.new(600, 'word').join(' ')}</p>)
-    newsletter = build_stubbed(:newsletter, body_html: body)
-    presenter = Newsletter::Presenter.new(newsletter)
-    presenter.body
-
-    expect(presenter.reading_time).to eq("3 min")
-  end
-
-  # The reader promotes the first image above the article, so leaving it in
-  # the body would show it twice.
-  it "leaves the promoted lead image out of the body" do
-    newsletter = build_stubbed(
-      :newsletter,
-      body_html: %(<img src="https://cdn.example/hero.png"><p>Morning</p>)
-    )
-
-    expect(Newsletter::Presenter.new(newsletter).body).not_to include("hero.png")
-  end
-
-  it "keeps the rest of the body around the promoted image" do
-    newsletter = build_stubbed(
-      :newsletter,
-      body_html: %(<img src="https://cdn.example/hero.png"><p>Morning</p>)
-    )
-
-    expect(Newsletter::Presenter.new(newsletter).body).to include("<p>Morning</p>")
-  end
-
-  it "captions the promoted image with the email's alt text" do
-    newsletter = build_stubbed(
-      :newsletter,
-      body_html: %(<img src="https://cdn.example/hero.png" alt="The new parser">)
-    )
-
-    expect(Newsletter::Presenter.new(newsletter).lead_image_caption).to eq("The new parser")
-  end
-
-  # The two slots carry different things: the caption is for a reader looking
-  # at the picture, the alt for one who cannot see it. A figure gives the
-  # email somewhere to say both.
-  it "captions the promoted image from its figure while keeping the alt text" do
-    newsletter = build_stubbed(
-      :newsletter,
-      body_html: %(<figure><img src="https://cdn.example/hero.png" alt="A bar chart">) +
-        %(<figcaption>Photo: Getty Images</figcaption></figure>)
-    )
-
-    presenter = Newsletter::Presenter.new(newsletter)
-
-    expect(presenter).to have_attributes(
-      lead_image_caption: "Photo: Getty Images",
-      lead_image_alt: "A bar chart"
-    )
   end
 end

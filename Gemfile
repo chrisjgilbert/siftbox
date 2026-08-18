@@ -62,6 +62,11 @@ group :development, :test do
 end
 
 group :test do
+  # Reads a rendered page the way a reader does, by accessible name and role,
+  # which .claude/rules/testing.md asks of anything above a request spec.
+  # Driven by rack_test — nothing on these pages needs JavaScript, so no
+  # browser and no driver gem.
+  gem "capybara", "~> 3.40"
   gem "shoulda-matchers", "~> 6.4"
   gem "webmock", "~> 3.24"
 end
@@ -72,3 +77,6 @@ group :development do
 end
 
 gem "honeybadger", "~> 6.9"
+
+# The model that writes the edition [https://github.com/anthropics/anthropic-sdk-ruby]
+gem "anthropic", "~> 1.62"

@@ -114,71 +114,547 @@ a {
   }
 }
 
-/* Feed masthead ----------------------------------------------------------- */
+/* Masthead ---------------------------------------------------------------- */
 
-/* Below 720px the brand and the filters are two stacked bands with their own
-   rules; from 720px they sit on one line under a single 2px rule. */
-.masthead__brand {
+/* The nameplate and the line naming the page: brand and links on one ruled
+   band, the page's own line on a second. Every screen behind the gate wears
+   it, the archive of originals included — it took this block's name over from
+   the feed's old header when read state took the filter bar away.
+
+   It wraps because the nav grew a third link. Nameplate and three mono links
+   come to more than a 320px screen has once the gutters are paid for, and
+   without this the page scrolls sideways rather than the links dropping to a
+   second line. The gap does double duty as the row gap when they do. */
+.masthead__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   padding: 24px var(--gutter) 20px;
   border-bottom: 2px solid var(--ink);
 }
 
-.filters {
+/* The nameplate is a link on every edition page — the way back to the day's
+   briefing. It carries the mark, which is drawn in currentColor, so the link
+   colour has to be put back to ink or the brackets turn blue. */
+.masthead__home {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.masthead__nav {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px var(--gutter);
-  border-bottom: 1px solid var(--rule);
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.filters__link {
+.masthead__link {
   color: var(--mute);
   text-decoration: none;
 }
 
-.filters__link:hover {
+.masthead__link:hover {
   color: var(--ink);
 }
 
-/* The number is the unread marker in the feed, so the active filter is the
-   only place blue fills a shape rather than colouring type. */
-.filters__link--active {
-  background: var(--blue);
-  color: var(--paper);
-  padding: 4px 7px;
-}
-
-.filters__link--active:hover {
-  color: var(--paper);
+/* An h1 set at 10px. What an edition is called is its number and the day it
+   covers, and the line carries them the way a dateline does — mono, which
+   also puts back the positive tracking every other heading gives up. */
+.masthead__line {
+  margin: 0;
+  padding: 14px var(--gutter);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 @media (min-width: 720px) {
-  .masthead {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  .masthead__bar {
     padding: 28px var(--gutter);
-    border-bottom: 2px solid var(--ink);
   }
 
-  .masthead__brand {
-    padding: 0;
-    border-bottom: 0;
-  }
-
-  .filters {
+  .masthead__nav {
     gap: 26px;
-    padding: 0;
-    border-bottom: 0;
     font-size: 11px;
   }
 
-  .filters__link--active {
-    padding: 4px 8px;
+  .masthead__line {
+    padding: 16px var(--gutter);
+    font-size: 11px;
+  }
+}
+
+/* Pen notice -------------------------------------------------------------- */
+
+/* App chrome, and it has to look like nothing else on the page: a mono band
+   the full width of the screen, sitting in the masthead's register rather
+   than the edition's measure, so it can never be mistaken for a story. Blue
+   because it is the one thing here to act on, and the arrow is direction
+   rather than copy, so it is drawn here and not translated.
+
+   One rule below and the masthead's rule above — the two it sits between. A
+   border-top of its own would sit flush against that one and read as a single
+   2px rule, which is the weight a section heading takes and this is not one. */
+.badge {
+  display: block;
+  padding: 13px var(--gutter);
+  border-bottom: 1px solid var(--rule);
+  color: var(--blue);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.badge::after {
+  content: "\00a0\00a0→";
+}
+
+.badge:hover {
+  background: var(--hover);
+}
+
+@media (min-width: 720px) {
+  .badge {
+    padding: 15px var(--gutter);
+    font-size: 11px;
+  }
+}
+
+/* Edition ----------------------------------------------------------------- */
+
+/* One column at the reading measure, centred the way the reader's article is.
+   The section heading takes the 2px rule and the stories under it take the
+   1px one, which is the whole of the hierarchy on the page. */
+.edition {
+  padding: 0 var(--gutter) 48px;
+}
+
+.edition__section {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding-top: 32px;
+}
+
+.edition__heading {
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 720px) {
+  .edition {
+    padding-bottom: 96px;
+  }
+
+  .edition__section {
+    padding-top: 56px;
+  }
+
+  .edition__heading {
+    padding-bottom: 10px;
+    font-size: 11px;
+  }
+}
+
+/* Story ------------------------------------------------------------------- */
+
+/* A lead story, a Briefly line and a reading list entry are one shape at
+   three lengths, so the type scale is all that separates them and it hangs
+   off the section rather than off a partial each. */
+.story {
+  padding: 24px 0 28px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.story__headline {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  text-wrap: pretty;
+}
+
+/* pre-line rather than a paragraph per line: the editor's copy arrives as
+   text and stays text, so a break in it is honoured by CSS reading the string
+   and never by markup assembled out of what a model wrote. */
+.story__body {
+  margin: 12px 0 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--body);
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+.edition__section--lead .story__headline {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+}
+
+.edition__section--briefly .story__headline {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.edition__section--briefly .story__body {
+  font-size: 16px;
+}
+
+/* Where the claim came from, and the one place it can be checked. */
+.story__sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.story__sources-label {
+  color: var(--mute);
+}
+
+.story__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.story__source {
+  color: var(--mute);
+}
+
+/* The separator belongs to the layout rather than to the copy, so it is drawn
+   here — the same slash the feed's mono line draws between its fields. */
+.story__source:not(:last-child)::after {
+  content: "\00a0/";
+}
+
+.story__link {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.story__link:hover {
+  color: var(--ink);
+}
+
+@media (min-width: 720px) {
+  .story {
+    padding: 32px 0 36px;
+  }
+
+  .story__headline {
+    font-size: 26px;
+    letter-spacing: -0.03em;
+  }
+
+  .story__body {
+    margin-top: 14px;
+    font-size: 19px;
+    line-height: 1.65;
+  }
+
+  .edition__section--lead .story__headline {
+    font-size: 36px;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+
+  .edition__section--briefly .story__headline {
+    font-size: 18px;
+  }
+
+  .edition__section--briefly .story__body {
+    font-size: 17px;
+  }
+
+  .story__sources {
+    gap: 14px;
+    margin-top: 20px;
+    font-size: 11px;
+  }
+
+  .story__list {
+    gap: 14px;
+  }
+}
+
+/* Archive of editions ----------------------------------------------------- */
+
+/* Every edition there has been, at the same measure the edition itself is set
+   at. One row per day: the day covered carries the row because it is what the
+   list is ordered by, and the number rides beside it in mono at the index's
+   own scale. No blue on the number: the whole row is the link, and a second
+   thing in the accent colour would read as a second thing to click. */
+.archive {
+  padding: 0 var(--gutter) 48px;
+}
+
+.archive__caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 32px 0 8px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.archive__order {
+  color: var(--mute);
+}
+
+.archive__list {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.archive__link {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 14px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  color: inherit;
+}
+
+.archive__number {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.archive__date {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.archive__empty {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 48px 0;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .archive {
+    padding-bottom: 96px;
+  }
+
+  .archive__caption {
+    padding: 56px 0 10px;
+    font-size: 11px;
+  }
+
+  /* The row grows a hover tint and the padding to hold it, as the feed's rows
+     do above the same breakpoint and for the same reason: below it there is
+     no pointer to answer. */
+  .archive__link {
+    grid-template-columns: 72px 1fr;
+    column-gap: 24px;
+    padding: 22px 14px;
+    margin: 0 -14px;
+  }
+
+  .archive__link:hover {
+    background: var(--hover);
+  }
+
+  .archive__number {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .archive__date {
+    font-size: 23px;
+  }
+
+  .archive__empty {
+    padding: 72px 0;
+  }
+}
+
+/* Subscriptions ----------------------------------------------------------- */
+
+/* The pen and the two nets around it, at the measure every page behind the
+   gate is set to. Three sections in one shape, built the way the edition's
+   are: the heading takes the 2px rule, the rows under it take the 1px one,
+   and nothing else separates them. */
+.pen {
+  padding: 0 var(--gutter) 48px;
+}
+
+.pen__section {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding-top: 32px;
+}
+
+.pen__heading {
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pen__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The rule belongs to the item and the grid to the line inside it, so a row
+   that is a link and a row that is not sit on exactly the same rails and the
+   rule keeps to the measure whatever the line does with its own margins. */
+.pen__item {
+  border-bottom: 1px solid var(--rule);
+}
+
+.pen__line {
+  display: grid;
+  grid-template-columns: 1fr;
+  row-gap: 4px;
+  padding: 16px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pen__sender {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.pen__subject {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+/* The one thing on this page that ages. How long a confirmation has been
+   waiting is what the reader is judging it on, so it is set in ink rather
+   than in the mute the rest of the mono furniture takes. */
+.pen__freshness {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* Recently bounced is an audit trail rather than a list to act on, so it
+   steps down the way Briefly steps down from a lead story — the type scale
+   hangs off the section, and no partial asks which one it is in. */
+.pen__section--bounced .pen__subject {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--body);
+}
+
+.pen__empty {
+  margin: 0;
+  padding: 24px 0 4px;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .pen {
+    padding-bottom: 96px;
+  }
+
+  .pen__section {
+    padding-top: 56px;
+  }
+
+  .pen__heading {
+    padding-bottom: 10px;
+    font-size: 11px;
+  }
+
+  /* Sender and freshness take columns of their own and the subject holds the
+     middle. The line grows a hover tint and the padding to hold it, as the
+     archive's row does and for the same reason: below this width there is no
+     pointer to answer. */
+  .pen__line {
+    grid-template-columns: 150px 1fr auto;
+    align-items: baseline;
+    column-gap: 24px;
+    row-gap: 0;
+    padding: 18px 14px;
+    margin: 0 -14px;
+  }
+
+  .pen__line--open:hover {
+    background: var(--hover);
+  }
+
+  .pen__sender,
+  .pen__freshness {
+    font-size: 11px;
+  }
+
+  .pen__subject {
+    font-size: 19px;
+  }
+
+  .pen__empty {
+    padding: 32px 0 8px;
   }
 }
 
@@ -283,10 +759,6 @@ a {
   color: inherit;
 }
 
-.lead--read {
-  opacity: 0.66;
-}
-
 .lead__image {
   grid-area: image;
   display: block;
@@ -310,10 +782,6 @@ a {
 .lead__number {
   grid-area: number;
   color: var(--blue);
-}
-
-.lead--read .lead__number {
-  color: var(--read);
 }
 
 /* The mono line reads "01 / RUBY WEEKLY / 06:12" on mobile. The separators
@@ -420,10 +888,6 @@ a {
   color: inherit;
 }
 
-.row--read {
-  opacity: 0.66;
-}
-
 .row__number,
 .row__sender,
 .row__timestamp {
@@ -434,14 +898,11 @@ a {
   color: var(--mute);
 }
 
-/* The number replaces the unread dot: blue while unread, grey once read. */
+/* The index number, in the accent colour: it is what makes the archive read
+   as a numbered list rather than a stack of cards. */
 .row__number {
   grid-area: number;
   color: var(--blue);
-}
-
-.row--read .row__number {
-  color: var(--read);
 }
 
 .row__number::after {
@@ -580,7 +1041,7 @@ a {
   }
 }
 
-/* Reader top bar ---------------------------------------------------------- */
+/* Original top bar -------------------------------------------------------- */
 
 .topbar {
   display: flex;
@@ -633,16 +1094,6 @@ a {
   display: inline;
 }
 
-/* Below 720px the bar keeps the way back and one action, so the labels never
-   collapse into an unreadable row. View original is the one that stays: it is
-   the escape hatch when the rebuilt reading view loses too much, where
-   marking unread again is housekeeping that can wait for a wider screen. */
-@media (max-width: 719px) {
-  .topbar__form--secondary {
-    display: none;
-  }
-}
-
 @media (min-width: 720px) {
   .topbar {
     font-size: 11px;
@@ -653,379 +1104,25 @@ a {
   }
 }
 
-/* Reader masthead --------------------------------------------------------- */
+/* Pen top bar ------------------------------------------------------------- */
 
-.article {
-  padding: 40px var(--gutter) 0;
-}
+/* What a held confirmation wears in place of the archive's bar: the same
+   furniture at the same weights, with two differences that are both about the
+   pen rather than about the look.
 
-.masthead-block {
-  max-width: var(--measure);
-  margin: 0 auto;
-}
+   It wraps rather than hiding an action below 720px. A phone is where mail
+   gets read, and a misfire the reader cannot release from one stays in the
+   pen until they are at a desk — which a confirm link may not outlast.
 
-.masthead-block__kicker {
-  margin: 0 0 20px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--blue);
-}
-
-.masthead-block__title {
-  margin: 0;
-  font-size: 34px;
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.035em;
-}
-
-.masthead-block__standfirst {
-  margin: 20px 0 0;
-  max-width: 620px;
-  font-size: 17px;
-  line-height: 1.5;
-  color: var(--body);
-  text-wrap: pretty;
-}
-
-/* Two fields below 720px, three above it: the issue number is the one the
-   narrow strip can do without. */
-.datastrip__field--issue {
-  display: none;
-}
-
-.datastrip {
-  display: flex;
+   Done is set in ink against the mute the other action keeps. It is the
+   ending nearly every hold has and the one the reader came here to press. */
+.topbar--pen {
   flex-wrap: wrap;
-  gap: 20px;
-  border-top: 2px solid var(--ink);
-  border-bottom: 1px solid var(--rule);
-  padding: 14px 0;
-  margin-top: 32px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--mute);
+  row-gap: 12px;
 }
 
-@media (min-width: 720px) {
-  .article {
-    padding: 80px 0 0;
-  }
-
-  .masthead-block__kicker {
-    margin-bottom: 24px;
-    font-size: 11px;
-  }
-
-  .masthead-block__title {
-    font-size: 56px;
-    line-height: 1.02;
-    letter-spacing: -0.04em;
-  }
-
-  .masthead-block__standfirst {
-    margin-top: 28px;
-    font-size: 21px;
-  }
-
-  .datastrip {
-    gap: 40px;
-    margin-top: 44px;
-    font-size: 11px;
-  }
-
-  .datastrip__field--issue {
-    display: inline;
-  }
-}
-
-/* Lead image -------------------------------------------------------------- */
-
-/* The one element that breaks the measure: wider than the text column, with
-   its caption sitting back inside it. */
-.leadshot {
-  margin: 0;
-  padding: 32px 0 0;
-}
-
-.leadshot__image {
-  display: block;
-  width: 100%;
-  max-width: var(--frame);
-  height: 240px;
-  object-fit: cover;
-  margin: 0 auto;
-  background: var(--hover);
-}
-
-.leadshot__caption:empty {
-  display: none;
-}
-
-.leadshot__caption {
-  max-width: var(--measure);
-  margin: 14px auto 0;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--mute);
-}
-
-@media (min-width: 720px) {
-  .leadshot {
-    padding: 48px var(--gutter) 0;
-  }
-
-  .leadshot__image {
-    height: 440px;
-  }
-}
-
-/* Sanitized newsletter body ----------------------------------------------- */
-
-.body {
-  max-width: var(--measure);
-  margin: 0 auto;
-  padding: 40px 0 72px;
-}
-
-.body p {
-  margin: 0 0 22px;
-  font-size: 16px;
-  line-height: 1.75;
-  text-wrap: pretty;
-}
-
-.body h2 {
-  margin: 32px 0 12px;
-  font-size: 23px;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.025em;
-}
-
-.body h3 {
-  margin: 32px 0 12px;
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.body ul,
-.body ol {
-  list-style: none;
-  padding-left: 32px;
-  margin: 0 0 24px;
-  counter-reset: item;
-}
-
-.body li {
-  position: relative;
-  margin-bottom: 14px;
-  font-size: 16px;
-  line-height: 1.7;
-  counter-increment: item;
-}
-
-/* Zero-padded mono counters, the same index the feed uses. The em-dash
-   bullets of the old design are gone; a list here reads as a numbered list
-   whether or not the sender marked one up. */
-.body li::before {
-  content: counter(item, decimal-leading-zero);
-  position: absolute;
-  left: -32px;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--blue);
-}
-
-.body code {
-  font-family: var(--mono);
-  font-size: 15px;
-}
-
-.body pre {
-  overflow-x: auto;
-}
-
-.body blockquote {
-  margin: 36px 0;
-  padding-left: 24px;
-  border-left: 2px solid var(--ink);
-  font-size: 19px;
-  line-height: 1.6;
-}
-
-.body hr {
-  border: 0;
-  border-top: 1px solid var(--rule);
-  margin: 40px 0;
-}
-
-/* Render at the image's own size, capped at the column. `width: 100%` used to
-   force every image to the full column, which upscaled a 40px logo or social
-   icon into a blurred band — senders put far more small images in a
-   newsletter than large ones.
-
-   `height: auto` deliberately overrides the height attribute Newsletter::Body
-   writes. The pair is there for its ratio, which the browser reads off the
-   two attributes to reserve space before the file arrives; the height itself
-   would fight max-width on anything wider than the column. An image with no
-   stored size carries neither attribute and falls back to the browser's own
-   reading of the file, which is what every image did before the blobs were
-   measured.
-
-   The rules above and below went with the full-width assumption. On an image
-   that is now only as wide as it is, they read as an underline on an icon
-   rather than as a plate, so separation is left to the margin. */
-.body img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  margin: 28px 0;
-}
-
-.body figcaption {
-  margin-top: 12px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--mute);
-}
-
-/* Newsletter tables are layout, not data. Unwrapped in CSS rather than by a
-   scrubber, so the markup stays reversible if a real data table turns up. */
-.body table,
-.body thead,
-.body tbody,
-.body tr,
-.body th,
-.body td {
-  display: block;
-  width: auto !important;
-  max-width: 100%;
-}
-
-.body th,
-.body td {
-  text-align: left;
-}
-
-/* No blanket `.body * { font-family: inherit }` here. The allowlist in
-   Newsletter::Body drops every style and class attribute, so the sender has
-   no way to set a typeface, colour or background — and a blanket !important
-   would override this file's own heading and code rules. */
-
-.body a {
-  color: var(--blue);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: 1px;
-}
-
-@media (min-width: 720px) {
-  .body {
-    padding: 56px 0 96px;
-  }
-
-  .body p {
-    margin-bottom: 28px;
-    font-size: 17px;
-  }
-
-  .body h2 {
-    margin: 52px 0 14px;
-    font-size: 28px;
-  }
-
-  .body h3 {
-    margin: 40px 0 12px;
-    font-size: 22px;
-  }
-
-  .body li {
-    font-size: 17px;
-  }
-}
-
-/* Previous / next --------------------------------------------------------- */
-
-.neighbours {
-  display: grid;
-  grid-template-columns: 1fr;
-  border-top: 2px solid var(--ink);
-  padding: 24px var(--gutter) 48px;
-}
-
-.neighbours__link {
-  display: block;
-  text-decoration: none;
-}
-
-.neighbours__label {
-  display: block;
-  margin-bottom: 8px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--blue);
-}
-
-/* The arrows carry the direction, so they sit outside the label the same way
-   the feed's slashes sit outside the sender. */
-.neighbours__cell--newer .neighbours__direction::before {
-  content: "←\00a0";
-}
-
-.neighbours__cell--older .neighbours__sender::after {
-  content: "\00a0→";
-}
-
-.neighbours__direction::after {
-  content: "\00a0/\00a0";
-}
-
-.neighbours__subject {
-  display: block;
-  font-size: 19px;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
+.topbar__action--done {
   color: var(--ink);
-  text-wrap: pretty;
-}
-
-@media (min-width: 720px) {
-  .neighbours {
-    grid-template-columns: 1fr 1fr;
-    column-gap: 56px;
-    padding: 28px var(--gutter) 72px;
-  }
-
-  /* The cell stays in the grid when there is no newer newsletter, so the
-     older one keeps the right-hand column. Only its divider goes. */
-  .neighbours__cell--newer {
-    border-right: 1px solid var(--rule);
-  }
-
-  .neighbours__cell--newer:empty {
-    border-right: 0;
-  }
-
-  .neighbours__cell--older {
-    text-align: right;
-  }
-
-  .neighbours__subject {
-    font-size: 21px;
-  }
 }
 
 /* View original ----------------------------------------------------------- */

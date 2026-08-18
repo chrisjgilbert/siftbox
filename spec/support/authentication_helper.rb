@@ -14,6 +14,21 @@ module AuthenticationHelper
   end
 end
 
+# The same gate from the outside. A system spec has no request object to post
+# through, so it fills the form in, which is also the one place the sign-in
+# page itself gets exercised end to end.
+module FormAuthenticationHelper
+  def sign_in_through_the_form(user = create(:user))
+    visit new_session_path
+    fill_in I18n.t("sessions.new.email"), with: user.email_address
+    fill_in I18n.t("sessions.new.password"), with: user.password
+    click_button I18n.t("sessions.new.submit")
+
+    user
+  end
+end
+
 RSpec.configure do |config|
   config.include AuthenticationHelper, type: :request
+  config.include FormAuthenticationHelper, type: :system
 end

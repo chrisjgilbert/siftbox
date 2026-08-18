@@ -1,0 +1,17 @@
+<%# Awaiting confirmation, New senders, Recently bounced. One shape at three
+    registers: the section's own name is on the wrapper and the type scale
+    hangs off it in CSS, so no template asks which section it is drawing.
+
+    Every section reaches here, empty or not, and prints its own line when it
+    has nothing — the reason is on Subscriptions. The rows choose their own
+    partial: two of the three sections list newsletters and link, the third
+    lists mail that never became one and cannot. %>
+<section class="pen__section pen__section--<%= section.name %>">
+  <h2 class="pen__heading"><%= section.heading %></h2>
+
+  <% if section.any? %>
+    <ol class="pen__list"><%= render section.rows %></ol>
+  <% else %>
+    <p class="pen__empty"><%= section.empty %></p>
+  <% end %>
+</section>

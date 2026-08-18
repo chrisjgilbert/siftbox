@@ -4,10 +4,25 @@
 # picks a timestamp format from it, so a row can never be formatted by one
 # rule and filed under a heading decided by another.
 class Newsletter::Age
+  include ActionView::Helpers::DateHelper
+
   WINDOW = 7.days
 
   def initialize(received_at)
     @received_at = received_at
+  end
+
+  # The same age said out loud: "4 minutes ago". The Subscriptions page prints
+  # it rather than the clock time the feed shows, because a confirmation link
+  # expires within a day or two and what the reader needs from a pen row is
+  # the distance, not the hour it landed.
+  #
+  # Distance is unsigned, so a newsletter dated in the future — the clock skew
+  # #bucket already allows for — reads as though it were that far past. A
+  # freshness line one Date header can make wrong is a smaller problem than
+  # printing a negative.
+  def in_words
+    I18n.t("newsletters.age", duration: time_ago_in_words(received_at))
   end
 
   # Open at the top: received_at comes from the sender's Date header, so a

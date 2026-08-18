@@ -1,10 +1,15 @@
 <% content_for :title, @newsletter.subject %>
 
-<header class="topbar">
-  <%= link_to t("newsletters.original.back"),
-        newsletter_path(@newsletter),
-        class: "topbar__back" %>
-</header>
+<%# Two bars, one page. Mail waiting in the pen is not in the archive and has
+    nowhere to go back to, so it gets the pen's bar and the pen's two endings;
+    everything else keeps the archive's. The moment a hold resolves the bar
+    goes back to the archive's, which is what stops a page left open from
+    posting a second, contradicting ending. %>
+<% if @newsletter.held? %>
+  <%= render "newsletters/originals/pen_bar", newsletter: @newsletter %>
+<% else %>
+  <%= render "newsletters/originals/archive_bar", newsletter: @newsletter %>
+<% end %>
 
 <main class="original">
   <p class="original__caption"><%= t("newsletters.original.caption") %></p>

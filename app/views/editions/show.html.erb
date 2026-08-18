@@ -1,0 +1,18 @@
+<% content_for :title, @edition.masthead %>
+
+<%# The number and the day covered, which is what an edition is called, and
+    so is the page's own heading. %>
+<%= render "application/masthead", line: @edition.masthead %>
+
+<%# Between the masthead and the edition, because this is the page a reader
+    opens every morning and a confirm link expires in a day or two. It stays
+    until the mail is resolved. %>
+<% if badge.pending? %>
+  <%= render "application/badge", badge: badge %>
+<% end %>
+
+<main class="edition">
+  <% @edition.sections.each do |section| %>
+    <%= render "editions/section", section: section %>
+  <% end %>
+</main>

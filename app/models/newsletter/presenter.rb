@@ -1,5 +1,14 @@
-# Display logic for one newsletter, built in the controller and used in the
-# views, so no template has to format a date or assemble a sender line.
+# Display logic for one newsletter, built by whatever is listing it, so no
+# template has to format a timestamp or assemble a sender line.
+#
+# The PRD retires this along with the reader ("the presenter goes"), and most
+# of it did: the article body, the promoted image, the kicker, the issue
+# number, the reading time and the previous/next links went with the page they
+# were written for. What is left is here because three surviving screens ask
+# it the same two questions — the archive's rows, the Subscriptions page, and
+# a story's citations all need a sender line that survives mail with no From
+# header, and the archive needs the timestamp beside it. Deleting the class
+# outright would have copied #sender into three places.
 class Newsletter::Presenter
   # Which timestamp format each row gets. Keyed by Newsletter::Age so the
   # format always agrees with the group heading the row sits under.
@@ -10,7 +19,7 @@ class Newsletter::Presenter
     older: :row_date
   }.freeze
 
-  delegate :lead_image?, :lead_image_url, :read?, :snippet, :subject,
+  delegate :held?, :lead_image?, :lead_image_url, :snippet, :subject,
     :to_param, to: :newsletter
 
   def initialize(newsletter)
@@ -24,114 +33,40 @@ class Newsletter::Presenter
       I18n.t("newsletters.unknown_sender")
   end
 
-  # Nil rather than "" so the views can drop the em dash with it — the dash
-  # belongs to the domain, not between two halves that might both be absent.
-  def sender_domain
-    newsletter.sender_domain.presence
-  end
-
-  def kicker
-    return sender if sender_domain.nil?
-
-    I18n.t("newsletters.show.kicker", sender: sender, domain: sender_domain)
-  end
-
   def timestamp
     I18n.l(newsletter.received_at, format: TIMESTAMP_FORMATS.fetch(age.bucket))
   end
 
-  def received_line
-    I18n.t(
-      "newsletters.show.received",
-      stamp: I18n.l(newsletter.received_at, format: :received_stamp)
-    )
+  # Where an original's top bar goes back to. The archive for content, and the
+  # pen for anything the archive would refuse to list: Newsletter.content
+  # excludes dismissed mail, which is still reachable because the
+  # Subscriptions page's new-senders list is deliberately not content-scoped.
+  # Sending it to the archive would be a way back to a page without it.
+  def back_path
+    return routes.subscriptions_path if newsletter.dismissed?
+
+    routes.newsletters_path
   end
 
-  # Nil when the subject carries no number, so the data strip drops the field
-  # rather than showing a label with nothing after it.
-  def issue
-    number = Newsletter::IssueNumber.new(subject).to_s
-    return if number.blank?
+  # Named for where it goes, so the label cannot say "archive" over a link to
+  # the pen. Shares the pen bar's key rather than repeating its wording.
+  def back_label
+    return I18n.t("newsletters.original.pen.back") if newsletter.dismissed?
 
-    I18n.t("newsletters.show.issue", number: number)
-  end
-
-  def reading_time
-    I18n.t(
-      "newsletters.show.reading_time",
-      minutes: Newsletter::ReadingTime.new(reading_body).minutes
-    )
-  end
-
-  # The body without the image the reader promotes above the article. Leaving
-  # it in would render the same image twice.
-  def body
-    lead_image.remainder
-  end
-
-  # What the reader promotes, read from the body #body actually strips rather
-  # than from the stored lead_image_url column. The feed asks the column,
-  # because a feed row loads no body — but the two can disagree, and when they
-  # do the reader is the screen that loses: #body removes the image while the
-  # figure above it never renders, so the image leaves the page entirely.
-  # Backfilling `lead_images:backfill` is what makes them agree; this makes
-  # the reader correct whether or not that deploy step has run.
-  def promoted_image?
-    promoted_image_url.present?
-  end
-
-  def promoted_image_url
-    lead_image.url
-  end
-
-  def lead_image_alt
-    lead_image.alt
-  end
-
-  def lead_image_caption
-    lead_image.caption
-  end
-
-  def newer
-    present(newsletter.newer)
-  end
-
-  def older
-    present(newsletter.older)
+    I18n.t("newsletters.original.back")
   end
 
   private
 
   attr_reader :newsletter
 
-  # One instance for both readers, so the body is parsed once per render
-  # rather than once for the caption and once for the article.
-  def lead_image
-    @_lead_image ||= Newsletter::LeadImage.new(reading_body)
-  end
-
-  # Memoised because all three of the reader's body readers share it: the
-  # article, the promoted image, and the word count. Each one building its
-  # own cost a full Loofah pass over a body that runs to tens of kilobytes.
-  #
-  # Built here rather than in the helper, because the view is handed a
-  # presenter and .claude/rules/views.md keeps it that way. The sizes let the
-  # browser reserve space for an image before it loads; without them every
-  # image shifts the text the reader is already looking at.
-  def reading_body
-    @_reading_body ||= Newsletter::Body.new(
-      newsletter.body_html,
-      dimensions: Newsletter::ImageDimensions.new(newsletter).to_h
-    )
-  end
-
   def age
     Newsletter::Age.new(newsletter.received_at)
   end
 
-  def present(other)
-    return if other.nil?
-
-    Newsletter::Presenter.new(other)
+  # A presenter has no route helpers of its own, the way
+  # Edition::Story::Presenter has none either.
+  def routes
+    Rails.application.routes.url_helpers
   end
 end

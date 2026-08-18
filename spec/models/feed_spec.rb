@@ -61,40 +61,40 @@ RSpec.describe Feed do
     expect(subjects).to eq([ "Later one", "Earlier one" ])
   end
 
+  # The archive answers "did this morning's Money Stuff arrive?", and a
+  # Substack confirmation sitting in the pen is not an answer to that.
+  it "leaves out mail held as a subscription confirmation" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 2.hours.ago, held_at: 1.hour.ago)
+
+    expect(Feed.new.issue_count).to eq(0)
+  end
+
+  it "leaves out a confirmation that was dismissed" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 3.hours.ago, held_at: 2.hours.ago, dismissed_at: 1.hour.ago)
+
+    expect(Feed.new.issue_count).to eq(0)
+  end
+
+  # A misfire put real mail in the pen; releasing it has to put it back where
+  # it would have been, not merely stop hiding it from the next edition.
+  it "shows a newsletter released back out of the pen" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 3.hours.ago, held_at: 2.hours.ago, released_at: 1.hour.ago)
+
+    expect(Feed.new.issue_count).to eq(1)
+  end
+
   it "excludes newsletters older than the window the end-of-list copy claims" do
     travel_to Time.zone.parse("2026-08-06 18:00")
 
     create(:newsletter, received_at: 8.days.ago)
 
     expect(Feed.new.groups).to be_empty
-  end
-
-  it "counts the unread newsletters for the filter label" do
-    travel_to Time.zone.parse("2026-08-06 18:00")
-
-    create(:newsletter, received_at: 1.hour.ago, read_at: nil)
-    create(:newsletter, received_at: 2.hours.ago, read_at: 1.minute.ago)
-
-    expect(Feed.new.unread_count).to eq(1)
-  end
-
-  it "shows only unread newsletters when filtered to unread" do
-    travel_to Time.zone.parse("2026-08-06 18:00")
-
-    create(:newsletter, received_at: 1.hour.ago, read_at: nil, subject: "Still unread")
-    create(:newsletter, received_at: 2.hours.ago, read_at: 1.minute.ago, subject: "Read")
-
-    subjects = Feed.new(filter: "unread").groups.first.newsletters.map(&:subject)
-
-    expect(subjects).to eq([ "Still unread" ])
-  end
-
-  it "counts unread newsletters even while filtered to unread" do
-    travel_to Time.zone.parse("2026-08-06 18:00")
-
-    create(:newsletter, received_at: 1.hour.ago, read_at: nil)
-
-    expect(Feed.new(filter: "unread").unread_count).to eq(1)
   end
 
   it "puts a newsletter received at exactly midnight in one group only" do
@@ -113,14 +113,14 @@ RSpec.describe Feed do
     expect(Feed.new.groups.first.label).to eq("Today")
   end
 
-  it "counts the same unread newsletters it renders" do
+  it "counts the same newsletters it renders" do
     travel_to Time.zone.parse("2026-08-06 18:00")
 
-    create(:newsletter, received_at: 2.days.from_now, read_at: nil)
+    create(:newsletter, received_at: 2.days.from_now)
 
     rendered = Feed.new.groups.sum { |group| group.newsletters.length }
 
-    expect(rendered).to eq(Feed.new.unread_count)
+    expect(rendered).to eq(Feed.new.issue_count)
   end
 
   it "hands the view presenters rather than records" do
@@ -167,14 +167,5 @@ RSpec.describe Feed do
     create(:newsletter, received_at: 3.days.ago)
 
     expect(Feed.new.issue_count).to eq(2)
-  end
-
-  it "counts only the issues it renders when filtered to unread" do
-    travel_to Time.zone.parse("2026-08-06 18:00")
-
-    create(:newsletter, received_at: 1.hour.ago, read_at: nil)
-    create(:newsletter, received_at: 2.hours.ago, read_at: 1.minute.ago)
-
-    expect(Feed.new(filter: "unread").issue_count).to eq(1)
   end
 end

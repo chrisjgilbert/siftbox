@@ -10,6 +10,17 @@
 #     schedule: at 5am every day
 
 production:
+  # The morning edition. The zone is named in the schedule rather than left to
+  # config.time_zone, so the reader gets it at seven whatever the offset is
+  # doing and however the app's own zone is set later. Production only, and
+  # deliberately: the scheduler is what fires this, a development machine
+  # composing an edition of its own would cost real money for nobody, and
+  # spec/config/recurring_spec.rb is what checks the line rather than a
+  # worker running locally.
+  compose_edition:
+    class: Edition::CompositionJob
+    schedule: every day at 7am Europe/London
+
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12

@@ -1,7 +1,43 @@
 en:
+  activerecord:
+    errors:
+      models:
+        edition:
+          attributes:
+            stories:
+              duplicate_position: claim the same position twice.
+        edition/story:
+          attributes:
+            citations:
+              duplicate_newsletter: name the same newsletter twice.
+  application:
+    masthead:
+      archive: Archive
+      originals: Originals
+      subscriptions: Subscriptions
   date:
     formats:
+      edition_masthead: "%A %-d %B"
       feed_group: "%A %-d %B"
+  editions:
+    index:
+      count:
+        one: 1 edition
+        other: "%{count} editions"
+      empty: No editions yet. The first one is written at 07:00, from whatever has
+        arrived by then.
+      line: Archive
+      order: By the day covered
+    masthead: "%{number} · %{date}"
+    number: No. %{number}
+    sections:
+      briefly: Briefly
+      lead: Lead stories
+      reading_list: The reading list
+    story:
+      sources:
+        one: Source
+        other: Sources
   feed:
     groups:
       earlier: Earlier
@@ -13,30 +49,23 @@ en:
       title: siftbox
       wordmark: siftbox
   newsletters:
-    filters:
-      everything: Everything
-      unread: Unread [%{count}]
+    age: "%{duration} ago"
     index:
       empty: Nothing yet. Point a subscription at %{address} and it will show up here.
       end_of_feed:
         one: End of feed — 1 issue
         other: End of feed — %{count} issues
+      line: Originals
       no_image: No image in email
       no_image_compact: No image
       subscribe: Subscribe with %{address}
     original:
-      back: Back to the reader
+      back: Back to the archive
       caption: Original HTML, sandboxed in an iframe. Styling is the sender's.
-    show:
-      back: Index
-      issue: Issue %{number}
-      kicker: "%{sender} / %{domain}"
-      mark_unread: Mark unread
-      newer: Newer
-      older: Older
-      reading_time: "%{minutes} min"
-      received: Received %{stamp}
-      view_original: View original
+      pen:
+        back: Back to subscriptions
+        done: Done
+        release: This is a newsletter
     unknown_sender: Unknown sender
   passwords:
     edit:
@@ -55,9 +84,25 @@ en:
       password: Password
       submit: Sign in
       title: Sign in
+  subscriptions:
+    badge:
+      line:
+        one: 1 subscription awaiting confirmation
+        other: "%{count} subscriptions awaiting confirmation"
+    index:
+      awaiting:
+        empty: Nothing waiting. A subscription confirmation is held here the moment
+          it arrives, and stays until you deal with it.
+        heading: Awaiting confirmation
+      bounced:
+        empty: Nothing refused in the last %{days} days.
+        heading: Recently bounced
+      line: Subscriptions
+      new_senders:
+        empty: No address has written for the first time in the last %{days} days.
+        heading: New senders
   time:
     formats:
-      received_stamp: "%Y.%m.%d %H:%M"
       row_date: "%-d %b"
       row_day: "%a"
       row_time: "%H:%M"
