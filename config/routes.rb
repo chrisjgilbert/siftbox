@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   # never the path, so a token routed as :id reaches the log verbatim.
   resource :password, only: [ :new, :create, :edit, :update ]
   resource :session, only: [ :new, :create, :destroy ]
+  resource :settings, only: :show
   # An index, because the page is a list of what is waiting. Dismissing and
   # releasing a hold are nested resources under a newsletter rather than verbs
   # here — the pen is a view of the mail, not a place mail lives.
