@@ -518,7 +518,8 @@ Honest ones, at n=1:
   doesn't change. Investigated against the built code in
   `docs/blogs-rss.md`, which finds the last clause optimistic — the
   completeness guarantee and the token budget are what a second source type
-  actually costs.
+  actually costs — and prefers a delegated type over the sibling table, to
+  keep the edition path on one id space.
 - **Email the edition** to the reader's own address.
 - **Private RSS feed of editions** for reader apps.
 - **Weekend edition**: one Saturday edition surfacing the week's long-form
