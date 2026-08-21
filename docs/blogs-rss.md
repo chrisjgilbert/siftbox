@@ -18,13 +18,13 @@ The finding, up front, in three parts:
    fetcher with a redirect ceiling, a byte cap, a wall-clock deadline and
    resolve-then-dial DNS-rebinding protection. A feed poller needs exactly
    that, for XML instead of images.
-3. **The editor is where this actually costs something**, and the PRD's
-   "the edition's shape doesn't change" is optimistic. Measured against ten
-   real feeds (Decision 2), the money is a non-issue — a day of them is
-   about 2,000 tokens — and the problem is entirely `Edition::Editor`'s
-   completeness guarantee, which demands a citation for every item in the
-   window. Thirty-seven of a measured forty carry no reporting to cite.
-   That wants answering before a table exists.
+3. **The editor's exposure is a question of scope, not of engineering.**
+   Measured against ten real feeds, aggregators produce 37 of 40 items a
+   day with a median body of eight characters, and `Edition::Editor`
+   demands a citation for every one — which breaks the edition outright.
+   Excluding them (Decision 2, now decided) leaves eight real blogs
+   producing **3.1 items and ~2,400 tokens a day**, and at that size the
+   PRD's "the edition's shape doesn't change" is simply true.
 
 So the recommendation is to stage it, to put a measurement first — the
 same order Milestone 0 used for the editor itself — and to store the two
@@ -213,129 +213,111 @@ fiction.
 
 ## Decision 2 — how the editor survives feed volume
 
-This is the one that matters, and the one the PRD's "the edition's shape
-doesn't change" glosses over.
+**Decided: aggregator feeds are out of scope.** Hacker News, lobste.rs,
+Reddit, Planet-style rollups. A feed whose items carry no body of their own
+is a list of links, not a source, and the measurement below is what settled
+it. Everything else in this section follows from that.
 
-It is also the one worth measuring rather than reasoning about, so it was
-measured. Ten real feeds were fetched and every item run through the app's
-own `Newsletter::Body` and `Newsletter::Prose` — the same two passes
-`Edition::Prompt#prose` makes — so the character counts below are what the
-editor would actually be handed. The feeds: Hacker News, lobste.rs, Julia
-Evans, Dan Luu, Simon Willison, the Rust blog, Martin Fowler, DHH, the
-GitHub blog and Coding Horror.
+It was measured rather than reasoned about. Ten real feeds were fetched and
+every item run through the app's own `Newsletter::Body` and
+`Newsletter::Prose` — the same two passes `Edition::Prompt#prose` makes —
+so the character counts are what the editor would actually be handed.
 
-### A day's window across those ten feeds
+### Why aggregators are out
 
-| | |
-|---|---|
-| items published in 24 hours | **40** |
-| prose after `Newsletter::Prose`, capped | **8,246 characters — about 2,060 tokens** |
-| items whose prose is under 200 characters | **37** |
-| items whose prose is under 50 characters | **35** |
-
-**The cost is not the problem, and this document said otherwise in an
-earlier draft.** Two thousand tokens is about three per cent of the PRD's
-assumed 60k-token newsletter window. Ten feeds a day is rounding error on
-the bill. What they are is thirty-seven more sources that
-`Edition::Editor` will demand a citation for.
-
-### The example that shows it
-
-Of those 40 items, 37 come from the two aggregators, and this is an
-unedited Hacker News item as `Newsletter::Prose` hands it over:
+The two aggregator feeds produced **37 of the 40 items published in a
+day**, with a median body of **eight characters**. This is an unedited
+Hacker News item as `Newsletter::Prose` hands it over:
 
 ```
 title: "DeepSeek-v4-flash-vision-exp"
 prose: "Comments"
 ```
 
-That is the whole body. The word "Comments", eight characters, because an
-aggregator's `<description>` is a link to its own thread. Twenty of these
-arrive from Hacker News in a day and seventeen more from lobste.rs, median
-body eight characters each.
-
-`Edition::Prompt` would quote each one as a source. And
-`Edition::Prompt::INSTRUCTIONS` tells the editor three things that cannot
-all hold for such an item:
+That is the whole body — the word "Comments", because an aggregator's
+`<description>` is a link to its own thread. `Edition::Prompt` would quote
+each of the 37 as a source, and `INSTRUCTIONS` then requires three things
+that cannot all hold for such an item:
 
 - "Every newsletter gets cited by at least one story — a dull one earns a
   deadpan line in briefly, not silence."
 - "Report only what the sources say. You have no other knowledge of these
-  events. Anything you remember about them stays out."
+  events."
 - "Invent nothing: no links, no figures, no quotes, no names that are not
   in the sources."
 
-Cite it, write it from the source alone, and invent nothing — from a
-headline and the word "Comments". The three outcomes are all bad:
+Cite it, write it from the source alone, invent nothing — from a headline
+and the word "Comments". All three outcomes are bad. It complies, and the
+edition is 37 deadpan lines restating 37 headlines. It drops one, and
+`Edition::Editor#uncited` fires, three attempts go out against the
+identical memoised prompt, `Incomplete` is raised, and
+`Edition::CompositionJob`'s `discard_on` gives up — **no edition that
+morning**. Or it fills the gap from memory, and a claim in the edition is
+no longer supported by the source beside it, which is the one failure the
+citation guarantee exists to make impossible.
 
-1. **It complies.** Thirty-seven deadpan Briefly lines that restate
-   thirty-seven headlines. The edition is now mostly aggregator titles, and
-   the reader has an RSS reader with extra steps.
-2. **It drops some.** `Edition::Editor#uncited` fires, three attempts go
-   out against the identical memoised prompt, `Incomplete` is raised, and
-   `Edition::CompositionJob`'s `discard_on` logs it and gives up. **No
-   edition that morning.**
-3. **It fills the gap from memory.** It knows what DeepSeek is. Now a
-   claim in the edition is not supported by the source beside it, which is
-   the one failure the citation guarantee exists to make impossible —
-   arriving through the front door, because the prompt asked for a line and
-   left nothing to write one from.
-
-Outcome 2 is the one that compounds. `Edition.watermark` is
+The middle case compounds: `Edition.watermark` is
 `maximum(:window_ended_at)` over *published* editions, so a discarded
-composition does not move it: tomorrow's window is 48 hours and eighty
-aggregator items, and it fails harder. Day three is 120. Nothing in the app
-recovers from this on its own — a person has to.
+composition does not move it. Tomorrow's window is 48 hours and 80
+aggregator items, and it fails harder. Nothing recovers on its own.
 
-### What the same measurement says about long-form feeds
+No cap fixes this. A cap of three per feed still hands the editor three
+items reading "Comments". The shape is wrong, not the volume, which is why
+the answer is scope rather than a setting.
 
-The opposite shape, and much less alarming. Dan Luu's feed carries 128
-items of which 22 hit the 12,000-character cap outright, median prose
-11,997 characters — full articles, not summaries. Five long-form blogs
-publishing daily would add around 15k input tokens a day. Real, affordable,
-and not what breaks anything. Their cost is on the *output* side: the
-prompt asks for a review of each evergreen item — what it teaches, how deep
-it goes, whether it is worth an evening — and `Edition::Draft::MAX_TOKENS`
-is 32,000 for thinking *and* the edition.
-`docs/briefing-followups.md` already flags that ceiling as never tested
-against a full edition.
+### What the in-scope feeds actually look like
 
-So there are two different volume problems and they want different
-answers: aggregators break completeness, long-form feeds press on the
-output ceiling.
+The remaining eight — Julia Evans, Dan Luu, Simon Willison, the Rust blog,
+Martin Fowler, DHH, the GitHub blog, Coding Horror — are a different
+animal entirely:
 
-### Ways out, in the order I would try them
+| | last 7 days | last 30 days |
+|---|---|---|
+| items | 22 | 57 |
+| per day | **3.1** | **1.9** |
+| prose after `Newsletter::Prose` | 68,453 chars | 205,547 chars |
+| tokens per day | **~2,400** | **~1,700** |
 
-1. **Bound the window per source.** The PRD anticipates this under Edge
-   cases — "a per-source cap bounds the prompt". Three posts per blog per
-   window keeps a prolific feed from crowding out nine quiet ones. Measured
-   against the day above it takes 40 items to 16, which is the difference
-   between a wall and an edition. What is *not* admitted needs saying out
-   loud somewhere, or it is the silent drop the pen exists to prevent.
-2. **Refuse the aggregator shape at ingest.** The stronger move, and the
-   measurement is what makes it defensible: an item whose prose is eight
-   characters carries no reporting to condense, and no cap fixes that — a
-   cap of three still hands the editor three items reading "Comments". A
-   floor on prose length, below which an item is stored for the archive but
-   never enters a window, is one predicate and it closes the whole failure
-   above. It wants naming honestly as this app's judgement, not as a fact
-   about the item.
-3. **Relax completeness for posts only.** The guarantee's stated
-   justification is that "with the inbox demoted, an uncited newsletter is
-   one the reader has no other surface to find". That is materially weaker
-   for a blog post: public, permanent, one click away on a site the reader
-   chose to follow. Mail is delivered once and losing it is losing it. A
-   genuine change to the edition's promise, and the reader's to make.
-4. **Expect the reading list to absorb the rest.** Most blog posts are
-   evergreen essays, so they land in `reading_list`, where the prompt
-   already asks for a review rather than a summary. Blogs may make the
-   reading list the biggest section of the edition, which is arguably the
-   product working.
+Real blogs publish *rarely*. Of the eight, four had published nothing in
+the week measured; Simon Willison's link blog alone accounted for 14 of the
+22. Eight subscriptions produce about three items a day, at around two
+thousand tokens — against a newsletter window the PRD assumes at 60k.
 
-**Recommend 2 plus 1, with 4 as the expected outcome, and put 3 to the
-reader as an open question.** Whatever is chosen,
-`Edition::Prompt::VERSION` bumps, because the instructions have to describe
-what a post is and how to attribute one.
+**So with aggregators excluded, this decision mostly dissolves.** Three
+extra sources a day is not a completeness problem, not a token problem, and
+not a `MAX_TOKENS` problem. The PRD's "the edition's shape doesn't change"
+turns out to be right *once the scope is right* — which is the opposite of
+what an earlier draft of this document concluded, and the measurement is
+what changed it.
+
+### What is still worth doing
+
+1. **Enforce the scope where the reader can see it.** Out-of-scope is a
+   policy, and policies that live only in a document get violated by the
+   person who wrote them. The sources page is the place: on adding a feed,
+   sample its items and refuse one whose bodies are stubs, saying so —
+   "this looks like a link aggregator; siftbox reads blogs". Refusing at
+   add time is honest in a way silent exclusion at composition never is,
+   and it is the only moment the reader is present to be told.
+2. **A prose floor, demoted to a cheap guard.** Legitimate blogs still
+   carry the odd stub: 9 of the 273 in-scope items came in under 400
+   characters — Martin Fowler publishes an essay in linked fragments, and
+   Simon Willison posts release notes. Small enough that it is no longer
+   the fix, big enough to be worth one predicate. It is this app deciding
+   an item is not worth reporting, so it should say so out loud rather than
+   dropping quietly.
+3. **A per-blog cap, demoted further.** At 3.1 items a day nothing is
+   crowding anything out. Worth keeping in mind for the day a subscription
+   turns out to be busier than it looked, not worth building now —
+   `.claude/rules/ruby.md` on not writing code for functionality that does
+   not exist yet.
+4. **Expect the reading list to absorb them.** Most of these are evergreen
+   essays, so they land in `reading_list`, where the prompt already asks
+   for a review rather than a summary. Blogs may make the reading list the
+   biggest section of the edition, which is arguably the product working.
+
+The one thing the scope decision does *not* fix is the first poll — Dan
+Luu's feed alone is 128 items of back catalogue. See Decision 4.
 
 ## Decision 3 — what identifies a post, and what "seen before" means
 
@@ -423,11 +405,11 @@ Reuse, with one extraction:
 New concerns that images did not have:
 
 - **XML parsing of a stranger-controlled document.** Entity expansion
-  (billion laughs) and external entities. Nokogiri does not resolve
-  external entities by default and is already in the production bundle;
-  REXML is currently a *test-only* transitive dependency, via `crack` under
-  webmock. Whatever parses feeds must have its entity handling stated
-  explicitly in the file, not inherited from a default.
+  (billion laughs) and external entities. Tested, and safe by default under
+  the recommended parser — see Parsing — but safe *by default* is the
+  operative phrase: it wants restating explicitly with a spec pinning it,
+  rather than inherited from a REXML default that a later Ruby could
+  move.
 - **A size cap that is not the image cap, and is bigger.** This was
   guessed wrong first time: `Newsletter::ImageDownload::MAX_BYTES` is 5MB,
   and Dan Luu's Atom feed measured **11.2MB** — a legitimate feed from a
@@ -444,28 +426,75 @@ New concerns that images did not have:
 
 ## Parsing
 
-Three candidates:
+**Recommend `rss` (ruby/rss), wrapped in one adapter.** It was tried
+against the eight in-scope feeds rather than chosen on paper, and it earns
+the choice:
 
-- **`rss` (stdlib).** Handles RSS 0.9/1.0/2.0 and Atom. Confirmed
-  available on the pinned Ruby 3.3.6 but it is a *bundled* gem, so under
-  Bundler it raises `LoadError` until it is declared in the `Gemfile` —
-  and declaring it pulls `rexml` into the production bundle. Its API
-  differs by format (`items` vs `entries`, `description` vs
-  `content:encoded` vs `summary`), so it needs a normalising wrapper
-  regardless.
-- **Feedjira.** Normalises the formats properly. A new dependency with its
-  own chain, for an app whose `Gemfile` is deliberately short.
-- **Nokogiri directly.** Already in the production bundle, through Loofah,
-  which this codebase parses HTML with in two places. Hand-rolling feed
-  parsing is a classic underestimate though: RSS 2.0 against Atom against
-  RSS 1.0/RDF, RFC-822 against ISO-8601 dates, namespace handling,
-  `content:encoded` against `description`.
+| | |
+|---|---|
+| feeds parsed | **8 of 8**, in *strict* mode — `validate: false` was not needed |
+| formats | RSS 2.0 and Atom, both reached through `feed.items` |
+| Dan Luu's 11.2MB feed | parsed in **1.38s**, the slowest by an order of magnitude |
+| dates | come back as real `Time` objects, RFC-822 and ISO-8601 alike |
 
-**Recommend `rss`, wrapped.** One adapter class that turns whatever came
-back into a single normalised item shape, and the parser choice stays a
-forty-line decision that can be revisited without touching anything else.
-Note in the diff that `rexml` becomes a production dependency, per
-`.claude/rules/review.md` on dependency bumps.
+The dates are the quiet win, and they are one of the three reasons not to
+hand-roll this on Nokogiri. The other two — format sprawl and namespace
+handling — it also absorbs.
+
+**Its XML security posture is good by default**, which was an open worry in
+the fetch section above and is now closed. Backed by REXML, whose defaults
+are `entity_expansion_limit = 10000` and `entity_expansion_text_limit =
+10240`:
+
+- **Billion laughs: refused.** A six-level bomb that would expand to 10
+  million characters comes back as
+  `RSS::NotWellFormedError: number of entity expansions exceeded`.
+- **External entities: not resolved.** A `<!ENTITY x SYSTEM
+  "file:///etc/hostname">` reference comes back as the literal string
+  `&x;`.
+
+Both are defaults rather than settings this app chose, so they want
+restating in the adapter with a spec pinning them — a REXML default that
+moves in a later Ruby would move this app's XXE posture with it, silently.
+
+**What the wrapper is actually for.** The collection is uniform — `items`
+works on both — but the fields are not, and this is the whole of the
+difference:
+
+| | RSS 2.0 | Atom |
+|---|---|---|
+| title | `title` | `title.content` |
+| identity | `guid.content` | `id.content` |
+| body | `content_encoded` \|\| `description` | `content.content` \|\| `summary.content` |
+| date | `pubDate` | `published.content` \|\| `updated.content` |
+
+That is a fifteen-line normaliser, not a rewrite, and it keeps the parser
+choice revisitable without touching anything else.
+
+**Two things to get right when adopting it:**
+
+- **It is a bundled gem, not a default one.** `require "rss"` raises
+  `LoadError` under Bundler on the pinned 3.3.6 until `gem "rss"` is in the
+  `Gemfile`, and declaring it pulls `rexml` into the production bundle,
+  where it is currently a *test-only* transitive dependency via `crack`
+  under webmock. Both belong in the commit message per
+  `.claude/rules/review.md` on dependency bumps.
+- **Feed bytes must be read as UTF-8 explicitly.** Handing the parser a
+  string tagged US-ASCII fails every feed in this set with
+  `ArgumentError: invalid byte sequence in US-ASCII` — which is exactly the
+  class of problem `Newsletter::InboundMessage#utf8` already exists to
+  solve for mail, arriving on the other ingest path. A feed declares its
+  encoding twice (the XML declaration and the HTTP `charset`) and the two
+  can disagree or both be missing, so this wants deciding once, in the
+  fetch, rather than at the parse.
+
+The alternatives, for the record: **Feedjira** normalises the formats for
+you but is a new dependency with its own chain, for an app whose `Gemfile`
+is deliberately short — and the table above shows the normalising is
+fifteen lines. **Nokogiri directly** is already in the production bundle
+through Loofah, but hand-rolling feed parsing is a classic underestimate,
+and it would mean owning the date parsing and the entity limits that `rss`
+hands over for free.
 
 **The partial-feed problem is worth calling out separately, and the
 measurement sharpened it.** The obvious detector — the body arrived in
@@ -578,10 +607,11 @@ it already is.
   Decision 2 and Decision 4 come from exactly this, run by hand against ten
   real feeds.* What is left is to make it a development rake task and point
   it at the reader's own feed list rather than a plausible one, over
-  several days rather than one snapshot, so the per-blog cap and the prose
-  floor are tuned against what they will actually see. The one snapshot was
-  enough to change two recommendations and correct two numbers in this
-  document, which is the argument for doing the rest of it before Stage 1.
+  several days rather than one snapshot, so the prose floor is tuned
+  against what it will actually see. The one snapshot settled the
+  aggregator scope, corrected two numbers in this document and reversed one
+  of its conclusions, which is the argument for doing the rest of it before
+  Stage 1.
 - **Stage 1 — the delegated type, with one type.** Introduce `items`, move
   the shared columns and the pen onto it, repoint `edition_citations`, and
   leave `Newsletter` as the only `itemable`. No feeds, no posts, no new
@@ -593,15 +623,19 @@ it already is.
   `itemable`, the poller, the recurring task, dedupe, the first-poll guard,
   and posts in the archive. Editions untouched. Shippable on its own:
   nothing already published is affected.
-- **Stage 3 — the sources page.** Add and remove a feed from Subscriptions.
-  Until it exists, feeds are seeded by hand, which is fine for one reader.
-  Feed autodiscovery from a pasted site URL (`<link rel="alternate">`) is
-  the obvious nicety and costs a second fetch through the same guard.
+- **Stage 3 — the sources page.** Add and remove a feed from Subscriptions,
+  with the aggregator refusal from Decision 2 living on the add path — the
+  one moment the reader is present to be told why a feed was declined.
+  Until the page exists, feeds are seeded by hand, which is fine for one
+  reader. Feed autodiscovery from a pasted site URL
+  (`<link rel="alternate">`) is the obvious nicety and costs a second fetch
+  through the same guard.
 - **Stage 4 — into editions.** The prompt gains `<post>` elements and
   `newsletter_ids` becomes `item_ids`; `Edition::Prompt::VERSION` goes to
-  2; the per-blog cap from Stage 0's numbers goes in. `Edition::Window`,
-  `Edition::Editor` and `Edition::Citation` need no structural change,
-  which is the whole return on Stage 1.
+  2; the prose floor goes in. `Edition::Window`, `Edition::Editor` and
+  `Edition::Citation` need no structural change, which is the whole return
+  on Stage 1 — and at ~3 items a day the completeness guarantee needs no
+  relaxing either.
 - **Stage 5 — the follow-ups.** Full-text fetch for summary feeds if
   Stage 0 says enough of them need it; silencing; caps tuned against real
   editions.
@@ -633,33 +667,31 @@ edition is noise. `spec/config/recurring_spec.rb` is what checks the line.
 - A `Source` abstraction over blogs and senders, per Decision 1D — let it
   fall out of two concrete cases rather than designing it now. A delegated
   type makes it easier later, which is a reason not to reach for it now.
+- **Aggregator feeds** — Hacker News, lobste.rs, Reddit, Planet rollups.
+  Decided out of scope in Decision 2, on the measurement. siftbox reads
+  sources, and a list of links is not one.
 
 ## Open questions
 
 1. **Does completeness hold for posts?** Every newsletter in a window earns
    a citation. Should every blog post? A post is public and permanent where
    mail is delivered once, which is the strongest argument the guarantee
-   has for treating them differently — and it is the reader's promise to
-   change, not an implementer's.
-2. **Are aggregator feeds in scope at all?** The measurement says one
-   Hacker News subscription is 37 of 40 items in a day, every one of them
-   carrying no reporting to cite. Refusing the shape outright — a feed
-   whose items have no body is a list of links, not a source — would be a
-   smaller and more honest answer than a prose floor, if the reader never
-   wanted one in the first place.
-3. **What is the per-blog cap and the prose floor, and what happens to what
-   they exclude?** A cap that silently drops the eleventh post of the day
-   is the failure the pen was built to prevent, on a different axis. And a
-   floor is this app deciding an item is not worth reporting, which the
-   reader should know it is doing.
-4. **Do truncated feeds get full-text fetching, or an honest marker?** The
+   has for treating them differently. Less pressing now that the scope
+   decision has taken the volume out of it, but still the reader's promise
+   to change rather than an implementer's.
+2. **Where is the aggregator rule enforced, and how does it read?** The
+   scope is decided; the mechanism is not. An add-time check on the sources
+   page that samples a feed and refuses a stub-bodied one is the proposal —
+   what it should say when it refuses, and whether it can be overridden,
+   are the open parts.
+3. **Do truncated feeds get full-text fetching, or an honest marker?** The
    marker is nearly free; the fetcher is a readability implementation and a
    new class of failure. Note from the measurement that "truncated" has no
    reliable detector — see Parsing.
-5. **Does a post's "view original" leave the app?** It is the only honest
+4. **Does a post's "view original" leave the app?** It is the only honest
    original a post has, and it is the first outbound link the reading
    surfaces would carry.
-6. **Is the delegated type worth its migration before the feature has
+5. **Is the delegated type worth its migration before the feature has
    proved itself?** Option C buys a final stage that changes a prompt and a
    column name instead of every query in the edition path, and pays for it
    with a migration over every row the reader has, run before a single post
