@@ -19,11 +19,12 @@ The finding, up front, in three parts:
    resolve-then-dial DNS-rebinding protection. A feed poller needs exactly
    that, for XML instead of images.
 3. **The editor is where this actually costs something**, and the PRD's
-   "the edition's shape doesn't change" is optimistic. `Edition::Editor`
-   requires every item in the window to be cited by some story and abandons
-   the edition otherwise. Newsletters are pre-curated digests; feeds are
-   raw. The volume and the completeness guarantee are the real design
-   problem, and they want answering before a table exists.
+   "the edition's shape doesn't change" is optimistic. Measured against ten
+   real feeds (Decision 2), the money is a non-issue — a day of them is
+   about 2,000 tokens — and the problem is entirely `Edition::Editor`'s
+   completeness guarantee, which demands a citation for every item in the
+   window. Thirty-seven of a measured forty carry no reporting to cite.
+   That wants answering before a table exists.
 
 So the recommendation is to stage it, to put a measurement first — the
 same order Milestone 0 used for the editor itself — and to store the two
@@ -215,55 +216,126 @@ fiction.
 This is the one that matters, and the one the PRD's "the edition's shape
 doesn't change" glosses over.
 
-The arithmetic as it stands. `Newsletter::Prose::MAXIMUM_CHARACTERS` is
-12,000 — roughly 3,000 tokens a source — against a PRD assumption of
-around twenty newsletters and ~60k input tokens a day.
-`Edition::Draft::MAX_TOKENS` is 32,000 for thinking *and* the edition, and
-`Edition::Editor` insists every item in the window is cited by some story,
-giving up after three attempts and publishing nothing.
+It is also the one worth measuring rather than reasoning about, so it was
+measured. Ten real feeds were fetched and every item run through the app's
+own `Newsletter::Body` and `Newsletter::Prose` — the same two passes
+`Edition::Prompt#prose` makes — so the character counts below are what the
+editor would actually be handed. The feeds: Hacker News, lobste.rs, Julia
+Evans, Dan Luu, Simon Willison, the Rust blog, Martin Fowler, DHH, the
+GitHub blog and Coding Horror.
 
-Feeds break that in a way newsletters do not:
+### A day's window across those ten feeds
 
-- **A newsletter is already a digest.** One issue carries five items; the
-  editor's clustering is what the prompt is for. A blog post is one item.
-  Ten feeds at a post a day is ten more sources for ten more items, at
-  lower signal per token than ten more newsletters would be.
-- **Aggregate feeds are the blowout case.** A Hacker News or lobste.rs
-  front-page feed is thirty-plus items a poll, refreshed continuously. One
-  such subscription is larger than the entire current window.
-- **Completeness turns volume into a wall.** Forty items means forty
-  forced citations, and the ones with nothing to say become forty deadpan
-  Briefly lines. That is the guarantee working exactly as designed and
-  producing an unreadable edition.
+| | |
+|---|---|
+| items published in 24 hours | **40** |
+| prose after `Newsletter::Prose`, capped | **8,246 characters — about 2,060 tokens** |
+| items whose prose is under 200 characters | **37** |
+| items whose prose is under 50 characters | **35** |
 
-Three ways out, in the order I would try them:
+**The cost is not the problem, and this document said otherwise in an
+earlier draft.** Two thousand tokens is about three per cent of the PRD's
+assumed 60k-token newsletter window. Ten feeds a day is rounding error on
+the bill. What they are is thirty-seven more sources that
+`Edition::Editor` will demand a citation for.
 
-1. **Bound the window per source.** The PRD already anticipates this under
-   Edge cases — "a per-source cap bounds the prompt". A cap of, say, three
-   posts per blog per window keeps a prolific blog from crowding out nine
-   quiet ones, and keeps an aggregator honest. Simple, mechanical, and it
-   leaves the guarantee intact for what is admitted. What is *not* admitted
-   needs saying out loud somewhere — otherwise it is the silent drop the
-   pen exists to prevent.
-2. **Relax completeness for posts only.** The guarantee's stated
+### The example that shows it
+
+Of those 40 items, 37 come from the two aggregators, and this is an
+unedited Hacker News item as `Newsletter::Prose` hands it over:
+
+```
+title: "DeepSeek-v4-flash-vision-exp"
+prose: "Comments"
+```
+
+That is the whole body. The word "Comments", eight characters, because an
+aggregator's `<description>` is a link to its own thread. Twenty of these
+arrive from Hacker News in a day and seventeen more from lobste.rs, median
+body eight characters each.
+
+`Edition::Prompt` would quote each one as a source. And
+`Edition::Prompt::INSTRUCTIONS` tells the editor three things that cannot
+all hold for such an item:
+
+- "Every newsletter gets cited by at least one story — a dull one earns a
+  deadpan line in briefly, not silence."
+- "Report only what the sources say. You have no other knowledge of these
+  events. Anything you remember about them stays out."
+- "Invent nothing: no links, no figures, no quotes, no names that are not
+  in the sources."
+
+Cite it, write it from the source alone, and invent nothing — from a
+headline and the word "Comments". The three outcomes are all bad:
+
+1. **It complies.** Thirty-seven deadpan Briefly lines that restate
+   thirty-seven headlines. The edition is now mostly aggregator titles, and
+   the reader has an RSS reader with extra steps.
+2. **It drops some.** `Edition::Editor#uncited` fires, three attempts go
+   out against the identical memoised prompt, `Incomplete` is raised, and
+   `Edition::CompositionJob`'s `discard_on` logs it and gives up. **No
+   edition that morning.**
+3. **It fills the gap from memory.** It knows what DeepSeek is. Now a
+   claim in the edition is not supported by the source beside it, which is
+   the one failure the citation guarantee exists to make impossible —
+   arriving through the front door, because the prompt asked for a line and
+   left nothing to write one from.
+
+Outcome 2 is the one that compounds. `Edition.watermark` is
+`maximum(:window_ended_at)` over *published* editions, so a discarded
+composition does not move it: tomorrow's window is 48 hours and eighty
+aggregator items, and it fails harder. Day three is 120. Nothing in the app
+recovers from this on its own — a person has to.
+
+### What the same measurement says about long-form feeds
+
+The opposite shape, and much less alarming. Dan Luu's feed carries 128
+items of which 22 hit the 12,000-character cap outright, median prose
+11,997 characters — full articles, not summaries. Five long-form blogs
+publishing daily would add around 15k input tokens a day. Real, affordable,
+and not what breaks anything. Their cost is on the *output* side: the
+prompt asks for a review of each evergreen item — what it teaches, how deep
+it goes, whether it is worth an evening — and `Edition::Draft::MAX_TOKENS`
+is 32,000 for thinking *and* the edition.
+`docs/briefing-followups.md` already flags that ceiling as never tested
+against a full edition.
+
+So there are two different volume problems and they want different
+answers: aggregators break completeness, long-form feeds press on the
+output ceiling.
+
+### Ways out, in the order I would try them
+
+1. **Bound the window per source.** The PRD anticipates this under Edge
+   cases — "a per-source cap bounds the prompt". Three posts per blog per
+   window keeps a prolific feed from crowding out nine quiet ones. Measured
+   against the day above it takes 40 items to 16, which is the difference
+   between a wall and an edition. What is *not* admitted needs saying out
+   loud somewhere, or it is the silent drop the pen exists to prevent.
+2. **Refuse the aggregator shape at ingest.** The stronger move, and the
+   measurement is what makes it defensible: an item whose prose is eight
+   characters carries no reporting to condense, and no cap fixes that — a
+   cap of three still hands the editor three items reading "Comments". A
+   floor on prose length, below which an item is stored for the archive but
+   never enters a window, is one predicate and it closes the whole failure
+   above. It wants naming honestly as this app's judgement, not as a fact
+   about the item.
+3. **Relax completeness for posts only.** The guarantee's stated
    justification is that "with the inbox demoted, an uncited newsletter is
-   one the reader has no other surface to find". That argument is
-   materially weaker for a blog post: it is public, permanent, and one
-   click away on a site the reader chose to follow. Mail is delivered once
-   and losing it is losing it. So posts could be "covered or knowingly
-   skipped" where newsletters stay "covered", with the skip recorded rather
-   than inferred. This is a genuine change to the edition's promise and
-   wants deciding by the reader, not by an implementer.
-3. **Expect the reading list to absorb most of it.** Worth stating because
-   it is probably true and it changes what "good" looks like: most blog
-   posts are evergreen essays, so they land in `reading_list`, where the
-   prompt already asks for a review rather than a summary. Blogs may make
-   the reading list the biggest section of the edition. That is arguably
-   the product working.
+   one the reader has no other surface to find". That is materially weaker
+   for a blog post: public, permanent, one click away on a site the reader
+   chose to follow. Mail is delivered once and losing it is losing it. A
+   genuine change to the edition's promise, and the reader's to make.
+4. **Expect the reading list to absorb the rest.** Most blog posts are
+   evergreen essays, so they land in `reading_list`, where the prompt
+   already asks for a review rather than a summary. Blogs may make the
+   reading list the biggest section of the edition, which is arguably the
+   product working.
 
-**Recommend 1 plus 3 to start, and put 2 to the reader as an open
-question.** Whatever is chosen, `Edition::Prompt::VERSION` bumps, because
-the instructions have to describe what a post is and how to attribute one.
+**Recommend 2 plus 1, with 4 as the expected outcome, and put 3 to the
+reader as an open question.** Whatever is chosen,
+`Edition::Prompt::VERSION` bumps, because the instructions have to describe
+what a post is and how to attribute one.
 
 ## Decision 3 — what identifies a post, and what "seen before" means
 
@@ -323,6 +395,13 @@ them out of the window by publication date on that first poll only. It
 wants to be one clearly-named method with the reasoning above it, not an
 incidental `.limit`.
 
+The measurement puts a number on why. The ten feeds carry **328 items**
+between them, and unbounded that is **520,000 tokens** of prose — roughly
+two and a half times the model's context window. A first poll with no guard
+does not produce an expensive edition, it produces a request that cannot be
+made at all. Dan Luu's feed is 128 of those items on its own, because it
+carries the entire archive with no truncation.
+
 ## The fetch
 
 Reuse, with one extraction:
@@ -349,9 +428,13 @@ New concerns that images did not have:
   REXML is currently a *test-only* transitive dependency, via `crack` under
   webmock. Whatever parses feeds must have its entity handling stated
   explicitly in the file, not inherited from a default.
-- **A size cap that is not the image cap.** 5MB is generous for an image
-  and generous for a feed too; the point is that it must be stated for
-  feeds rather than borrowed.
+- **A size cap that is not the image cap, and is bigger.** This was
+  guessed wrong first time: `Newsletter::ImageDownload::MAX_BYTES` is 5MB,
+  and Dan Luu's Atom feed measured **11.2MB** — a legitimate feed from a
+  well-known blog, silently refused by a borrowed ceiling. Feeds carry
+  archives where images carry one picture. The cap has to be chosen for
+  feeds and it has to be generous, which makes the streaming byte check in
+  `ImageDownload#capped_body` more load-bearing here than it is there.
 - **Conditional GET.** Store the blog's `ETag` and `Last-Modified` and send
   them back. Polite, and it makes an hourly poll nearly free for the
   publisher. Store `Last-Modified` as the header string verbatim rather
@@ -384,8 +467,20 @@ forty-line decision that can be revisited without touching anything else.
 Note in the diff that `rexml` becomes a production dependency, per
 `.claude/rules/review.md` on dependency bumps.
 
-**The partial-feed problem is worth calling out separately.** Many blogs
-publish a two-line `<description>` and no `content:encoded`. The editor
+**The partial-feed problem is worth calling out separately, and the
+measurement sharpened it.** The obvious detector — the body arrived in
+`<summary>`/`<description>` rather than `<content>`/`content:encoded` — does
+not work. Dan Luu's feed puts *full articles* in `<summary>`: 128 items,
+median prose 11,997 characters, 22 of them hitting the 12,000 cap. Simon
+Willison's feed is also all `<summary>`, median 1,169 characters, and those
+short ones are mostly link posts that are short by design rather than
+truncated. So which element carried the body says nothing, and length alone
+cannot separate "truncated" from "briefly, on purpose". Any rule here is a
+heuristic, and it should say so out loud the way
+`Newsletter::Confirmation` does.
+
+The shape of the problem is unchanged: many blogs publish a two-line
+`<description>` and no `content:encoded`. The editor
 would read that as the PRD's *teaser* nature and report it as paywalled —
 "the free portion covers X; the rest is paywalled" — which is a falsehood
 about a blog that simply publishes summary feeds. Two ways out: fetch the
@@ -479,15 +574,14 @@ it already is.
 
 ## Staging
 
-- **Stage 0 — measure, store nothing.** A development rake task pointed at
-  ten real feeds that prints what a day's window would look like: item
-  counts per feed, prose sizes after `Newsletter::Prose`, an input-token
-  estimate against the current window, and how many items are summary-only.
-  This answers Decision 2 with numbers instead of guesses, and it is the
-  same move Milestone 0 made before the editor was wired to a schedule.
-  Nothing below is worth starting until it has run — if the numbers say
-  feeds cannot join editions without breaking completeness, the migration
-  in Stage 1 may not be wanted at all.
+- **Stage 0 — measure, store nothing.** *Partly done: the numbers under
+  Decision 2 and Decision 4 come from exactly this, run by hand against ten
+  real feeds.* What is left is to make it a development rake task and point
+  it at the reader's own feed list rather than a plausible one, over
+  several days rather than one snapshot, so the per-blog cap and the prose
+  floor are tuned against what they will actually see. The one snapshot was
+  enough to change two recommendations and correct two numbers in this
+  document, which is the argument for doing the rest of it before Stage 1.
 - **Stage 1 — the delegated type, with one type.** Introduce `items`, move
   the shared columns and the pen onto it, repoint `edition_citations`, and
   leave `Newsletter` as the only `itemable`. No feeds, no posts, no new
@@ -542,22 +636,31 @@ edition is noise. `spec/config/recurring_spec.rb` is what checks the line.
 
 ## Open questions
 
-1. **Does completeness hold for posts?** Every newsletter in a window
-   earns a citation. Should every blog post? A post is public and
-   permanent where mail is delivered once, which is the strongest argument
-   the guarantee has for treating them differently — and it is the reader's
-   promise to change, not an implementer's.
-2. **What is the per-blog cap, and what happens to what it excludes?** A
-   cap that silently drops the eleventh post of the day is the failure the
-   pen was built to prevent, on a different axis.
-3. **Do summary-only feeds get full-text fetching, or an honest marker?**
-   Stage 0's numbers should decide it. The marker is nearly free; the
-   fetcher is a readability implementation and a new class of failure.
-4. **Does a post's "view original" leave the app?** It is the only honest
+1. **Does completeness hold for posts?** Every newsletter in a window earns
+   a citation. Should every blog post? A post is public and permanent where
+   mail is delivered once, which is the strongest argument the guarantee
+   has for treating them differently — and it is the reader's promise to
+   change, not an implementer's.
+2. **Are aggregator feeds in scope at all?** The measurement says one
+   Hacker News subscription is 37 of 40 items in a day, every one of them
+   carrying no reporting to cite. Refusing the shape outright — a feed
+   whose items have no body is a list of links, not a source — would be a
+   smaller and more honest answer than a prose floor, if the reader never
+   wanted one in the first place.
+3. **What is the per-blog cap and the prose floor, and what happens to what
+   they exclude?** A cap that silently drops the eleventh post of the day
+   is the failure the pen was built to prevent, on a different axis. And a
+   floor is this app deciding an item is not worth reporting, which the
+   reader should know it is doing.
+4. **Do truncated feeds get full-text fetching, or an honest marker?** The
+   marker is nearly free; the fetcher is a readability implementation and a
+   new class of failure. Note from the measurement that "truncated" has no
+   reliable detector — see Parsing.
+5. **Does a post's "view original" leave the app?** It is the only honest
    original a post has, and it is the first outbound link the reading
    surfaces would carry.
-5. **Is the delegated type worth its migration before the feature has
-   proved itself?** Option C buys a Stage 4 that changes a prompt and a
+6. **Is the delegated type worth its migration before the feature has
+   proved itself?** Option C buys a final stage that changes a prompt and a
    column name instead of every query in the edition path, and pays for it
    with a migration over every row the reader has, run before a single post
    exists. Option B inverts both. The recommendation is C on the grounds
