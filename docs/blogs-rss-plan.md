@@ -47,16 +47,22 @@ here, with one open difference recorded in Decision 1b of
 - **One `sources` table serves both kinds.** Conceded — this branch's
   earlier objection assumed the two cases would arrive months apart, and
   they are concurrent.
-- **Open: the feed half's shape.** That branch keys on a string
-  `identifier` (feed URL); this one argues for a `blog_id` foreign key with
-  `sender_email` for mail and a check constraint, so `Blog` stays whole and
-  a mutable URL is not stored twice. Needs settling before either lands.
+- **Settled: typed references, not a shared identifier string.** `sources`
+  carries `sender_email` for mail and a `blog_id` foreign key for feeds,
+  with a check constraint that exactly one is set, another that
+  `sender_email` is non-empty, and no `kind` column. `Blog` stays whole.
+- **Settled: `NOT EXISTS`, not a guarded subquery**, on both branches, for
+  structural immunity to the NULL trap rather than a guard every future
+  scope has to remember.
+- **Sequenced so their branch is not blocked.** `sources` ships mail-only
+  there; the `blog_id` column, its check constraint and its index arrive
+  additively here in Milestone 1, against a table that already exists.
 - **`Newsletter::Source` → `Newsletter::Markup`** lands there, in its own
   commit, before either branch references a top-level `Source`. Nothing
   here adds new references to it in the meantime.
-- **`Edition::Window` is edited by both.** Whoever lands second rebases.
-  Milestone 2 below merges two relations; the silence test applies to
-  **both** of them, and the guard in Decision 1b is not optional.
+- **`Edition::Window` is edited by both.** They take the rebase if they
+  land second. Milestone 2 below merges two relations; the silence test
+  applies to **both** of them, as a correlated `NOT EXISTS`.
 - **The Subscriptions page.** That branch owns the Sources section and the
   mute state; this one contributes the add-a-feed form and the aggregator
   refusal in Milestone 3, rendering into their section rather than beside
@@ -109,6 +115,18 @@ Two migrations, both additive, neither touching `newsletters`:
 
 The columns mirror `newsletters` on purpose — the reading pipeline is
 already shared, and this is what lets it stay shared.
+
+**Plus a third, if the silencing branch has landed:** `sources` gains
+`blog_id` (FK, `on_delete: :cascade`), the check constraint tying it to
+`sender_email` so exactly one is set, and a partial unique index. Additive
+against a table that already exists — that sequencing is what keeps their
+branch from being blocked on this one.
+
+It also carries a spec that could not be written on their branch, because
+it needs `blog_id` to exist: **a silenced source with no `sender_email`
+must not empty the window.** That is the `NOT IN` trap, and the correlated
+`NOT EXISTS` is what makes it pass. Flagged on both sides so neither
+assumes the other has it.
 
 ### The ingest path
 

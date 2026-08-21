@@ -330,9 +330,14 @@ fiction.
 
 ## Decision 1b — the shared roster, and where it should not be shared
 
-Conceded in Decision 1D: one `sources` table serves both kinds. What
-follows is this branch's position on its shape, which differs from
-`docs/silencing.md` in one column and agrees with it everywhere else.
+Conceded in Decision 1D: one `sources` table serves both kinds. Its shape
+was contested for one column and is now **settled with the silencing
+branch** — typed references rather than a shared identifier string, no
+`kind`, and `NOT EXISTS` as the query shape on both branches. What follows
+is the reasoning, kept because the argument is what makes the shape
+defensible later.
+
+The exchange itself is in `docs/blogs-rss-reply.md`.
 
 ### The feed identifier is the wrong shape, and it is the fixable part
 
@@ -364,50 +369,94 @@ foreign key is sitting right there. Three concrete consequences:
   what the reader typed, or where it resolved? Mail has no equivalent
   question.
 
-**The counter-proposal:** `sources` carries the roster's own data — `name`,
-`silenced_at` — and a *typed* reference to what it is about:
-`sender_email` for mail, a `blog_id` foreign key for feeds, with a check
-constraint that exactly one is set. This is the same pattern Decision 1
-adopts for `edition_citations` on GitLab's advice, applied consistently:
-point at the row when a row exists, and use the string only where mail
-genuinely has nothing to point at.
-
-That answers **`Blog belongs_to :source`: no, the other way round.** `Blog`
-stays whole — feed URL, ETag, `Last-Modified` header, last poll, display
-name in one place — and `Source` references it. Splitting a blog's name and
-its fetch target across two tables would leave `Blog::Poll`, the sources
-page and the post presenter each reassembling one object from two rows.
-
-### The cost of the counter-proposal, found by testing it
-
-Making the reference columns nullable introduces a trap that the
-`null: false` identifier does not have, and it is severe enough to state
-loudly. `where.not(col: subquery)` compiles to `col NOT IN (subquery)`, and
-`NOT IN` over a set containing NULL is never true. Against real SQLite:
+**Settled shape**, agreed with the silencing branch:
 
 ```
-newsletters total:      3
-NOT IN, unguarded:      0   <- expected 2
-NOT IN, NULL-guarded:   2   <- expected 2
+sources
+  id
+  sender_email  string                                    # mail only
+  blog_id       integer, FK -> blogs, on_delete: :cascade  # feed only
+  name          string,  null: false, default: ""
+  silenced_at   datetime
+  check: exactly one of sender_email, blog_id is set
+  check: sender_email <> ''
+  unique on sender_email where sender_email is not null
+  unique on blog_id      where blog_id is not null
 ```
 
-With one silenced feed row carrying a NULL `sender_email`, the unguarded
-mail scope returns **nothing** — silencing one blog would drop every
-newsletter from every edition. And it fails quietly: an empty window falls
-through `Edition::Window#empty?` to `Edition::CompositionJob#skipped`,
-which logs "no newsletters since the last edition closed" and publishes
-nothing. Indistinguishable from a quiet day.
+Point at the row where a row exists; use the string only where mail
+genuinely has nothing to point at. The same pattern Decision 1 adopts for
+`edition_citations` after GitLab's guidance — typed references and a check
+constraint rather than one untyped pointer — so the two tables are
+consistent with each other.
 
-Two mitigations, both cheap, and the scope wants a spec that fails without
-them: guard the subquery with `where.not(sender_email: nil)`, or write it
-as a correlated `NOT EXISTS`, for which this codebase already has form in
-`Newsletter::EARLIEST_FROM_SENDER`. The feed half avoids the trap entirely,
-because it is a join through a foreign key rather than a `NOT IN` over
-strings.
+**No `kind` column.** An earlier draft of this proposal had one. The
+silencing branch pointed out that it is derivable from which reference
+column is set, so with the check constraint it is a fourth representation
+of one fact and a fourth thing that can disagree with the other three —
+which is the objection that killed the shared identifier, turned on the row
+itself. `Source.mail` is `where.not(sender_email: nil)`. Correctly argued,
+and conceded.
 
-This is a real cost of the counter-proposal and not of the original. It is
-worth paying for a constrained foreign key and an unduplicated URL, but the
-guard is not optional.
+**`Blog` is not split.** It keeps feed URL, `ETag`, the `Last-Modified`
+header, last poll and its display name; `Source` references it. Splitting a
+blog's name from its fetch target across two tables would leave
+`Blog::Poll`, the sources page and the post presenter each reassembling one
+object from two rows.
+
+### The query shape is `NOT EXISTS`, and that is binding
+
+Nullable reference columns carry a trap the `null: false` identifier did
+not. `where.not(col: subquery)` compiles to `col NOT IN (subquery)`, and
+`NOT IN` is never true against a set containing NULL. Against real SQLite,
+with five newsletters and one silenced *feed* source whose `sender_email`
+is NULL:
+
+```
+NOT IN      -> 0   (expected 4)
+NOT EXISTS  -> 4   (expected 4)
+```
+
+So the naive scope means **silencing one blog drops every newsletter from
+every edition** — and it fails quietly, through `Edition::Window#empty?`
+into `Edition::CompositionJob#skipped`, logged as "no newsletters since the
+last edition closed". Indistinguishable from a quiet day.
+
+A guarded subquery (`.where.not(sender_email: nil)`) also fixes it, and the
+silencing branch's argument for preferring `NOT EXISTS` is the right one
+and is adopted as the agreed shape on both branches: the failure is silent
+and total, so structural immunity beats a guard that every future scope
+touching this table has to remember. `Newsletter::EARLIEST_FROM_SENDER` is
+the house precedent, comment and all.
+
+Accepted cost: mail and feeds no longer share a query shape — mail is a
+correlated `NOT EXISTS` over strings, feeds are a join through a foreign
+key — so each wants its own `EXPLAIN QUERY PLAN` in the diff, the way the
+pen's queries were checked.
+
+### The empty sender is a separate hole, and `NOT EXISTS` does not close it
+
+Tested in the same session, and worth stating because it looks like the
+same bug and is not. `newsletters.sender_email` defaults to `""` and stays
+that way for mail whose From header will not parse — `InboundMessage`
+guards for exactly this, and the app has a deliberate handful. A `sources`
+row carrying `""` therefore matches all of them at once:
+
+```
+a source row with sender_email = ""
+NOT IN      -> 3   (both unparseable newsletters silenced)
+NOT EXISTS  -> 3   (identical; the query shape does not help)
+```
+
+So the non-empty rule is orthogonal to the query shape and neither
+substitutes for the other. The silencing branch is validating it; a check
+constraint belongs under the validation as the floor, the way
+`Edition::Citation`'s uniqueness has a unique index under it.
+
+**One spec cannot be written on that branch.** "A silenced source with no
+`sender_email` must not empty the window" needs `blog_id` to exist, so it
+lands here, in Milestone 1, with the column. Flagged on both sides so
+neither assumes the other has it.
 
 ## Decision 2 — how the editor survives feed volume
 

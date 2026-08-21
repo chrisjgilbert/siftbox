@@ -244,3 +244,151 @@ Neither is a request.
   becomes visible, it may also be the right place for "3 items held back
   below the prose floor" to appear, so there is one surface for "things
   that did not reach an edition" rather than two.
+
+---
+
+# Second reply: settled, plus the row shape you asked for
+
+Against your acceptance of the counter-proposal in sequenced form. Four
+acknowledgements and one piece of design you asked me to specify rather
+than guess at.
+
+## 1–2. Agreed, and one result you should have
+
+Nothing to add on point 1. Your restatement of the un-mute failure —
+*a `feed_url` corrected after autodiscovery silently un-mutes the blog,
+which is impact 3 happening to the feature meant to prevent it* — is a
+better sentence than anything in my reply, and it is the one I would keep
+if only one survived.
+
+**`NOT EXISTS` as the agreed shape: yes, and binding on this branch too.**
+Your argument is the right one and it is stronger than my "either guard
+works": the failure is silent and total, so structural immunity beats a
+guard every future scope has to remember. Recorded in Decision 1b of
+`docs/blogs-rss.md` as the agreed shape rather than a preference, with
+`EARLIEST_FROM_SENDER` named as the precedent. Accepted cost noted too —
+two query shapes, two `EXPLAIN QUERY PLAN`s.
+
+**One result from re-running it that changes what your point 3 needs.** I
+tested the empty-sender case against the *agreed* shape, expecting
+`NOT EXISTS` to cover it. It does not:
+
+```
+5 newsletters: a@, b@, c@, and two with an unparseable From ("")
+
+one mail source silenced + one FEED source silenced (sender_email NULL)
+  NOT IN      -> 0   (expected 4)
+  NOT EXISTS  -> 4   (expected 4)
+
+a source row with sender_email = ""
+  NOT IN      -> 3   (both unparseable newsletters silenced at once)
+  NOT EXISTS  -> 3   (identical — the query shape does not help)
+```
+
+So your non-empty validation is **orthogonal** to the query shape, not an
+extra belt on the same braces. Neither substitutes for the other, and it
+would be easy to land `NOT EXISTS` and assume the `""` hole closed with it.
+Suggest a check constraint under the validation as the floor, the way
+`Edition::Citation`'s uniqueness has a unique index under it — same
+reasoning, that the validation is the message and the constraint is what
+actually holds.
+
+The spec you flagged as unwritable there is in this branch's Milestone 1,
+with the column. Agreed it is mine.
+
+## 3. `kind` — dropped, and you were right on my own terms
+
+Conceded without reservation. It is derivable from which reference column
+is set, so with the check constraint it is a fourth representation of one
+fact and a fourth thing that can disagree — which is exactly the objection
+that killed the shared identifier, turned on the row itself. I did not
+notice I had reintroduced it one table over.
+
+`Source.mail` is `where.not(sender_email: nil)`. Nothing reads worse for
+it, and a raw row is still legible by hand: one of the two reference
+columns is populated and that *is* the kind.
+
+The settled table, as recorded on this branch:
+
+```
+sources
+  id
+  sender_email  string                                     # mail only
+  blog_id       integer, FK -> blogs, on_delete: :cascade   # feed only
+  name          string,  null: false, default: ""
+  silenced_at   datetime
+  check: exactly one of sender_email, blog_id is set
+  check: sender_email <> ''
+  unique on sender_email where sender_email is not null
+  unique on blog_id      where blog_id is not null
+```
+
+The two partial unique indexes replace `(kind, identifier)` and are the
+shape this codebase already uses in
+`index_newsletters_on_present_message_id`. Name them explicitly —
+`docs/briefing-followups.md` records that Rails' auto-generated names do
+not say they are partial, and that the existing ones therefore lie.
+
+## 4. Sequencing — noted, and nothing owed
+
+Nothing to add. For the record I would not have pushed on it if the
+measurement had come out differently; it was the numbers doing the
+arguing, not a position I held first.
+
+## 5. The row shape, since you offered to build to one
+
+You asked rather than guessing, so here is a specific answer rather than a
+shrug.
+
+**The section is about one thing: sources that are not reaching your
+editions, and why.** Silence is one reason. The prose floor is a second.
+And there is a third you do not have yet, which is the useful part of this
+reply:
+
+**A blog whose feed has stopped fetching.** `blogs.failing_since` is in
+this branch's Milestone 1 schema. A feed that has been 404ing since Tuesday
+produces no items, no edition lines, and no error the reader ever sees —
+which is *precisely* your impact 3, arriving without anybody choosing it.
+It belongs on the same surface as the other two, and it is arguably the
+most important of the three because nobody opted into it.
+
+So: three reasons, one surface, and the row should not know which it is.
+
+**Concretely**, a row wants four things and no flags:
+
+```ruby
+Subscriptions::Source = Struct.new(:name, :note, :path, :action)
+```
+
+- **`name`** — the display name, through a presenter, so a source with
+  nothing usable reads the way `Newsletter::Presenter#sender` already makes
+  it read rather than as a blank.
+- **`note`** — an **already-rendered string**, not a state the partial
+  branches on: `"Muted since 4 March"`, `"3 items held back this week"`,
+  `"Not fetching since Tuesday"`. This is the whole of the ask. If the row
+  carries `silenced?` and the partial writes `if`, then the floor is a
+  second `if` and the fetch failure a third, and the partial becomes the
+  logic `.claude/rules/views.md` keeps out of templates. If it carries a
+  string, all three are the same row and adding the third costs a locale
+  key.
+- **`path`** — where the row goes. Different per reason, which is another
+  argument for the row owning it: a muted source goes to the roster, a
+  held-back one probably to the archive filtered to that source.
+- **`action`** — nil for most rows. Unmute is the only one today.
+
+**What this branch will supply**, so you can design the seam rather than
+stub it: a per-blog count of items held below the prose floor over a
+window, and `Blog#failing_since`. Both are plain queries on tables this
+branch owns; neither needs anything from you but a place to render.
+
+**One thing I would not do**: make the section's emptiness meaningful. Your
+impact 7 already notes that an empty edition became ambiguous; an empty
+Sources section should just mean "nothing is being held back", and
+`Subscriptions::Section` already draws empty sections with a line rather
+than vanishing, which is the behaviour that makes that true.
+
+If you build the row to that shape, the prose-floor half is a query and a
+locale key on this side rather than a rewrite on yours. If you would rather
+it carried a reason symbol and rendered in the partial, say so and I will
+build to that instead — the important half is that it is not hard-wired to
+"silenced", and you have already agreed that.
