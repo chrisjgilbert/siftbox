@@ -515,7 +515,10 @@ Honest ones, at n=1:
   email itself" reading path.
 - **RSS/blog sources**: a second ingest path writing a sibling of
   `Newsletter`; citations gain a second source type; the edition's shape
-  doesn't change.
+  doesn't change. Investigated against the built code in
+  `docs/blogs-rss.md`, which finds the last clause optimistic — the
+  completeness guarantee and the token budget are what a second source type
+  actually costs.
 - **Email the edition** to the reader's own address.
 - **Private RSS feed of editions** for reader apps.
 - **Weekend edition**: one Saturday edition surfacing the week's long-form
