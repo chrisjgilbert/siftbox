@@ -27,10 +27,9 @@ The finding, up front, in three parts:
    PRD's "the edition's shape doesn't change" is simply true.
 
 So the recommendation is to stage it, to put a measurement first — the
-same order Milestone 0 used for the editor itself — and to store the two
-kinds of source under a **delegated type** rather than as two sibling
-tables, because that is what keeps the third finding from becoming a
-rewrite of the edition path.
+same order Milestone 0 used for the editor itself — and to store posts in
+a **sibling table** with typed foreign keys throughout, which migrates
+nothing that already exists and leaves no unconstrained pointer anywhere.
 
 ## What is already there
 
@@ -95,7 +94,7 @@ Against it, and decisively:
   makes Postmark's retries idempotent would be doing double duty for feed
   dedupe, which has different rules (see Decision 3).
 
-### Option B: a `blog_posts` table, sibling of `newsletters`
+### Option B: a `blog_posts` table, sibling of `newsletters` — recommended
 
 What the PRD says. The rendering pipeline is already generic, so the cost
 lands almost entirely on the editor: two id spaces to keep apart, a window
@@ -111,11 +110,29 @@ explicit `on_delete`. Two nullable keys keep both, keep
 `belongs_to :newsletter` intact for every row that exists today, and read
 honestly: there are two kinds of source, not an open set.
 
-This is what the PRD describes, and it is the right answer only if the next
-option is rejected: it accepts two id spaces, and every seam listed under
-"What is not there" is somewhere that then has to learn about both.
+This is what the PRD describes, and — after a detour through Option C — it
+is what this document recommends. The reasoning is in **Why Option B over
+Option C** below. In short: it needs no migration of anything that already
+exists, and it leaves no unconstrained pointer anywhere.
 
-### Option C: a delegated type — recommended
+**Citations get two nullable foreign keys, not one polymorphic pair.**
+`edition_citations.newsletter_id` stays, `blog_post_id` arrives, and a
+check constraint says exactly one is set. That is not a compromise between
+polymorphism and separate tables — it *is* the separate-tables approach
+applied to a join table. Both columns are real foreign keys with an
+explicit `on_delete`, which is what `.claude/rules/database.md` asks for
+and what a polymorphic pair cannot give.
+
+Keeping it as one table rather than splitting it into
+`edition_newsletter_citations` and `edition_post_citations` is a
+deliberate, smaller divergence: a citation means one thing — "this story
+was written from this source" — so it is one concept with two possible
+targets, not two concepts sharing a home. One table keeps
+`Edition::Story`'s distinct-sources validation in one place, keeps a
+story's sources in a single order, and keeps `EditionRegeneration`'s
+recovery of a window from its citations a single query.
+
+### Option C: a delegated type
 
 `delegated_type` is on Rails 8.1.3.1 and there is no polymorphism anywhere
 in the app today, so this is a clean sheet. An `items` table holds what a
@@ -189,8 +206,89 @@ and the citation list would be back to loading newsletters to print names.
 - **`subject` and `title` unify.** One column on `items`; `title` is the
   general word and `subject` is mail's. A small rename across views and
   locales.
+- **The `inline_images` attachment could not move with the rest**, which
+  the table above gets wrong. `Newsletters::ImagesController` says why in
+  its own comment: the paths it serves "are baked into `body_html` at
+  ingest", so every stored newsletter body contains
+  `/newsletters/:id/images/:blob` as literal text. Moving the attachment to
+  `items` means rewriting hundreds of kilobytes of markup per row in the
+  migration — the most dangerous thing on this list, in exchange for
+  nothing. It would have had to stay behind, splitting the shared table's
+  story.
 - **Two inserts per ingest**, inside the transaction
   `Newsletter::InboundMessage#store` already opens. Cheap.
+
+### Why Option B over Option C
+
+Option C was recommended in an earlier draft. GitLab's database guidelines
+are what changed it, and they are worth quoting because the headline is
+unambiguous: **"Always use separate tables instead of polymorphic
+associations."** Their five objections are storage waste in the type
+column, composite-index ordering, query overhead, single-responsibility,
+and — the one that matters — *"being unable to enforce data consistency on
+the database level using foreign keys."*
+
+Three of the five are about GitLab's scale and do not transfer. Ten bytes a
+row of `itemable_type` is kilobytes here, not gigabytes; composite-index
+ordering and query planning are not pressures on a single-reader SQLite
+database of a few thousand rows. Importing a rule without importing its
+reasons is how a codebase acquires cargo. And their single-responsibility
+objection lands on STI more than on `delegated_type`, which exists
+precisely to keep type-specific columns out of the shared table.
+
+**The foreign-key objection transfers completely, and it is decisive.**
+Count the unconstrained pointers:
+
+- **Option C** has one. `items.itemable_type`/`itemable_id` can point at a
+  `blog_posts` row that no longer exists, and nothing in the database will
+  stop it. The citation edge is safe — `edition_citations.item_id` is a
+  real key — but an unconstrained pointer is still an unconstrained
+  pointer, and `.claude/rules/database.md` asks for foreign keys with an
+  explicit `on_delete` without an exception for structural ones.
+- **Option B** has none. Every edge is a real foreign key.
+
+Then two things that have nothing to do with GitLab and should have been
+weighed the first time:
+
+**Option B migrates nothing that already exists.** `newsletters` is
+untouched; `edition_citations` gains a nullable column. Option C moves
+every row the reader has into a new table, rewrites
+`Newsletter::EARLIEST_FROM_SENDER` across two of them, bumps
+`Edition::Prompt::VERSION` for a key rename, and needs a backup before both
+deploys — an entire milestone of risk that ships the reader nothing. That
+milestone simply does not exist under Option B.
+
+**And Option C is the mistake this document already named once.** Option D
+is rejected below on the grounds that doing the refactor first "means
+designing the abstraction against one real user of it". That is exactly
+what building `items` before `Blog::Post` exists would be. If a shared item
+concept earns its place, it can be extracted later with two concrete cases
+in hand — which is the same argument, applied consistently.
+
+### What Option B costs, and when to revisit
+
+Not free, and the costs are permanent rather than one-off:
+
+- **Two id spaces in the editor, for good.** `Edition::Window` merges two
+  relations, `Edition::Editor#faults_in` does its set arithmetic twice, and
+  `Edition::Story` grows a second `has_many :through` that
+  `Edition::Story::Presenter` unions. Perhaps eighty lines across six
+  files.
+- **Ordering needs a third key.** Every ordering in this app breaks ties on
+  `id` because date headers carry whole seconds and a batch send ties. That
+  argument does not survive a merge — newsletter 5 and post 5 are not
+  comparable — so a merged window or feed needs a total order over
+  `(received_at, type, id)`, and the comments explaining why the tie-break
+  exists need to say so.
+- **A third source type would multiply it.** That is the moment to extract
+  the shared table, with three real cases to design against rather than
+  none.
+
+One cost turns out to be a benefit. `Edition::Prompt::SCHEMA` gains
+`post_ids` beside `newsletter_ids` rather than unifying both into
+`item_ids` — and telling the model which kind of source it is citing is
+better than hiding it, because attribution differs by kind. "Money Stuff
+reports" is wrong over a blog.
 
 ### Option D: a `Source` model first
 
@@ -198,7 +296,7 @@ The PRD's silencing entry says that is the moment "sender" stops being a
 string column, and that per-sender hints and RSS both want it. True, and
 still the wrong order: silencing is a feature for the reader, RSS is a
 second ingest path, and doing the refactor first means designing the
-abstraction against one real user of it. Do C, then let a `Source` fall
+abstraction against one real user of it. Do B, then let a `Source` fall
 out of the two concrete cases if it wants to.
 
 ### Option E, named so it can be rejected: fabricate email
@@ -572,80 +670,52 @@ about what is not — and the parallel is worth being able to see.
 
 ## Schema sketch
 
-For discussion, not a migration, in the PRD's phrasing, and under Option C:
+For discussion, not a migration, in the PRD's phrasing, and under Option B:
 
-- `items` — `itemable_type`, `itemable_id`, `title`, `body_html`,
-  `snippet`, `lead_image_url`, `source_name`, `received_at`, and the pen's
-  `held_at`/`dismissed_at`/`released_at`. `has_many_attached
-  :inline_images` moves here with them. Index `received_at`; keep the two
-  partial indexes the pen already has, and re-check `Edition::Window`'s
-  `EXPLAIN QUERY PLAN` note against the moved columns rather than assuming
-  it still holds.
-- `newsletters` — reduced to `message_id`, `sender_email`, `sender_name`,
-  keeping `index_newsletters_on_present_message_id` exactly as it is: that
-  index is what makes Postmark's ten retries idempotent, and it should not
-  move or change shape in the same migration that moves everything else.
-- `blog_posts` — `blog_id` (FK, `on_delete: :cascade`), `guid`, `url`,
-  `published_at`. Partial unique index on `(blog_id, guid) where guid <> ''`,
-  the same shape the newsletters table already uses.
 - `blogs` — `title`, `feed_url` (unique), `site_url`, `polled_at`, `etag`,
   `last_modified_header`, `failing_since`, and `silenced_at` if silencing
   lands at the same time. Optional strings default to `""` per
-  `.claude/rules/database.md`.
-- `edition_citations` — `newsletter_id` becomes `item_id`, with a foreign
-  key and an `on_delete`. One key, not two, and no check constraint.
+  `.claude/rules/database.md`. `last_modified_header` is deliberately not
+  `_at`: it stores the header as text because servers compare it as text,
+  and a re-emitted timestamp is how you get a 200 every time.
+- `blog_posts` — `blog_id` (FK, `on_delete: :cascade`), `guid`, `url`,
+  `title`, `body_html`, `snippet`, `lead_image_url`, `published_at`,
+  `received_at`. Partial unique index on `(blog_id, guid) where guid <> ''`,
+  the same shape `newsletters` already uses for `message_id`. Index
+  `received_at` — the window filters and sorts on it.
+- `edition_citations` — add nullable `blog_post_id` with a foreign key and
+  an explicit `on_delete`, plus a check constraint that exactly one of the
+  two source columns is set.
+- `newsletters` — untouched. That is the point of Option B.
 
-The pen sits on `items` rather than on `newsletters` for the reason given
-under Option C's costs: its meaning is item-level even though only mail
-triggers it today. `Newsletter::Confirmation` does not move — it reads a
-subject and a sender and writes nothing, so it stays the mail-only detector
-it already is.
+The columns on `blog_posts` mirror the ones `newsletters` already carries
+because the reading pipeline is shared: `Newsletter::Body`,
+`Newsletter::Prose` and `Newsletter::LeadImage` take an HTML string or a
+`Body` and will read a post's without knowing it is one.
+
+Deliberately absent: `held_at` / `dismissed_at` / `released_at`. The pen
+exists for double-opt-in confirmations, which arrive by mail and only by
+mail. A feed has no confirmation step, so copying the three across would be
+three columns nothing ever writes.
+
+Also deliberately absent: `has_many_attached :inline_images` on a post in
+the sense mail has it. A post carries no MIME parts, so
+`Newsletter::InlineImages` has nothing to do — but `RemoteImages` does, and
+a post needs its own attachment and its own images route, because
+`Newsletters::ImagesController` serves paths that are baked into stored
+`body_html` at ingest and are keyed per record.
 
 ## Staging
 
-- **Stage 0 — measure, store nothing.** *Partly done: the numbers under
-  Decision 2 and Decision 4 come from exactly this, run by hand against ten
-  real feeds.* What is left is to make it a development rake task and point
-  it at the reader's own feed list rather than a plausible one, over
-  several days rather than one snapshot, so the prose floor is tuned
-  against what it will actually see. The one snapshot settled the
-  aggregator scope, corrected two numbers in this document and reversed one
-  of its conclusions, which is the argument for doing the rest of it before
-  Stage 1.
-- **Stage 1 — the delegated type, with one type.** Introduce `items`, move
-  the shared columns and the pen onto it, repoint `edition_citations`, and
-  leave `Newsletter` as the only `itemable`. No feeds, no posts, no new
-  behaviour: a refactor whose entire success condition is that the suite
-  and `bin/ci` are as green afterwards as before. Doing it alone is what
-  makes it reviewable — every later stage is additive against a shape that
-  has already been proved against the reader's real archive.
-- **Stage 2 — fetch and store.** `Blog`, `Blog::Post` as the second
-  `itemable`, the poller, the recurring task, dedupe, the first-poll guard,
-  and posts in the archive. Editions untouched. Shippable on its own:
-  nothing already published is affected.
-- **Stage 3 — the sources page.** Add and remove a feed from Subscriptions,
-  with the aggregator refusal from Decision 2 living on the add path — the
-  one moment the reader is present to be told why a feed was declined.
-  Until the page exists, feeds are seeded by hand, which is fine for one
-  reader. Feed autodiscovery from a pasted site URL
-  (`<link rel="alternate">`) is the obvious nicety and costs a second fetch
-  through the same guard.
-- **Stage 4 — into editions.** The prompt gains `<post>` elements and
-  `newsletter_ids` becomes `item_ids`; `Edition::Prompt::VERSION` goes to
-  2; the prose floor goes in. `Edition::Window`, `Edition::Editor` and
-  `Edition::Citation` need no structural change, which is the whole return
-  on Stage 1 — and at ~3 items a day the completeness guarantee needs no
-  relaxing either.
-- **Stage 5 — the follow-ups.** Full-text fetch for summary feeds if
-  Stage 0 says enough of them need it; silencing; caps tuned against real
-  editions.
+The milestones, what each one touches, and the deploy steps are in
+`docs/blogs-rss-plan.md`. Kept there rather than repeated here, so a plan
+that changes as it is worked cannot drift from the decisions above.
 
-The trade against Option B is worth being explicit about. A sibling table
-would let Stage 2 ship first and leave the existing schema alone, so the
-blast radius stays small until the feature has proved itself. The delegated
-type front-loads a migration over every row the reader has, before a single
-post is stored — and buys back a Stage 4 that changes a prompt and a
-column name rather than every query in the edition path.
+The shape, in one line each: measure against the reader's own feeds; fetch
+and store, with posts in the archive and out of editions; then into
+editions behind a prompt version; then the sources page. Under Option B
+there is no refactor milestone — that was Option C's, and it shipped the
+reader nothing.
 
 ## Deploy
 
@@ -691,11 +761,8 @@ edition is noise. `spec/config/recurring_spec.rb` is what checks the line.
 4. **Does a post's "view original" leave the app?** It is the only honest
    original a post has, and it is the first outbound link the reading
    surfaces would carry.
-5. **Is the delegated type worth its migration before the feature has
-   proved itself?** Option C buys a final stage that changes a prompt and a
-   column name instead of every query in the edition path, and pays for it
-   with a migration over every row the reader has, run before a single post
-   exists. Option B inverts both. The recommendation is C on the grounds
-   that the edition path is the part that is hard to change twice — but it
-   is a judgement about appetite for a schema migration, not a technical
-   fact, and it is the reader's to make.
+5. **When does the shared item table earn its place?** Option B leaves two
+   id spaces in the edition path permanently, and a third source type would
+   multiply that rather than add to it. Extracting a shared table then —
+   with three concrete cases to design against — is the intended escape
+   hatch, but nothing here says what would trigger it.
