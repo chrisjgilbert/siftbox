@@ -37,6 +37,34 @@ Not restated per milestone, because it is the same every time:
   the classes being generalised have their rationale written above them; it
   moves with them, updated where the move makes it untrue.
 
+## Coordinating with the silencing branch
+
+`claude/mute-newsletters-reports-kh0rro` (`docs/silencing.md`) is scoping
+silencing at the same time, and the two branches share a roster. Agreed
+here, with one open difference recorded in Decision 1b of
+`docs/blogs-rss.md`:
+
+- **One `sources` table serves both kinds.** Conceded — this branch's
+  earlier objection assumed the two cases would arrive months apart, and
+  they are concurrent.
+- **Open: the feed half's shape.** That branch keys on a string
+  `identifier` (feed URL); this one argues for a `blog_id` foreign key with
+  `sender_email` for mail and a check constraint, so `Blog` stays whole and
+  a mutable URL is not stored twice. Needs settling before either lands.
+- **`Newsletter::Source` → `Newsletter::Markup`** lands there, in its own
+  commit, before either branch references a top-level `Source`. Nothing
+  here adds new references to it in the meantime.
+- **`Edition::Window` is edited by both.** Whoever lands second rebases.
+  Milestone 2 below merges two relations; the silence test applies to
+  **both** of them, and the guard in Decision 1b is not optional.
+- **The Subscriptions page.** That branch owns the Sources section and the
+  mute state; this one contributes the add-a-feed form and the aggregator
+  refusal in Milestone 3, rendering into their section rather than beside
+  it.
+- **Silencing is not staged here.** It is that branch's feature on that
+  branch's timeline. It appears under Parked below only so this plan does
+  not look as though it forgot.
+
 ## Milestone 0 — finish the measurement
 
 The spike in `docs/blogs-rss.md` was run by hand, once, against a plausible
@@ -219,6 +247,10 @@ roughly eighty lines across six files:
 - `Edition::Window` merges two relations, with the same
   `(received_at, type, id)` total order as the archive, and the second
   clause for mail released out of the pen still applying only to mail.
+  **If silencing has landed, the silence test applies to both relations** —
+  the blog one is the easy one to miss, because it arrives already written.
+  It wants a spec that fails when either is left out, and the `NOT IN`
+  NULL guard from Decision 1b.
 - `Edition::Prompt` quotes posts as `<post id="...">` beside
   `<newsletter id="...">`, and `SCHEMA` gains `post_ids` beside
   `newsletter_ids`. Keeping them separate rather than unifying is
@@ -266,9 +298,11 @@ judgement call read by a person, the way the PRD's own Milestone 0 was —
 
 The first write UI in the app outside the waitlist and password reset.
 
-- `resources :blogs, only: [:index, :create, :destroy]`, rendered as a
-  section of the Subscriptions page — which was named for the page rather
-  than the pen exactly so this could land there.
+- `resources :blogs, only: [:index, :create, :destroy]`, rendering into the
+  Sources section the silencing branch builds rather than adding a fourth
+  section beside it. One roster, one section — which is most of the
+  argument for having a shared roster at all. If that branch has not landed,
+  this milestone waits rather than building a section to be merged later.
 - **The aggregator refusal lives on the add path.** Sample the feed on
   submission and decline one whose bodies are stubs, saying why: "this
   looks like a link aggregator; siftbox reads blogs". Refusing where the
@@ -290,7 +324,9 @@ Not scheduled. Each needs evidence first:
 
 - **Full-text fetching** for truncated feeds, if the marker proves
   insufficient. A readability implementation and a new class of failure.
-- **Silencing**, the PRD's first fast follow, which now wants both types.
+- **Silencing** — not parked so much as elsewhere: it is being built on
+  `claude/mute-newsletters-reports-kh0rro`. Listed so this plan does not
+  read as having forgotten it.
 - **A per-blog cap**, if a subscription turns out busier than it looked.
 - **Relaxing completeness for posts**, if volume ever makes it necessary.
 - **A shared item table.** Option C, deferred rather than rejected: a third

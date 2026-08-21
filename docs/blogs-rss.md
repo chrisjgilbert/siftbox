@@ -290,14 +290,33 @@ One cost turns out to be a benefit. `Edition::Prompt::SCHEMA` gains
 better than hiding it, because attribution differs by kind. "Money Stuff
 reports" is wrong over a blog.
 
-### Option D: a `Source` model first
+### Option D: a `Source` model first — reopened, and conceded
 
 The PRD's silencing entry says that is the moment "sender" stops being a
-string column, and that per-sender hints and RSS both want it. True, and
-still the wrong order: silencing is a feature for the reader, RSS is a
-second ingest path, and doing the refactor first means designing the
-abstraction against one real user of it. Do B, then let a `Source` fall
-out of the two concrete cases if it wants to.
+string column, and that per-sender hints and RSS both want it. This
+document rejected it as the wrong order: doing the refactor first means
+designing the abstraction against one real user of it.
+
+**That reasoning no longer applies, and the rejection is withdrawn.** It
+assumed the two cases would arrive months apart. They are being designed
+concurrently, both pre-code, on `claude/mute-newsletters-reports-kh0rro`
+(`docs/silencing.md`) and here. Two real users of the abstraction exist
+right now, which is precisely the condition the objection was waiting for.
+Shipping silencing keyed on `sender_email` and RSS on a standalone `Blog`
+would mean unifying later across two shipped features and live data.
+
+What that concedes is the roster. What it does not concede is the shape of
+its feed half — see below.
+
+**Note on the name.** `Newsletter::Source` (the PORO serving the sandboxed
+frame's HTML) is renamed to `Newsletter::Markup` on the silencing branch,
+in its own commit, because Rails resolves an association's class name
+through the owner's nesting and `Newsletter::Source` therefore wins over a
+top-level `Source`. Verified independently: for `type_name = "Source"` on
+`Newsletter`, `ActiveRecord::Inheritance#compute_type` builds
+`["Newsletter::Source", "Source"]` and takes the first. This branch adds no
+new references to `Newsletter::Source` in the meantime; existing mentions
+in this document and the plan are of the class as it stands today.
 
 ### Option E, named so it can be rejected: fabricate email
 
@@ -308,6 +327,87 @@ because real newsletter MIME is messy, and every one of those guards would
 be reading a message this app itself wrote a moment earlier. It buys reuse
 by making the most carefully-reasoned file in the ingest path parse a
 fiction.
+
+## Decision 1b — the shared roster, and where it should not be shared
+
+Conceded in Decision 1D: one `sources` table serves both kinds. What
+follows is this branch's position on its shape, which differs from
+`docs/silencing.md` in one column and agrees with it everywhere else.
+
+### The feed identifier is the wrong shape, and it is the fixable part
+
+The proposal keys the roster on `identifier` — a sender's address for
+mail, a feed URL for a blog — unique on `(kind, identifier)`. For mail that
+is exactly right: no row per sender exists, the address is the identity,
+and it is already denormalised onto every newsletter, indexed, and keyed on
+by `Newsletter::Confirmation` and `EARLIEST_FROM_SENDER`. Matching it in a
+subquery is the natural query.
+
+For a feed it is not, because a blog *already has a row*. Under this
+branch's plan `blogs` is a real table with an integer key and
+`Blog::Post belongs_to :blog`. Routing a post's source identity through
+`blog_posts → blogs.feed_url → sources.identifier` reaches a string when a
+foreign key is sitting right there. Three concrete consequences:
+
+- **The URL is mutable and would be stored twice.** `blogs.feed_url`
+  changes when a blog moves host, moves `/feed` to `/atom.xml`, or gets
+  edited after autodiscovery. Nothing keeps `sources.identifier` equal to
+  it, so an edit silently orphans the silence decision. That is a
+  denormalisation with no constraint behind it — the same objection
+  `docs/silencing.md` correctly makes against `newsletters.source_id`,
+  pointed the other way.
+- **Uniqueness is asserted twice and can disagree.** `blogs.feed_url` is
+  unique, and so is `(kind, identifier)`. Two constraints over one logical
+  value in two tables, with nothing tying them together.
+- **Redirects have no answer.** The fetch follows up to three hops. When
+  `http://x/feed` lands on `https://x/feed`, which string is the identity —
+  what the reader typed, or where it resolved? Mail has no equivalent
+  question.
+
+**The counter-proposal:** `sources` carries the roster's own data — `name`,
+`silenced_at` — and a *typed* reference to what it is about:
+`sender_email` for mail, a `blog_id` foreign key for feeds, with a check
+constraint that exactly one is set. This is the same pattern Decision 1
+adopts for `edition_citations` on GitLab's advice, applied consistently:
+point at the row when a row exists, and use the string only where mail
+genuinely has nothing to point at.
+
+That answers **`Blog belongs_to :source`: no, the other way round.** `Blog`
+stays whole — feed URL, ETag, `Last-Modified` header, last poll, display
+name in one place — and `Source` references it. Splitting a blog's name and
+its fetch target across two tables would leave `Blog::Poll`, the sources
+page and the post presenter each reassembling one object from two rows.
+
+### The cost of the counter-proposal, found by testing it
+
+Making the reference columns nullable introduces a trap that the
+`null: false` identifier does not have, and it is severe enough to state
+loudly. `where.not(col: subquery)` compiles to `col NOT IN (subquery)`, and
+`NOT IN` over a set containing NULL is never true. Against real SQLite:
+
+```
+newsletters total:      3
+NOT IN, unguarded:      0   <- expected 2
+NOT IN, NULL-guarded:   2   <- expected 2
+```
+
+With one silenced feed row carrying a NULL `sender_email`, the unguarded
+mail scope returns **nothing** — silencing one blog would drop every
+newsletter from every edition. And it fails quietly: an empty window falls
+through `Edition::Window#empty?` to `Edition::CompositionJob#skipped`,
+which logs "no newsletters since the last edition closed" and publishes
+nothing. Indistinguishable from a quiet day.
+
+Two mitigations, both cheap, and the scope wants a spec that fails without
+them: guard the subquery with `where.not(sender_email: nil)`, or write it
+as a correlated `NOT EXISTS`, for which this codebase already has form in
+`Newsletter::EARLIEST_FROM_SENDER`. The feed half avoids the trap entirely,
+because it is a join through a foreign key rather than a `NOT IN` over
+strings.
+
+This is a real cost of the counter-proposal and not of the original. It is
+worth paying for a constrained foreign key and an unduplicated URL, but the
+guard is not optional.
 
 ## Decision 2 — how the editor survives feed volume
 
@@ -740,6 +840,40 @@ edition is noise. `spec/config/recurring_spec.rb` is what checks the line.
 - **Aggregator feeds** — Hacker News, lobste.rs, Reddit, Planet rollups.
   Decided out of scope in Decision 2, on the measurement. siftbox reads
   sources, and a list of links is not one.
+- **ULIDs, or any string primary key.** Asked because the merged ordering
+  under Option B needs a tie-break that works across two tables, and a
+  lexicographically sortable global id would supply one. It is not worth
+  it, for four reasons in descending order of weight:
+
+  1. **Ids here are tokens a model has to copy back exactly.**
+     `Edition::Prompt` writes `<newsletter id="47">` and the answer must
+     return `47` in `newsletter_ids`. Under a ULID it must reproduce
+     `01ARZ3NDEKTSV4RRFFQ69G5FAV` — twenty-six characters of base32 — once
+     per source, and `Edition::Editor#invented` throws away the whole
+     edition when a returned id was not in the window. Trading a one- or
+     two-digit integer for that raises the rate of a failure whose
+     consequence is no edition at all.
+  2. **It is the Option C migration again**, over more tables. Every
+     primary key and every foreign key in the schema, rewritten across the
+     whole archive, to ship the reader nothing — which is the objection
+     that decided Decision 1.
+  3. **Active Storage would break.**
+     `active_storage_attachments.record_id` is `bigint`, and `Newsletter`
+     has `has_many_attached :inline_images`. A string key on that table
+     needs Rails' own schema changed to follow it.
+  4. **The problem it solves is already solved for nothing.**
+     `(received_at, type, id)` is a total order across both tables and
+     costs one sort key. On SQLite there is a further cost the other way:
+     `INTEGER PRIMARY KEY` aliases the rowid and *is* the btree key, so a
+     text key makes every table and every secondary index carry
+     twenty-six characters instead of eight bytes.
+
+  ULIDs earn their place where ids must be generated without coordination
+  — multiple writers, offline clients, merged databases. This is one
+  reader, one SQLite file, one writer. And one place a ULID would be
+  actively wrong: `Blog::Post`'s guid fallback (Decision 3) wants a
+  *deterministic* digest of title and date so that re-polling dedupes. A
+  ULID is time-plus-random and would mint a new one on every poll.
 
 ## Open questions
 
