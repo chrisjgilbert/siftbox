@@ -2,10 +2,6 @@ en:
   activerecord:
     errors:
       models:
-        edition:
-          attributes:
-            stories:
-              duplicate_position: claim the same position twice.
         blog:
           attributes:
             feed_url:
@@ -17,6 +13,10 @@ en:
                 may be refusing us.
               unreadable: is not a feed. Check the address points at the feed rather
                 than at the page it belongs to.
+        edition:
+          attributes:
+            stories:
+              duplicate_position: claim the same position twice.
         edition/citation:
           attributes:
             base:
@@ -33,6 +33,11 @@ en:
       settings: Settings
       subscriptions: Subscriptions
   blogs:
+    count:
+      one: 1 post
+      other: "%{count} posts"
+    kind: Blog
+    no_image: No image in post
     row:
       remove: Remove
     section:
@@ -44,11 +49,6 @@ en:
         from it. Read hourly; new posts go in the archive and the next edition.
       placeholder: https://example.dev
       submit: Follow
-    count:
-      one: 1 post
-      other: "%{count} posts"
-    kind: Blog
-    no_image: No image in post
     state:
       failing: Not answering for %{duration}
       polled: Checked %{duration} ago
