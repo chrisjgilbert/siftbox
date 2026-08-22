@@ -20,10 +20,8 @@ class Blog::Post::Presenter
     @post = post
   end
 
-  # The blog's name, falling back to where it is fetched from. A feed that
-  # gave no title still has to read as something rather than as a blank.
   def sender
-    post.blog.title.presence || post.blog.feed_url
+    post.blog.name
   end
 
   def subject

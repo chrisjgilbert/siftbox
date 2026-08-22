@@ -74,6 +74,24 @@ class Blog::Feed
   # what the feed said.
   IDENTITY_FIELDS = %i[guid id].freeze
 
+  # How many items this app is willing to read out of one feed.
+  #
+  # Nothing about a feed bounds how many it carries, and each one costs an
+  # HTML parse, a row and an image-fetching job — so without a ceiling the
+  # publisher decides how long this app is busy for. Measured: a 16MB feed of
+  # 131,000 items took 90 seconds and 445MB, and an accepted one of that shape
+  # would insert every row inside a single SQLite write transaction, which is
+  # the one write lock the whole app shares.
+  #
+  # The same reasoning as Newsletter::RemoteImages::MAX_IMAGES, and a ceiling
+  # on the outliers rather than a setting real feeds meet: the largest
+  # measured for docs/blogs-rss.md is Dan Luu's at 128 items.
+  #
+  # What is past the cap is a back catalogue. The first-poll guard already
+  # keeps anything older than a week out of every edition window, so the items
+  # this drops are ones no edition could have covered.
+  MAX_ITEMS = 200
+
   Item = Data.define(:title, :url, :body_html, :published_at, :identity)
 
   def initialize(document)
@@ -81,7 +99,7 @@ class Blog::Feed
   end
 
   def posts
-    parsed.items.map { |item| item_from(item) }
+    parsed.items.first(MAX_ITEMS).map { |item| item_from(item) }
   end
 
   # What the feed calls itself, and where it says the writing lives. Both are

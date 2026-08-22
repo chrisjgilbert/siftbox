@@ -34,9 +34,24 @@ class Blog::FeedLink
 
   attr_reader :document, :page_url
 
+  # Both attributes folded, because HTML link relations and media types are
+  # ASCII case-insensitive and Nokogiri's attribute selectors are not — a page
+  # writing rel="Alternate" announced a feed this refused to see, and told the
+  # reader their blog was not a feed.
+  #
+  # The type is cut at its first semicolon: a media type may carry parameters,
+  # and `application/rss+xml; charset=utf-8` is an ordinary thing for a
+  # generator to write.
   def announced
-    parsed.css("link[rel~='alternate'][type]")
-      .select { |link| TYPES.include?(link["type"].to_s.strip.downcase) }
+    parsed.css("link[rel][type]").select { |link| feed?(link) }
+  end
+
+  def feed?(link)
+    alternate?(link["rel"]) && TYPES.include?(link["type"].to_s.split(";").first.to_s.strip.downcase)
+  end
+
+  def alternate?(rel)
+    rel.to_s.downcase.split.include?("alternate")
   end
 
   # Resolved against the page it was found on, because most pages write a path

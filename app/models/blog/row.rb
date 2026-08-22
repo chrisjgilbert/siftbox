@@ -1,18 +1,16 @@
 # One line of the Sources section: what the blog is called, where its feed is
 # read from, how it is getting on, and how much of it is stored.
 #
-# The name comes through the same fallback Blog::Post::Presenter uses, so a
-# blog with no title reads here the way its posts read in the archive rather
-# than as a blank line.
+# The name is the blog's own, so a blog with no title reads here the way its
+# posts read in the archive rather than as a blank line.
 class Blog::Row
-  delegate :feed_url, :to_param, to: :blog
+  delegate :feed_url, :name, :to_param, to: :blog
 
-  def initialize(blog)
+  # The count is handed over rather than asked for: the page draws the whole
+  # roster, and a row that counted its own posts would be one query each.
+  def initialize(blog, posts)
     @blog = blog
-  end
-
-  def name
-    blog.title.presence || blog.feed_url
+    @posts = posts
   end
 
   # The one thing the reader cannot find out any other way. A blog that has
@@ -31,7 +29,24 @@ class Blog::Row
   end
 
   def count
-    I18n.t("blogs.count", count: blog.posts.size)
+    I18n.t("blogs.count", count: posts)
+  end
+
+  # The class the whole state line takes, rather than a conditional the
+  # template assembles: the sibling section documents that move — the name
+  # goes on the element and the CSS hangs off it, so no template asks which
+  # thing it is drawing.
+  def state_class
+    return "sources__state sources__state--failing" if failing?
+
+    "sources__state"
+  end
+
+  # A blog with no title is named by its feed address, so printing the address
+  # underneath prints it twice — at 390px that is one row twice as tall as its
+  # neighbours saying one thing.
+  def feed?
+    name != feed_url
   end
 
   def to_partial_path
@@ -40,7 +55,7 @@ class Blog::Row
 
   private
 
-  attr_reader :blog
+  attr_reader :blog, :posts
 
   # The distance rather than the clock time the archive prints, for the reason
   # the pen's rows use it: what the reader needs from this line is how long it

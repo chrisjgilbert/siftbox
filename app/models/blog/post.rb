@@ -66,6 +66,17 @@ class Blog::Post < ApplicationRecord
   # because the guarantee should not rest on which index the planner reaches
   # for. Where it is genuinely load-bearing is Feed#ordering, which sorts in
   # Ruby, where sort_by is not stable — and that one is specced.
+  # Asked of a bare body as well as of a row: Blog::Subscription judges a
+  # feed's items before any of them is a record. One statement of the rule, so
+  # a feed admitted at the door and a post kept out of an edition cannot
+  # disagree about what a body is worth.
+  #
+  # Measured on the prose the editor would be shown rather than on the HTML,
+  # so a post that is markup around nothing is judged on what is left of it.
+  def self.enough_to_write_from?(html)
+    Newsletter::Body.prose(html).length >= EDITORIAL_MINIMUM
+  end
+
   def self.oldest_first
     order(received_at: :asc, id: :asc)
   end
@@ -97,17 +108,7 @@ class Blog::Post < ApplicationRecord
     Rails.application.routes.url_helpers.blog_post_image_path(self, blob)
   end
 
-  # Measured on the same prose the editor would be shown rather than on the
-  # HTML, so a post that is markup around nothing is judged on what is left of
-  # it. Through the pipeline the prompt uses, for the same reason the snippet
-  # goes through it: it takes an HTML string and knows nothing about mail.
   def enough_to_write_from?
-    prose.length >= EDITORIAL_MINIMUM
-  end
-
-  private
-
-  def prose
-    Newsletter::Body.prose(body_html)
+    self.class.enough_to_write_from?(body_html)
   end
 end

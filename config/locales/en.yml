@@ -1,5 +1,11 @@
 en:
   activerecord:
+    attributes:
+      blog:
+        # So a refusal reads "Feed address is not a feed" rather than "Feed
+        # url ...", which is what Rails humanises the column to. The messages
+        # below are written to follow this, and it is the form's own label.
+        feed_url: Feed address
     errors:
       models:
         blog:
@@ -39,7 +45,10 @@ en:
     kind: Blog
     no_image: No image in post
     row:
+      confirm: Remove %{name}? Its posts go too, and so do the citations in
+        published editions that name them.
       remove: Remove
+      remove_blog: Remove %{name}
     section:
       empty: No blogs yet. Paste a feed address above and siftbox will read it
         every hour.
@@ -53,6 +62,7 @@ en:
       failing: Not answering for %{duration}
       polled: Checked %{duration} ago
       unpolled: Not checked yet
+    too_many: That is a lot of feeds at once. Try again in a minute.
   date:
     formats:
       edition_masthead: "%A %-d %B"

@@ -229,23 +229,13 @@ class Edition::Prompt
   def quoted_post(post)
     <<~SOURCE
       <post id="#{post.id}">
-      Blog: #{scrubbed(named(post))}
+      Blog: #{scrubbed(post.blog.name)}
       Title: #{scrubbed(post.title)}
       Published: #{published_at(post).iso8601}
 
       #{scrubbed(prose(post.body_html))}
       </post>
     SOURCE
-  end
-
-  # Through the presenter the citation under the story uses, so the prompt and
-  # the page name the same thing. blogs.title defaults to "" and blogs are
-  # added by hand until the Sources page ships, so an untitled blog would
-  # otherwise be quoted as a bare "Blog:" line — and the instructions make the
-  # blog's name load-bearing, so the model would invent one while the citation
-  # beneath printed the feed URL.
-  def named(post)
-    Blog::Post::Presenter.new(post).sender
   end
 
   # A feed in RSS 1.0 without dc:date publishes every item undated, so this is

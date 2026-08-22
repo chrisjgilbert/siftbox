@@ -477,4 +477,28 @@ RSpec.describe Blog::Feed do
 
     expect(feed.title).to eq("Query Plan Weekly")
   end
+
+  # Nothing about a feed bounds how many items it carries, and each one costs
+  # a parse, a row and a job. Without a ceiling the publisher decides how long
+  # this app is busy for — measured at 90 seconds and 445MB for a 16MB feed,
+  # holding SQLite's single write lock throughout.
+  #
+  # Newest first, which is the convention every real feed follows and the
+  # order that matters: what is past the cap is a back catalogue no edition
+  # window could reach anyway.
+  it "reads no more items than it is willing to be busy for" do
+    items = (1..(Blog::Feed::MAX_ITEMS + 10)).map { |number| rss_item("Post #{number}") }
+
+    feed = Blog::Feed.new(rss_document(items.join))
+
+    expect(feed.posts.length).to eq(Blog::Feed::MAX_ITEMS)
+  end
+
+  it "keeps the items the feed listed first" do
+    items = (1..(Blog::Feed::MAX_ITEMS + 10)).map { |number| rss_item("Post #{number}") }
+
+    feed = Blog::Feed.new(rss_document(items.join))
+
+    expect(feed.posts.first.title).to eq("Post 1")
+  end
 end

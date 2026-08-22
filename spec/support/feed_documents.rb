@@ -24,6 +24,31 @@ module FeedDocuments
     XML
   end
 
+  # An item carrying a real article, which is what Blog::Subscription admits
+  # and Blog::Post::EDITORIAL_MINIMUM clears. For specs where an accepted feed
+  # is furniture rather than the assertion — where the body's length IS the
+  # assertion, write it out in the example.
+  def rss_article(title)
+    <<~XML
+      <item>
+        <title>#{title}</title>
+        <link>https://queryplanweekly.dev/#{title.parameterize}</link>
+        <guid>#{title.parameterize}</guid>
+        <description>#{"word " * 200}</description>
+      </item>
+    XML
+  end
+
+  # A blog's home page, announcing where its feed is.
+  def home_page(feed_url)
+    <<~HTML
+      <!DOCTYPE html>
+      <html><head><title>Query Plan Weekly</title>
+      <link rel="alternate" type="application/rss+xml" href="#{feed_url}"></head>
+      <body><p>Notes on databases.</p></body></html>
+    HTML
+  end
+
   # One item with a guid derived from its title, which is what a poll dedupes
   # on. Enough for any example whose subject is the polling rather than the
   # parsing.

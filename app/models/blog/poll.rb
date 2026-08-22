@@ -22,9 +22,7 @@ class Blog::Poll
   # what an edition may cover on day one is what the archive is showing.
   FIRST_POLL_WINDOW = 1.week
 
-  FETCH = ->(blog) { Blog::Fetch.new(blog).result }
-
-  def initialize(blog, fetch: FETCH)
+  def initialize(blog, fetch: Blog::Fetch::DEFAULT)
     @blog = blog
     @fetch = fetch
   end

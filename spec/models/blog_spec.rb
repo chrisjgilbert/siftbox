@@ -77,4 +77,18 @@ RSpec.describe Blog do
 
     expect(blog.feed_url).to eq("https://queryplanweekly.dev/feed")
   end
+
+  # A fact about a blog rather than about a page, which is where it kept
+  # ending up: three callers spelled this out, and one of them was a prompt
+  # reaching through a display presenter to get it.
+  it "is named by its title" do
+    expect(build_stubbed(:blog, title: "Query Plan Weekly").name).to eq("Query Plan Weekly")
+  end
+
+  # Dan Luu's feed ships <title></title>, so this is the ordinary case.
+  it "is named by its feed address when it published no title" do
+    blog = build_stubbed(:blog, title: "", feed_url: "https://danluu.com/atom.xml")
+
+    expect(blog.name).to eq("https://danluu.com/atom.xml")
+  end
 end

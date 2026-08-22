@@ -1,24 +1,16 @@
 require "rails_helper"
 
 RSpec.describe "Blogs" do
-  # The fetch is the one thing a request spec cannot let out of the process,
-  # so the seam Blog::Subscription takes for its sample is where it stops.
-  def feed_answering(document)
-    fetched = Blog::Fetch::Fetched.new(document: document, etag: "", last_modified: "")
-    allow(Blog::Subscription).to receive(:new).and_wrap_original do |original, blog, **|
-      original.call(blog, fetch: ->(_blog) { fetched })
+  # Through the real fetch stack rather than by stubbing Blog::Subscription's
+  # constructor: resolve_publicly plus WebMock is the house pattern (see
+  # spec/jobs/blog/poll_job_spec.rb), and stubbing the constructor left
+  # Blog::Fetch and Download untouched by anything on this path.
+  def serving(feed_url, *documents)
+    resolve_publicly
+    answers = documents.map do |document|
+      { body: document, headers: { "Content-Type" => "application/rss+xml" } }
     end
-  end
-
-  def article(title)
-    <<~ITEM
-      <item>
-        <title>#{title}</title>
-        <link>https://queryplanweekly.dev/#{title.parameterize}</link>
-        <guid>#{title.parameterize}</guid>
-        <description>#{"word " * 200}</description>
-      </item>
-    ITEM
+    stub_request(:get, feed_url).to_return(answers)
   end
 
   def add(feed_url)
@@ -27,7 +19,7 @@ RSpec.describe "Blogs" do
 
   it "puts a followed blog on the roster" do
     sign_in
-    feed_answering(rss_document(article("One")))
+    serving("https://queryplanweekly.dev/feed", rss_document(rss_article("One")))
 
     add("https://queryplanweekly.dev/feed")
 
@@ -36,7 +28,7 @@ RSpec.describe "Blogs" do
 
   it "returns the reader to the subscriptions page" do
     sign_in
-    feed_answering(rss_document(article("One")))
+    serving("https://queryplanweekly.dev/feed", rss_document(rss_article("One")))
 
     add("https://queryplanweekly.dev/feed")
 
@@ -47,29 +39,43 @@ RSpec.describe "Blogs" do
   # anything — see .claude/rules/controllers.md.
   it "answers a refused feed with the page and an unprocessable status" do
     sign_in
-    feed_answering(rss_document)
+    serving("https://queryplanweekly.dev/feed", rss_document)
 
     add("https://queryplanweekly.dev/feed")
 
     expect(response).to have_http_status(:unprocessable_entity)
   end
 
-  it "says why a feed was refused" do
+  # The whole message, prefix included: Rails humanises the column to "Feed
+  # url", and these sentences are written to follow the label the reader
+  # typed into.
+  it "says why a feed was refused, by the name the form calls it" do
     sign_in
-    feed_answering(rss_document)
+    serving("https://queryplanweekly.dev/feed", rss_document)
 
     add("https://queryplanweekly.dev/feed")
 
-    expect(response.body).to include("has nothing in it yet")
+    expect(response.body).to include("Feed address has nothing in it yet")
   end
 
   it "keeps the address the reader typed in the form after a refusal" do
     sign_in
-    feed_answering(rss_document)
+    serving("https://queryplanweekly.dev/feed", rss_document)
 
     add("https://queryplanweekly.dev/feed")
 
     expect(response.body).to include("https://queryplanweekly.dev/feed")
+  end
+
+  it "follows the feed a pasted home page announces" do
+    sign_in
+    resolve_publicly
+    stub_request(:get, "https://queryplanweekly.dev/").to_return(body: home_page("/feed"))
+    serving("https://queryplanweekly.dev/feed", rss_document(rss_article("One")))
+
+    add("https://queryplanweekly.dev/")
+
+    expect(Blog.sole.feed_url).to eq("https://queryplanweekly.dev/feed")
   end
 
   it "takes a blog off the roster" do

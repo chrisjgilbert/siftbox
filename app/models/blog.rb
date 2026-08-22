@@ -39,6 +39,18 @@ class Blog < ApplicationRecord
 
   validates :feed_url, presence: true, uniqueness: true, format: { with: FETCHABLE }
 
+  # What to call this blog. A fact about the blog rather than about any page
+  # showing one, which is where it kept ending up — the archive row, the
+  # sources row and the edition prompt all spelled it out, and the last of
+  # those reached through a display presenter to do it.
+  #
+  # blogs.title defaults to "" and a feed may genuinely publish an empty one:
+  # Dan Luu's does. The address it is read from is the only other thing this
+  # app knows about it.
+  def name
+    title.presence || feed_url
+  end
+
   # This poll did not come home with a feed. Here rather than in Blog::Poll
   # because the rule is a fact about the column: the first failure's time
   # survives the ones after it, so the Sources page can say how long a blog

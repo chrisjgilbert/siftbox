@@ -6,7 +6,7 @@
 
     One shape as the pen's sections, so the type scale hangs off the section
     name in CSS and no template asks which one it is drawing. %>
-<section class="pen__section pen__section--sources">
+<section class="pen__section pen__section--blogs">
   <h2 class="pen__heading"><%= t(".heading") %></h2>
 
   <%= form_with model: blog, url: blogs_path, class: "sources__form" do |form| %>
@@ -31,8 +31,8 @@
     <p class="sources__note"><%= t(".note") %></p>
   <% end %>
 
-  <% if blogs.any? %>
-    <ol class="pen__list"><%= render blogs %></ol>
+  <% if roster.any? %>
+    <ol class="pen__list"><%= render roster %></ol>
   <% else %>
     <p class="pen__empty"><%= t(".empty") %></p>
   <% end %>

@@ -150,4 +150,15 @@ RSpec.describe Blog::Post do
 
     expect(post.reload.url).to eq("https://queryplanweekly.dev/ab")
   end
+
+  # Asked of a bare body as well as of a row, because Blog::Subscription
+  # judges a feed's items before any of them is a record — and the two must
+  # not be able to disagree about what a body is worth.
+  it "answers the floor for a body it does not hold" do
+    expect(Blog::Post.enough_to_write_from?("<p>#{"word " * 200}</p>")).to be(true)
+  end
+
+  it "answers the floor for a short body it does not hold" do
+    expect(Blog::Post.enough_to_write_from?("<p>Two lines.</p>")).to be(false)
+  end
 end

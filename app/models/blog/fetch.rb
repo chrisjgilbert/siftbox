@@ -32,6 +32,11 @@ class Blog::Fetch
   # of singletons and the line that translated between them.
   UNCHANGED = Download::UNCHANGED
 
+  # How a blog is fetched when nobody says otherwise. Here rather than on each
+  # of the two callers that inject around it, so "the default way to fetch a
+  # blog" sits beside the class that implements it.
+  DEFAULT = ->(blog) { new(blog).result }
+
   def initialize(blog, resolver: Download::Destination::RESOLVER)
     @blog = blog
     @resolver = resolver

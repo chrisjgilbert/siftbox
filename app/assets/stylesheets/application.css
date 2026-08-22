@@ -630,7 +630,12 @@ a {
   grid-template-columns: 1fr;
 }
 
+/* width, because a refused form comes back wrapped: Rails' field_error_proc
+   puts a div round the input, that div becomes the grid item, and the input
+   falls back to its intrinsic 219px — clipping the address the reader typed
+   at exactly the moment the page is explaining why it was refused. */
 .sources__input {
+  width: 100%;
   border: 0;
   border-bottom: 2px solid var(--ink);
   border-radius: 0;
@@ -645,8 +650,14 @@ a {
   color: var(--read);
 }
 
+/* Something has to change on focus, and the underline is already there to
+   change. focus-visible so a click does not draw it and a Tab does. */
 .sources__input:focus {
   outline: 0;
+}
+
+.sources__input:focus-visible {
+  border-bottom-color: var(--blue);
 }
 
 .sources__submit {
@@ -709,12 +720,20 @@ a {
   overflow-wrap: anywhere;
 }
 
+/* Lower case, and the one place in this app mono is. The rule is that mono is
+   always uppercase; an uppercased URL is a wrong URL to read or to copy, and
+   this is the address the reader typed and may need to check. The reason is
+   here because .claude/rules asks for one when a rule is broken.
+
+   --mute rather than --read: #9a9a9a on paper is 2.81:1, under even the 3:1
+   floor for non-text, and this is 10px. --mute is 5.41:1 and is what the
+   count and the state beside it take. */
 .sources__feed {
   grid-column: 1;
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.06em;
-  color: var(--read);
+  color: var(--mute);
   overflow-wrap: anywhere;
 }
 
@@ -735,19 +754,29 @@ a {
   color: var(--ink);
 }
 
-.sources__remove {
+/* button_to generates a <button> inside a <form> under Rails 8 defaults, so
+   the grid placement goes on the form — which is the grid item — and the
+   appearance on the button. Styling ` input` matched only the hidden _method
+   field, and left the control at the browser's own Arial, outset border and
+   rounded corners: a third typeface, a rule weight the system does not have,
+   and a radius, in one control. */
+.sources__remove-form {
   grid-column: 2;
-  grid-row: 1 / span 4;
+  grid-row: 1 / -1;
   align-self: center;
   margin: 0;
 }
 
-.sources__remove input {
-  border: 1px solid var(--rule);
+/* Borderless mute text, which is the app's second button treatment, after
+   .topbar__action. A bordered one would be a third the system does not have
+   — and --rule on paper is 1.28:1, well under the 3:1 a control edge needs
+   to be seen at all. */
+.sources__remove {
+  border: 0;
   border-radius: 0;
-  background: transparent;
+  background: none;
   color: var(--mute);
-  padding: 8px 14px;
+  padding: 0;
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.1em;
@@ -755,8 +784,7 @@ a {
   cursor: pointer;
 }
 
-.sources__remove input:hover {
-  border-color: var(--ink);
+.sources__remove:hover {
   color: var(--ink);
 }
 
@@ -811,6 +839,40 @@ a {
 
   .pen__empty {
     padding: 32px 0 8px;
+  }
+
+  /* The Blogs section takes the same step up as the sections above it. Left
+     at its mobile sizes the whole thing read one notch smaller than identical
+     furniture six lines up the page — spacing is untokenised on purpose, the
+     type scale is not. */
+  .sources__label,
+  .sources__submit,
+  .sources__count,
+  .sources__feed,
+  .sources__state,
+  .sources__remove {
+    font-size: 11px;
+  }
+
+  .sources__name {
+    font-size: 19px;
+  }
+
+  .pen__item--source {
+    padding: 18px 0;
+  }
+
+  /* Input and button on one line, as the waitlist's are above this width and
+     for the same reason: below it, "Follow" set in mono beside a field is
+     wider than a 390px screen leaves room for. */
+  .sources__controls {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+  }
+
+  .sources__submit {
+    margin-top: 0;
+    margin-left: 20px;
   }
 }
 

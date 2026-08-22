@@ -92,4 +92,32 @@ RSpec.describe Blog::FeedLink do
   it "finds nothing in a document that is not markup at all" do
     expect(Blog::FeedLink.new("", "https://queryplanweekly.dev/").url).to be_nil
   end
+
+  # HTML link relations are ASCII case-insensitive. The type was already
+  # folded and the rel was not, so a page written this way announced a feed
+  # the app refused to see and the reader was told it was not a feed.
+  it "finds a feed announced with a capitalised rel" do
+    head = %(<link rel="Alternate" type="application/rss+xml" href="https://queryplanweekly.dev/feed">)
+
+    expect(found_in(head)).to eq("https://queryplanweekly.dev/feed")
+  end
+
+  it "finds a feed announced with a capitalised type" do
+    head = %(<link rel="alternate" type="application/RSS+XML" href="https://queryplanweekly.dev/feed">)
+
+    expect(found_in(head)).to eq("https://queryplanweekly.dev/feed")
+  end
+
+  # A type may carry parameters, and plenty of generators write one.
+  it "finds a feed whose type carries a charset" do
+    head = %(<link rel="alternate" type="application/rss+xml; charset=utf-8" href="https://queryplanweekly.dev/feed">)
+
+    expect(found_in(head)).to eq("https://queryplanweekly.dev/feed")
+  end
+
+  it "still finds a feed announced with rel listing more than alternate" do
+    head = %(<link rel="alternate feed" type="application/rss+xml" href="https://queryplanweekly.dev/feed">)
+
+    expect(found_in(head)).to eq("https://queryplanweekly.dev/feed")
+  end
 end

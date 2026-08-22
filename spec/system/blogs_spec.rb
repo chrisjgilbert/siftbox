@@ -7,36 +7,19 @@ RSpec.describe "The blogs on the Subscriptions page" do
   # The one thing a system spec cannot let out of the process. Stopped at the
   # seam Blog::Subscription takes for its sample, so everything on this side
   # of it — the form, the refusal, the roster — is the real thing.
-  def feed_answering(*documents)
-    answers = documents.dup
-    allow(Blog::Subscription).to receive(:new).and_wrap_original do |original, blog, **|
-      original.call(blog, fetch: lambda do |_blog|
-        Blog::Fetch::Fetched.new(document: answers.shift, etag: "", last_modified: "")
-      end)
-    end
+  # Through the real fetch stack rather than by stubbing Blog::Subscription's
+  # constructor, which left Blog::Fetch and Download untouched by every
+  # example on this page.
+  def serving(feed_url, *documents)
+    resolve_publicly
+    stub_request(:get, feed_url).to_return(
+      documents.map { |document| { body: document } }
+    )
   end
 
-  # A blog's home page, announcing where its feed is.
-  def home_page(feed_url)
-    <<~HTML
-      <!DOCTYPE html>
-      <html><head><title>Query Plan Weekly</title>
-      <link rel="alternate" type="application/rss+xml" href="#{feed_url}"></head>
-      <body><p>Notes on databases.</p></body></html>
-    HTML
-  end
-
-  def article(title)
-    <<~ITEM
-      <item>
-        <title>#{title}</title>
-        <link>https://queryplanweekly.dev/#{title.parameterize}</link>
-        <guid>#{title.parameterize}</guid>
-        <description>#{"word " * 200}</description>
-      </item>
-    ITEM
-  end
-
+  # What an aggregator publishes, measured rather than imagined: the body of a
+  # Hacker News item is the word "Comments" and nothing else, because its
+  # description is a link back to its own thread.
   def aggregated(title)
     <<~ITEM
       <item>
@@ -62,7 +45,8 @@ RSpec.describe "The blogs on the Subscriptions page" do
   end
 
   it "puts a followed blog on the roster with what it read" do
-    feed_answering(rss_document(article("One") + article("Two")))
+    serving("https://queryplanweekly.dev/feed",
+      rss_document(rss_article("One") + rss_article("Two")))
     sign_in_through_the_form
 
     visit subscriptions_path
@@ -74,7 +58,8 @@ RSpec.describe "The blogs on the Subscriptions page" do
   # The whole reason the check is made while the reader is standing there:
   # refusing later, silently, tells them nothing.
   it "refuses a link aggregator and says why" do
-    feed_answering(rss_document(aggregated("One") + aggregated("Two")))
+    serving("https://news.ycombinator.com/rss",
+      rss_document(aggregated("One") + aggregated("Two")))
     sign_in_through_the_form
 
     visit subscriptions_path
@@ -84,7 +69,7 @@ RSpec.describe "The blogs on the Subscriptions page" do
   end
 
   it "keeps the address in the form after refusing it" do
-    feed_answering(rss_document(aggregated("One")))
+    serving("https://news.ycombinator.com/rss", rss_document(aggregated("One")))
     sign_in_through_the_form
 
     visit subscriptions_path
@@ -125,11 +110,13 @@ RSpec.describe "The blogs on the Subscriptions page" do
   # Readers know their blogs by their home pages. Most sites never show a feed
   # address at all, so pasting one is the case, not the exception.
   it "follows the feed a pasted home page announces" do
-    feed_answering(home_page("/feed"), rss_document(article("One")))
+    resolve_publicly
+    stub_request(:get, "https://queryplanweekly.dev/").to_return(body: home_page("/feed"))
+    serving("https://queryplanweekly.dev/feed", rss_document(rss_article("One")))
     sign_in_through_the_form
 
     visit subscriptions_path
-    follow("https://queryplanweekly.dev")
+    follow("https://queryplanweekly.dev/")
 
     expect(page).to have_text("https://queryplanweekly.dev/feed").and have_text("1 post")
   end
