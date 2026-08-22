@@ -102,7 +102,7 @@ RSpec.describe Newsletter::InboundMessage do
 
     newsletter = message.save
 
-    expect(newsletter.snippet.length).to be <= Newsletter::InboundMessage::SNIPPET_LENGTH
+    expect(newsletter.snippet.length).to be <= Newsletter::Body::SNIPPET_LENGTH
   end
 
   it "stores the Message-ID" do

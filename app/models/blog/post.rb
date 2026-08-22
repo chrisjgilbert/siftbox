@@ -37,6 +37,13 @@ class Blog::Post < ApplicationRecord
 
   belongs_to :blog, touch: true
 
+  # SQLite stops reading a string literal at a NUL, so one stray byte fails
+  # the INSERT and loses the post. The same guard Newsletter carries, for the
+  # same reason and against a source no less hostile: feed XML is written by
+  # strangers and a NUL survives the parser intact.
+  normalizes :body_html, :guid, :snippet, :title, :url,
+    with: ->(value) { value.delete("\0") }
+
   # The column is NOT NULL and that is what actually holds. This is here so an
   # ordinary failure reads as a validation naming the field rather than as a
   # NotNullViolation naming the table — the same division Newsletter makes for

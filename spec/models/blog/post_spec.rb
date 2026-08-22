@@ -88,4 +88,20 @@ RSpec.describe Blog::Post do
 
     expect(post).not_to be_enough_to_write_from
   end
+
+  # SQLite stops reading a string literal at a NUL, so one stray byte fails
+  # the INSERT and loses the post. Feed XML is written by strangers and the
+  # parser hands a NUL through intact — confirmed against RSS::REXMLParser
+  # rather than assumed.
+  it "strips a null byte from a body the feed carried" do
+    post = create(:blog_post, body_html: "<p>the#{0.chr} planner</p>")
+
+    expect(post.reload.body_html).to eq("<p>the planner</p>")
+  end
+
+  it "strips a null byte from a title the feed carried" do
+    post = create(:blog_post, title: "Rewriting#{0.chr} the planner")
+
+    expect(post.reload.title).to eq("Rewriting the planner")
+  end
 end

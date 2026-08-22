@@ -122,26 +122,23 @@ class Blog::Poll
     posts.reject { |key, _post| stored.include?(key) }
   end
 
+  # The snippet and the lead image are both read off the stored body by the
+  # pipeline that already exists. It takes an HTML string and knows nothing
+  # about mail, which is the whole reason blog_posts carries the same column
+  # names newsletters does — a post is read by that code rather than by a
+  # second copy of it.
+  #
+  # One Body between them, because it holds the parsed tree: building two
+  # would walk a body that runs to tens of kilobytes twice for one row.
   def attributes_for(key, post)
     body = Newsletter::Body.new(post.body_html)
 
     {
       title: post.title, url: post.url, guid: key,
       body_html: post.body_html, published_at: post.published_at,
-      received_at: received_at_for(post), snippet: snippet_of(body),
+      received_at: received_at_for(post), snippet: Newsletter::Body.snippet(body.text),
       lead_image_url: Newsletter::LeadImage.new(body).url
     }
-  end
-
-  # Both read off the stored body by the pipeline that already exists. It
-  # takes an HTML string and knows nothing about mail, which is the whole
-  # reason blog_posts carries the same column names newsletters does — a post
-  # is read by that code rather than by a second copy of it.
-  #
-  # One Body between them, because it holds the parsed tree: building two
-  # would walk a body that runs to tens of kilobytes twice for one row.
-  def snippet_of(body)
-    body.text.truncate(Newsletter::InboundMessage::SNIPPET_LENGTH, separator: " ")
   end
 
   # What "seen this one before" is decided on: the publisher's own name for

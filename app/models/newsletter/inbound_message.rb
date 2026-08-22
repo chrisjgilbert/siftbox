@@ -11,8 +11,6 @@
 class Newsletter::InboundMessage
   include ActiveModel::Model
 
-  SNIPPET_LENGTH = 120
-
   attr_accessor :mail
 
   def save
@@ -135,7 +133,7 @@ class Newsletter::InboundMessage
   end
 
   def decoded(part)
-    utf8(bytes(part))
+    Utf8.new(bytes(part)).text
   end
 
   # Mail raises on a Content-Transfer-Encoding it does not recognise, and a
@@ -146,21 +144,6 @@ class Newsletter::InboundMessage
     part.decoded
   rescue Mail::UnknownEncodingType
     part.body.raw_source
-  end
-
-  # Mail has nothing to transcode from when a part declares no charset, so it
-  # hands back ASCII-8BIT, and one Windows-1252 curly quote in that fails the
-  # INSERT — which loses the newsletter exactly as raising would. `tidy_bytes`
-  # recodes only the bad runs, so a body that is UTF-8 apart from one stray
-  # byte keeps its other accents instead of being transcoded whole.
-  #
-  # dup because Mail hands back the same raw_source object every call, and
-  # force_encoding would re-tag its string in place. The tag is needed:
-  # tidy_bytes finds nothing to repair while the string still says binary.
-  def utf8(source)
-    ActiveSupport::Multibyte::Unicode.tidy_bytes(
-      source.dup.force_encoding(Encoding::UTF_8)
-    )
   end
 
   # A plain-text newsletter still has to render as something. Wrapping its
@@ -175,7 +158,7 @@ class Newsletter::InboundMessage
   end
 
   def snippet
-    plain_text.truncate(SNIPPET_LENGTH, separator: " ")
+    Newsletter::Body.snippet(plain_text)
   end
 
   # Newsletter::Body's text, not the raw HTML's: Nokogiri's #text returns the

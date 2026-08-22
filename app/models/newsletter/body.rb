@@ -17,6 +17,21 @@ class Newsletter::Body
 
   SIZED_ATTRIBUTES = %w[height width].freeze
 
+  # How much of a body a feed row shows. Here rather than on the mail reader,
+  # because a blog post has a snippet and has never been near MIME — this is
+  # the pipeline the two ingest paths genuinely share.
+  SNIPPET_LENGTH = 120
+
+  # A class method because the text does not always come from a Body: mail
+  # prefers its own plain-text part when the sender sent one, and only falls
+  # back to reading the HTML.
+  #
+  # On a word boundary, so the last thing a row shows is a word rather than
+  # half of one.
+  def self.snippet(text)
+    text.truncate(SNIPPET_LENGTH, separator: " ")
+  end
+
   def initialize(html, dimensions: {})
     @html = html
     @dimensions = dimensions
