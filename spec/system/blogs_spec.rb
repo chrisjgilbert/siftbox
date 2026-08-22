@@ -4,6 +4,8 @@ require "rails_helper"
 # arrive, take one off again. It sits on the Subscriptions page because that
 # is where the reader already goes to see what reaches them and what does not.
 RSpec.describe "The blogs on the Subscriptions page" do
+  include ActiveJob::TestHelper
+
   # The one thing a system spec cannot let out of the process. Stopped at the
   # seam Blog::Subscription takes for its sample, so everything on this side
   # of it — the form, the refusal, the roster — is the real thing.
@@ -31,9 +33,12 @@ RSpec.describe "The blogs on the Subscriptions page" do
     ITEM
   end
 
+  # The reading happens off the request, so the reader is told yes or no at
+  # once and the row fills in behind them. Both halves are what they see, so
+  # both happen here.
   def follow(feed_url)
     fill_in "Feed address", with: feed_url
-    click_button "Follow"
+    perform_enqueued_jobs { click_button "Follow" }
   end
 
   it "says the roster is empty before anything is on it" do
@@ -46,11 +51,13 @@ RSpec.describe "The blogs on the Subscriptions page" do
 
   it "puts a followed blog on the roster with what it read" do
     serving("https://queryplanweekly.dev/feed",
+      rss_document(rss_article("One") + rss_article("Two")),
       rss_document(rss_article("One") + rss_article("Two")))
     sign_in_through_the_form
 
     visit subscriptions_path
     follow("https://queryplanweekly.dev/feed")
+    visit subscriptions_path
 
     expect(page).to have_text("Query Plan Weekly").and have_text("2 posts")
   end
@@ -112,11 +119,13 @@ RSpec.describe "The blogs on the Subscriptions page" do
   it "follows the feed a pasted home page announces" do
     resolve_publicly
     stub_request(:get, "https://queryplanweekly.dev/").to_return(body: home_page("/feed"))
-    serving("https://queryplanweekly.dev/feed", rss_document(rss_article("One")))
+    serving("https://queryplanweekly.dev/feed",
+      rss_document(rss_article("One")), rss_document(rss_article("One")))
     sign_in_through_the_form
 
     visit subscriptions_path
     follow("https://queryplanweekly.dev/")
+    visit subscriptions_path
 
     expect(page).to have_text("https://queryplanweekly.dev/feed").and have_text("1 post")
   end

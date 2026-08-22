@@ -23,8 +23,16 @@ class Blog::PollJob < ApplicationJob
   # what reaches here is the unforeseen kind. It is recorded the same way,
   # because from the reader's side the difference between a blog that answered
   # badly and a blog that answered in a way nobody predicted is nothing.
-  def perform
-    Blog.find_each { |blog| poll(blog) }
+  # One blog when the reader has just added it and is waiting to see it fill
+  # in, the whole roster on the hour. An optional argument against the usual
+  # rule, because the alternative is a second job repeating this one's rescue
+  # — and what that rescue does is the same for both: from the reader's side
+  # a blog that answered badly and a blog that answered unpredictably are the
+  # same thing.
+  def perform(blog = nil)
+    return poll(blog) if blog
+
+    Blog.find_each { |followed| poll(followed) }
   end
 
   private

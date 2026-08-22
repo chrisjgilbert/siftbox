@@ -30,6 +30,16 @@ class Blog::Subscription
   # Eight characters against three hundred and thirty, with this between them.
   STUB_LENGTH = 100
 
+  # How many of a feed's items are read to decide what kind of feed it is.
+  #
+  # A feed's character shows in its first items: an aggregator's are uniformly
+  # stubs and a blog's are uniformly not, so twenty is ample for a question
+  # that is answered by a majority. Reading all of them told us nothing more
+  # and cost ten seconds of the twenty-one a real blog's first subscription
+  # took — every item's HTML parsed to judge a feed nobody had asked us to
+  # judge item by item.
+  SAMPLE = 20
+
   # How much of a feed has to read like writing before this app will take it.
   # At least half, so one stub in a real blog's feed costs it nothing and one
   # long self-post in an aggregator's buys it nothing.
@@ -63,23 +73,18 @@ class Blog::Subscription
 
   attr_reader :blog, :fetch
 
-  # The sample is the first poll rather than a second request. The reader is
-  # waiting, the document has just been read, and polling again would ask the
-  # publisher for the same bytes twice — so Blog::Poll is handed what is
-  # already in hand, through the seam it takes for exactly this.
+  # The row is written and the reading is asked for, not done. The sample
+  # above is what the reader is waiting on and it is bounded; storing a back
+  # catalogue is not — a real blog's took twenty seconds inside the request,
+  # on one of the three threads the whole app has, with a row and an
+  # image-fetching job per item inside a single SQLite write transaction.
   #
-  # One transaction over the two, so a poll that raises leaves no blog behind.
-  # Without it the row survived with nothing in it, reading "Not checked yet"
-  # on the roster while the reader saw an error page and a retry earned "has
-  # already been taken". The reason Blog::Poll keeps its own fetch outside a
-  # transaction does not apply: the document is already in hand and nothing
-  # here touches the network.
+  # It costs one more fetch, of a document already read once. That is the
+  # trade: the reader is told yes or no in about a second, the roster row is
+  # there when they land back on the page, and it fills in behind them.
   def follow
-    blog.transaction do
-      blog.save!
-      Blog::Poll.new(blog, fetch: ->(_blog) { fetched }).save
-    end
-
+    blog.save!
+    Blog::PollJob.perform_later(blog)
     true
   end
 
@@ -139,9 +144,10 @@ class Blog::Subscription
   # Measured on the prose the editor would be shown rather than on the markup,
   # so a feed that is mostly markup is judged on what is left of it.
   def stubs?
-    writing = posts.count { |post| Newsletter::Body.prose(post.body_html).length >= STUB_LENGTH }
+    sample = posts.first(SAMPLE)
+    writing = sample.count { |post| Newsletter::Body.prose(post.body_html).length >= STUB_LENGTH }
 
-    writing < posts.length * READABLE_SHARE
+    writing < sample.length * READABLE_SHARE
   end
 
   # Nothing rather than an empty list when the document is not a feed, so the

@@ -313,8 +313,13 @@ not two.
 
 Nothing polls until a blog exists. Blogs are added on the Subscriptions page,
 under Blogs: paste the feed address, or the blog's home page and siftbox will
-find the feed from it. The feed is read on the spot, so a blog appears with
-its posts already in the archive rather than waiting for the top of the hour.
+find the feed from it.
+
+The feed is sampled while you wait — about a second, and five for the largest
+real feed measured — which is what makes a refusal something you are told
+rather than something you work out later. The reading itself happens behind
+you: the row appears at once saying "Not checked yet" and fills in within
+seconds. It does not wait for the top of the hour.
 
 Four things get refused there, each with a reason on the page:
 

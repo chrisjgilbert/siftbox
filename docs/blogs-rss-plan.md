@@ -286,6 +286,11 @@ refused. The measurements are miles either side of that line — aggregators
 median eight characters, 9 of 273 in-scope items under four hundred — so it
 separates them without a judgement call.
 
+The sample is bounded and the reading is not, so they were split: the reader
+waits on twenty items to hear yes or no, and the back catalogue is stored by
+a job behind them. Doing both in the request took twenty-one seconds on a
+real blog, on one of the three threads the whole app has.
+
 Removing a blog destroys it, along with its posts and the citations in
 published editions naming them. Muting, which keeps the archive intact, is
 the silencing branch's.

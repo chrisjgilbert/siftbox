@@ -52,4 +52,27 @@ RSpec.describe Blog::PollJob do
 
     expect(broken.reload.failing_since).to be_present
   end
+
+  # A blog just added by the reader, who is waiting for it to fill in. The
+  # roster is not polled for them — the other blogs were polled on the hour.
+  it "polls one blog when it is handed one" do
+    resolve_publicly
+    added = create(:blog)
+    untouched = create(:blog)
+    stub_feed(added, rss_document(rss_item("From the new one")))
+
+    Blog::PollJob.perform_now(added)
+
+    expect(added.reload.polled_at).to be_present
+    expect(untouched.reload.polled_at).to be_nil
+  end
+
+  it "records a blog it was handed as failing when it raises" do
+    broken = create(:blog, failing_since: nil)
+    poll_raising_for(broken)
+
+    Blog::PollJob.perform_now(broken)
+
+    expect(broken.reload.failing_since).to be_present
+  end
 end

@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe Blog::Subscription do
+  include ActiveJob::TestHelper
+
   # The document the feed would have answered with, handed over rather than
   # served: what these examples are about is what this class does with a
   # feed, not how it is fetched.
@@ -65,20 +67,22 @@ RSpec.describe Blog::Subscription do
     expect(Blog.count).to eq(1)
   end
 
-  # The first poll is the sample, not a second request: the reader is standing
-  # there, and the document that was just read is the one to read from.
-  it "stores the posts it sampled rather than fetching them again" do
-    follow("https://queryplanweekly.dev/feed",
+  # The reader waits for the decision, not for the archive. Storing a real
+  # blog's back catalogue took twenty seconds inside the request, on a thread
+  # the whole app shares three of.
+  it "asks for the blog to be polled rather than storing it inline" do
+    _followed, blog = follow("https://queryplanweekly.dev/feed",
       returning(rss_document(rss_article("One") + rss_article("Two"))))
 
-    expect(Blog::Post.count).to eq(2)
+    expect(Blog::PollJob).to have_been_enqueued.with(blog)
+    expect(Blog::Post.count).to eq(0)
   end
 
-  it "takes the blog's name from the feed it sampled" do
-    _followed, blog = follow("https://queryplanweekly.dev/feed",
-      returning(rss_document(rss_article("One"))))
+  it "asks for nothing when the feed was refused" do
+    follow("https://news.ycombinator.com/rss",
+      returning(rss_document(link("One") + link("Two"))))
 
-    expect(blog.reload.title).to eq("Query Plan Weekly")
+    expect(Blog::PollJob).not_to have_been_enqueued
   end
 
   it "refuses a feed whose items are all stubs" do
@@ -162,16 +166,23 @@ RSpec.describe Blog::Subscription do
     expect(blog.feed_url).to eq("https://queryplanweekly.dev")
   end
 
-  # A blog row that exists with nothing in it reads "Not checked yet" forever,
-  # the reader is shown an error page, and a retry earns "already been taken".
-  it "leaves no blog behind when the poll raises after the row is written" do
-    allow(RemoteImagesJob).to receive(:perform_later).and_raise(ActiveRecord::StatementInvalid)
-
-    suppress(ActiveRecord::StatementInvalid) do
-      follow("https://queryplanweekly.dev/feed", returning(rss_document(rss_article("One"))))
+  # A feed's character shows in its first items, and reading a back catalogue
+  # of 128 to decide told us nothing the first twenty did — measured at ten
+  # seconds of the twenty-one a real blog's first subscription took.
+  it "judges a feed on a sample rather than on all of it" do
+    items = (1..(Blog::Subscription::SAMPLE + 20)).map { |number| rss_article("Post #{number}") }
+    read = []
+    fetch = lambda do |_blog|
+      Blog::Fetch::Fetched.new(document: rss_document(items.join), etag: "", last_modified: "")
+    end
+    allow(Newsletter::Body).to receive(:prose).and_wrap_original do |original, html|
+      read << html
+      original.call(html)
     end
 
-    expect(Blog.count).to eq(0)
+    follow("https://queryplanweekly.dev/feed", fetch)
+
+    expect(read.length).to eq(Blog::Subscription::SAMPLE)
   end
 
   # A blog that publishes two-line excerpts and a "read more" link is a blog.
@@ -208,12 +219,12 @@ RSpec.describe Blog::Subscription do
     expect(blog.reload.feed_url).to eq("https://queryplanweekly.dev/feed")
   end
 
-  it "stores the posts from the feed a home page announced" do
-    follow("https://queryplanweekly.dev", returning_each(
+  it "asks for the feed a home page announced to be polled" do
+    _followed, blog = follow("https://queryplanweekly.dev", returning_each(
       home_page("https://queryplanweekly.dev/feed"), rss_document(rss_article("One"))
     ))
 
-    expect(Blog::Post.count).to eq(1)
+    expect(Blog::PollJob).to have_been_enqueued.with(blog)
   end
 
   it "still refuses an aggregator reached through its home page" do
