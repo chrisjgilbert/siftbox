@@ -67,7 +67,21 @@ class Edition::Editor
   # the ids merged would read a story citing one of them as having cited both.
   def faults_in(stories)
     faults_for("newsletter", mail, cited(stories, :newsletter_ids)) +
-      faults_for("post", posts, cited(stories, :post_ids))
+      faults_for("post", posts, cited(stories, :post_ids)) +
+      [ unattributed(stories) ].compact
+  end
+
+  # Every source cited by some story is not the same guarantee as every story
+  # citing some source, and the second is the one the reader is owed: a story
+  # naming nothing satisfies both checks above vacuously — nothing was missed
+  # and nothing was invented — and ships under the masthead with no way to
+  # check it. The instructions ask for this too, and asking is the part that
+  # cannot be verified.
+  def unattributed(stories)
+    loose = stories.count { |story| cites_nothing?(story) }
+    return if loose.zero?
+
+    "#{loose} #{"story".pluralize(loose)} cites no source"
   end
 
   def cited(stories, field)
@@ -76,6 +90,10 @@ class Edition::Editor
 
   def faults_for(kind, known, cited)
     [ uncited(kind, known, cited), invented(kind, known, cited) ].compact
+  end
+
+  def cites_nothing?(story)
+    story.fetch(:newsletter_ids).empty? && story.fetch(:post_ids).empty?
   end
 
   def uncited(kind, known, cited)

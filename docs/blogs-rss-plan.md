@@ -224,6 +224,11 @@ across six files:
   9 of the 273 posts I measured were under 400 characters, mostly Martin
   Fowler publishing an essay in linked fragments. When this holds something
   back it should say so somewhere, not drop it quietly.
+
+  **Where it says so:** a line in the job log naming the post, which is where
+  this app says everything else it decided not to do. Nothing reaches the
+  reader. The Sources page (Milestone 3) is the place for that, and it can
+  read the same rule off `Blog::Post#enough_to_write_from?`.
 - **A note when a feed only gives a summary.** Some blogs publish the first
   two lines and a "read more" link. Without a marker, the editor reads that
   as a paywalled article and reports the blog as paywalled, which is false.
@@ -231,6 +236,19 @@ across six files:
   Luu's full articles arrive in the field usually used for summaries, and
   Simon Willison's short posts are short on purpose. So it's a guess and
   should be written as one.
+
+  **What was built instead, and why.** No per-post marker. The plan asked for
+  a line appended to short bodies, the way `Newsletter::Prose::OMISSION`
+  names this app's own cut — but that marker is honest because the app knows
+  it cut the text, and a "this may be an excerpt" line would be the app
+  guessing about somebody else's publishing. Since length says nothing (see
+  the measurements above), every such line would be a guess printed as a
+  fact, on the majority of posts wrongly. What shipped is a standing sentence
+  in the instructions: a feed carrying the opening of a post and a link to
+  read on is publishing that way rather than charging for the rest, so never
+  call a blog paywalled on the strength of a short post. That fixes the false
+  paywall. It does not give the reader a "go and read the rest of this" nudge
+  on a genuinely summary-only feed, which is the half that was dropped.
 
 **Not doing:** limiting posts per blog, or relaxing the rule that every
 source gets written about. At 3 posts a day neither is needed.

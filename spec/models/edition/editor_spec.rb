@@ -379,4 +379,33 @@ RSpec.describe Edition::Editor do
       /no story cited newsletter #{missed.id}\b.*cited post #{written.id + 404}/m
     )
   end
+
+  # The instructions ask for it, and asking is exactly the part that cannot be
+  # verified — which is this class's own argument for checking completeness
+  # mechanically. A story citing nothing satisfies both existing checks
+  # vacuously: nothing was missed and nothing was invented. It also ships
+  # under the masthead with no attribution, which is the one thing an edition
+  # is not allowed to do.
+  it "gives up rather than publishing a story that cites nothing" do
+    source = newsletter
+    client = FakeAnthropic.new(text: answer(
+      story(cites: [ source.id ], headline: "Figma filed"),
+      story(headline: "Something else entirely")
+    ))
+
+    expect { compose([ source ], client) }
+      .to raise_error(Edition::Editor::Incomplete, /cites no source/)
+  end
+
+  it "asks again when one story in the answer cited nothing" do
+    source = newsletter
+    client = FakeAnthropic.new(text: [
+      answer(story(cites: [ source.id ]), story(headline: "Something else entirely")),
+      answer(story(cites: [ source.id ]))
+    ])
+
+    edition = compose([ source ], client)
+
+    expect(edition.reload.stories.length).to eq(1)
+  end
 end
