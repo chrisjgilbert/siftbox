@@ -16,6 +16,12 @@ FactoryBot.define do
     sequence(:feed_url) { |n| "https://queryplanweekly#{n}.dev/feed" }
   end
 
+  factory :blog_post, class: "Blog::Post" do
+    blog
+    title { "Why your index is not being used" }
+    received_at { 1.hour.ago }
+  end
+
   factory :edition_citation, class: "Edition::Citation" do
     newsletter
     story factory: :edition_story

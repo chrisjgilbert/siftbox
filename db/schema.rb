@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_142354) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_22_163759) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "message_checksum", null: false
@@ -46,6 +46,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_142354) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "blog_posts", force: :cascade do |t|
+    t.integer "blog_id", null: false
+    t.text "body_html", default: "", null: false
+    t.datetime "created_at", null: false
+    t.string "guid", default: "", null: false
+    t.string "lead_image_url", default: "", null: false
+    t.datetime "published_at"
+    t.datetime "received_at", null: false
+    t.string "snippet", default: "", null: false
+    t.string "title", default: "", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", default: "", null: false
+    t.index ["blog_id", "guid"], name: "index_blog_posts_on_present_guid", unique: true, where: "guid <> ''"
+    t.index ["blog_id"], name: "index_blog_posts_on_blog_id"
+    t.index ["received_at"], name: "index_blog_posts_on_received_at"
   end
 
   create_table "blogs", force: :cascade do |t|
@@ -146,6 +163,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_142354) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "blog_posts", "blogs", on_delete: :cascade
   add_foreign_key "edition_citations", "edition_stories", on_delete: :cascade
   add_foreign_key "edition_citations", "newsletters", on_delete: :cascade
   add_foreign_key "edition_stories", "editions", on_delete: :cascade
