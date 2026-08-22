@@ -604,6 +604,162 @@ a {
   color: var(--body);
 }
 
+/* The Sources section. One shape as the pen's sections above it — the type
+   scale hangs off the section name, so no partial asks which one it is in —
+   with a form at the top, because this is the only section of this page the
+   reader writes to rather than only reads. */
+.sources__form {
+  padding-top: 24px;
+}
+
+.sources__label {
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* Stacked below 720px for the reason the waitlist's are: "Follow" in mono
+   beside an input is wider than a 390px screen leaves room for, and squeezing
+   both onto one line pushes the button off the page. */
+.sources__controls {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.sources__input {
+  border: 0;
+  border-bottom: 2px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 0;
+  font-family: var(--sans);
+  font-size: 17px;
+  color: var(--ink);
+}
+
+.sources__input::placeholder {
+  color: var(--read);
+}
+
+.sources__input:focus {
+  outline: 0;
+}
+
+.sources__submit {
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 14px 22px;
+  margin-top: 16px;
+  justify-self: start;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sources__submit:hover {
+  background: var(--blue);
+}
+
+/* Set in ink and in sentence case: this is the app explaining itself to
+   somebody who has just been told no, and it is the one moment there is to
+   say why. */
+.sources__error {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.sources__note {
+  margin: 14px 0 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* Not a link, so the grid sits on the item itself where the pen's sits on
+   the line inside it. */
+.pen__item--source {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  row-gap: 4px;
+  column-gap: 16px;
+  padding: 16px 0;
+}
+
+.sources__name {
+  grid-column: 1;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.sources__feed {
+  grid-column: 1;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--read);
+  overflow-wrap: anywhere;
+}
+
+.sources__count,
+.sources__state {
+  grid-column: 1;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* The one thing on this page the reader has to act on, so it is the one thing
+   set in ink rather than in the mute the rest of the mono furniture takes —
+   the same move the pen makes for how long a confirmation has waited. */
+.sources__state--failing {
+  color: var(--ink);
+}
+
+.sources__remove {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  align-self: center;
+  margin: 0;
+}
+
+.sources__remove input {
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--mute);
+  padding: 8px 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sources__remove input:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
 .pen__empty {
   margin: 0;
   padding: 24px 0 4px;

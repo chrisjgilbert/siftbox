@@ -37,10 +37,26 @@ class Subscriptions
     end
   end
 
+  # The blog the add-a-feed form is filling in. A fresh one on an ordinary
+  # visit; the one that was just refused when BlogsController re-renders this
+  # page, so the reader sees what they typed and why it was turned down.
+  attr_reader :blog
+
+  def initialize(blog: Blog.new)
+    @blog = blog
+  end
+
   # Memoised because the view asks each section twice — whether to draw rows
   # or the empty line, and then for the rows.
   def sections
     @_sections ||= [ awaiting, new_senders, bounced ]
+  end
+
+  # The roster, newest first so a blog just added is at the top where the
+  # reader is looking. Ordered on the id rather than on created_at, which the
+  # table does not carry an index for and which ties on a seeded roster.
+  def blogs
+    @_blogs ||= Blog.order(id: :desc).map { |followed| Blog::Row.new(followed) }
   end
 
   private

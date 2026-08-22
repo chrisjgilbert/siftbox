@@ -1,0 +1,39 @@
+<%# The roster: what the reader follows, and the way to add another.
+
+    Drawn on the Subscriptions page rather than on a page of its own, because
+    this is the same question the sections above it answer — what reaches me,
+    and what does not. A second page would be a second answer.
+
+    One shape as the pen's sections, so the type scale hangs off the section
+    name in CSS and no template asks which one it is drawing. %>
+<section class="pen__section pen__section--sources">
+  <h2 class="pen__heading"><%= t(".heading") %></h2>
+
+  <%= form_with model: blog, url: blogs_path, class: "sources__form" do |form| %>
+    <%= form.label :feed_url, t(".label"), class: "sources__label" %>
+
+    <div class="sources__controls">
+      <%= form.url_field :feed_url,
+            required: true,
+            autocomplete: "off",
+            placeholder: t(".placeholder"),
+            class: "sources__input" %>
+      <%= form.submit t(".submit"), class: "sources__submit" %>
+    </div>
+
+    <%# The reason, in the sentence the model wrote it in. A refused feed is
+        the one moment there is to say why, so it says why here rather than
+        "is invalid". %>
+    <% blog.errors.full_messages_for(:feed_url).each do |message| %>
+      <p class="sources__error"><%= message %></p>
+    <% end %>
+
+    <p class="sources__note"><%= t(".note") %></p>
+  <% end %>
+
+  <% if blogs.any? %>
+    <ol class="pen__list"><%= render blogs %></ol>
+  <% else %>
+    <p class="pen__empty"><%= t(".empty") %></p>
+  <% end %>
+</section>

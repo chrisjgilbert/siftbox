@@ -1,0 +1,16 @@
+<%# Name, feed, state, count, and the way off the roster. The name links out
+    to the feed rather than to a page of this app's: a post's original is the
+    blog itself, and so is a blog's.
+
+    Removing is a button rather than a link, because it is a DELETE — see
+    .claude/rules/views.md. %>
+<li class="pen__item pen__item--source">
+  <span class="sources__name"><%= row.name %></span>
+  <span class="sources__feed"><%= row.feed_url %></span>
+  <span class="sources__state<%= " sources__state--failing" if row.failing? %>">
+    <%= row.state %>
+  </span>
+  <span class="sources__count"><%= row.count %></span>
+  <%= button_to t("blogs.row.remove"), blog_path(row), method: :delete,
+        class: "sources__remove" %>
+</li>

@@ -6,6 +6,17 @@ en:
           attributes:
             stories:
               duplicate_position: claim the same position twice.
+        blog:
+          attributes:
+            feed_url:
+              aggregator: looks like a link aggregator. Siftbox reads blogs — feeds
+                whose items carry the writing itself rather than a link to it.
+              empty: has nothing in it yet. A feed with no items is one siftbox cannot
+                tell apart from a page that is not a feed at all.
+              unreachable: could not be read. The address may be wrong, or the server
+                may be refusing us.
+              unreadable: is not a feed. Check the address points at the feed rather
+                than at the page it belongs to.
         edition/citation:
           attributes:
             base:
@@ -21,8 +32,26 @@ en:
       originals: Originals
       subscriptions: Subscriptions
   blogs:
+    row:
+      remove: Remove
+    section:
+      empty: No blogs yet. Paste a feed address above and siftbox will read it
+        every hour.
+      heading: Blogs
+      label: Feed address
+      note: The feed, not the blog's home page. Siftbox reads it hourly and puts
+        new posts in the archive and the next edition.
+      placeholder: https://example.dev/feed.xml
+      submit: Follow
+    count:
+      one: 1 post
+      other: "%{count} posts"
     kind: Blog
     no_image: No image in post
+    state:
+      failing: Not answering for %{duration}
+      polled: Checked %{duration} ago
+      unpolled: Not checked yet
   date:
     formats:
       edition_masthead: "%A %-d %B"

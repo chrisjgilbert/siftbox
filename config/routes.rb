@@ -5,6 +5,10 @@ Rails.application.routes.draw do
   resources :blog_posts, only: [] do
     resources :images, only: :show, module: :blog_posts
   end
+  # No index: the roster is a section of the Subscriptions page, which is
+  # where the reader already goes to see what reaches them and what does not.
+  # Adding one here would be a second answer to the same question.
+  resources :blogs, only: [ :create, :destroy ]
   resources :editions, only: [ :index, :show ]
   resources :newsletters, only: :index do
     # The two ways out of the pen, as nouns: creating a dismissal is the
