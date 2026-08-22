@@ -54,7 +54,13 @@ class Blog::Feed
   # specs below pin all three.
   VALIDATE = false
 
-  Item = Data.define(:title, :url, :body_html, :published_at)
+  # The publisher's own name for a post: guid in RSS, id in Atom. Neither is
+  # guaranteed, so what a post is identified by when both are absent is
+  # Blog::Poll's decision rather than this class's — all it does is surface
+  # what the feed said.
+  IDENTITY_FIELDS = %i[guid id].freeze
+
+  Item = Data.define(:title, :url, :body_html, :published_at, :identity)
 
   def initialize(document)
     @document = document
@@ -71,8 +77,8 @@ class Blog::Feed
   def item_from(item)
     Item.new(
       title: value_of(item.title).to_s, url: address_of(item).to_s,
-      body_html: longest_of(item, BODY_FIELDS).to_s,
-      published_at: first_of(item, DATE_FIELDS)
+      body_html: body_of(item), published_at: first_of(item, DATE_FIELDS),
+      identity: first_of(item, IDENTITY_FIELDS).to_s
     )
   end
 
@@ -82,9 +88,20 @@ class Blog::Feed
   # the reader to a comments document. Only Atom answers a list, so RSS falls
   # through to its single link untouched.
   def address_of(item)
-    return value_of(item.link) unless item.respond_to?(:links)
+    return value_of(alternate(item.links) || item.link) if item.respond_to?(:links)
 
-    value_of(alternate(item.links) || item.link)
+    value_of(item.link).presence || permalink_of(item)
+  end
+
+  # RSS 2.0 lets an item carry its address in the guid instead of a link,
+  # when the guid says it is one. Without this such a post has no address at
+  # all: nothing for the archive to link to and nothing for the edition to
+  # cite.
+  def permalink_of(item)
+    guid = item.guid if item.respond_to?(:guid)
+    return unless guid&.isPermaLink
+
+    guid.content
   end
 
   # No rel at all means alternate, per RFC 4287, so both spellings count.
@@ -102,8 +119,27 @@ class Blog::Feed
   end
 
   # The fullest text the feed offers, per BODY_FIELDS above.
-  def longest_of(item, fields)
-    values_of(item, fields).max_by(&:length)
+  def body_of(item)
+    bodies = BODY_FIELDS.filter_map do |field|
+      html_of(item.public_send(field)) if item.respond_to?(field)
+    end
+
+    bodies.select(&:present?).max_by(&:length).to_s
+  end
+
+  # Atom marks a plain-text body with type="text", and it is the only field
+  # here that is not already markup. Escaped rather than wrapped, and through
+  # CGI rather than ERB::Util, because the latter answers a SafeBuffer — and
+  # a body written by a stranger is the last string in this app that should
+  # be carrying an html_safe flag around with it.
+  def html_of(field)
+    return value_of(field) unless plain_text?(field)
+
+    CGI.escapeHTML(field.content)
+  end
+
+  def plain_text?(field)
+    field.respond_to?(:type) && field.type == "text"
   end
 
   # A date is a date, so the first the item answers with will do.

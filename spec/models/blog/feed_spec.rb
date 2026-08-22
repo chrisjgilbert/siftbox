@@ -149,7 +149,8 @@ RSpec.describe Blog::Feed do
         title: "Why your index is not being used",
         url: "https://queryplanweekly.dev/unused-index",
         body_html: "<p>The planner has its reasons.</p>",
-        published_at: Time.utc(2026, 8, 21, 6, 30)
+        published_at: Time.utc(2026, 8, 21, 6, 30),
+        identity: "https://queryplanweekly.dev/unused-index"
       )
     )
   end
@@ -322,5 +323,63 @@ RSpec.describe Blog::Feed do
     feed = Blog::Feed.new(document)
 
     expect(feed.posts.first.url).to eq("https://queryplanweekly.dev/x")
+  end
+
+  # Atom marks a plain-text body with type="text". Stored as it stands it
+  # lands in an HTML column, and the first bare < swallows the rest of the
+  # post — either as an unterminated tag in the browser or under the
+  # sanitiser's pruning.
+  it "escapes an Atom body that is marked as plain text" do
+    document = atom_document(<<~ENTRY)
+      <entry>
+        <title>t</title><id>i</id><updated>2026-08-21T06:30:00Z</updated>
+        <content type="text">if a &lt; b then print &quot;hi&quot;</content>
+      </entry>
+    ENTRY
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.body_html).to eq("if a &lt; b then print &quot;hi&quot;")
+  end
+
+  # What "seen this one before" is decided on. RSS calls it guid, Atom calls
+  # it id, and both are the publisher's own name for the post rather than
+  # anything derived from it — which is what makes polling the same feed
+  # twice store nothing the second time.
+  it "reads a post's identity from its guid" do
+    document = rss_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <guid isPermaLink="false">tag:queryplanweekly.dev,2026:1481</guid>
+      </item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.identity).to eq("tag:queryplanweekly.dev,2026:1481")
+  end
+
+  it "reads a post's identity from an Atom id" do
+    feed = Blog::Feed.new(atom_document(atom_entry))
+
+    expect(feed.posts.first.identity)
+      .to eq("https://queryplanweekly.dev/unused-index")
+  end
+
+  # RSS 2.0 lets an item carry its address in the guid instead of a link,
+  # when the guid is marked as a permalink. Without this such a post has no
+  # address at all — nothing for the archive to link to, and nothing for the
+  # edition to cite.
+  it "takes the address from a permalink guid when there is no link" do
+    document = rss_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <guid isPermaLink="true">https://queryplanweekly.dev/unused-index</guid>
+      </item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.url).to eq("https://queryplanweekly.dev/unused-index")
   end
 end
