@@ -17,6 +17,12 @@ class Blog::Post < ApplicationRecord
     id blog_id title snippet url received_at lead_image_url
   ].freeze
 
+  # What an edition's citation renders: the blog's name, and where the post
+  # can be read. Mirrors Newsletter::CITATION_COLUMNS — a post's body_html is
+  # a whole article, and printing forty citations should not read forty of
+  # them.
+  CITATION_COLUMNS = %i[id blog_id title url].freeze
+
   belongs_to :blog, touch: true
 
   # The column is NOT NULL and that is what actually holds. This is here so an
@@ -24,6 +30,10 @@ class Blog::Post < ApplicationRecord
   # NotNullViolation naming the table — the same division Newsletter makes for
   # the same column.
   validates :received_at, presence: true
+
+  def self.for_citation
+    select(CITATION_COLUMNS)
+  end
 
   def self.for_feed
     select(FEED_COLUMNS)

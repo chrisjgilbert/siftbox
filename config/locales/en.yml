@@ -6,9 +6,14 @@ en:
           attributes:
             stories:
               duplicate_position: claim the same position twice.
+        edition/citation:
+          attributes:
+            base:
+              one_source: must name either a newsletter or a blog post, not both.
         edition/story:
           attributes:
             citations:
+              duplicate_blog_post: name the same blog post twice.
               duplicate_newsletter: name the same newsletter twice.
   application:
     masthead:

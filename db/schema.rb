@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_163759) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_22_194829) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "message_checksum", null: false
@@ -79,12 +79,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_163759) do
   end
 
   create_table "edition_citations", force: :cascade do |t|
+    t.integer "blog_post_id"
     t.datetime "created_at", null: false
     t.integer "edition_story_id", null: false
-    t.integer "newsletter_id", null: false
+    t.integer "newsletter_id"
     t.datetime "updated_at", null: false
+    t.index ["blog_post_id"], name: "index_edition_citations_on_blog_post_id"
+    t.index ["edition_story_id", "blog_post_id"], name: "index_edition_citations_on_story_and_post", unique: true, where: "blog_post_id IS NOT NULL"
     t.index ["edition_story_id", "newsletter_id"], name: "index_edition_citations_on_edition_story_id_and_newsletter_id", unique: true
     t.index ["newsletter_id"], name: "index_edition_citations_on_newsletter_id"
+    t.check_constraint "(newsletter_id IS NOT NULL) + (blog_post_id IS NOT NULL) = 1", name: "edition_citations_name_one_source"
   end
 
   create_table "edition_stories", force: :cascade do |t|
@@ -164,6 +168,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_163759) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "blog_posts", "blogs", on_delete: :cascade
+  add_foreign_key "edition_citations", "blog_posts", on_delete: :cascade
   add_foreign_key "edition_citations", "edition_stories", on_delete: :cascade
   add_foreign_key "edition_citations", "newsletters", on_delete: :cascade
   add_foreign_key "edition_stories", "editions", on_delete: :cascade
