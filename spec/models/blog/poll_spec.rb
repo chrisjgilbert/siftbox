@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe Blog::Poll do
+  include ActiveJob::TestHelper
+
   # The fetch is injected rather than performed, so every example here is a
   # string. rss_document wraps the items in the channel furniture the format
   # requires; see spec/support/feed_documents.rb.
@@ -302,7 +304,7 @@ RSpec.describe Blog::Poll do
 
   # A stalled host holds its connection for up to Download::MAX_DURATION.
   # Holding a database transaction open across that, once per blog, is what
-  # Newsletter::RemoteImages documents itself as avoiding.
+  # RemoteImages documents itself as avoiding.
   it "does not hold a transaction open across the fetch" do
     blog = create(:blog)
     # The example itself runs inside a transaction, so depth rather than
@@ -335,5 +337,75 @@ RSpec.describe Blog::Poll do
     Blog::Poll.new(blog, fetch: returning(one_post)).save
 
     expect(blog.reload.site_url).to eq("https://queryplanweekly.dev")
+  end
+
+  # Off the poll rather than inside it, for the reason mail does the same: a
+  # slow image host would otherwise hold the poll open, and the rest of the
+  # roster behind it.
+  it "asks for the images each stored post hotlinks" do
+    blog = create(:blog)
+
+    Blog::Poll.new(blog, fetch: returning(one_post)).save
+
+    expect(RemoteImagesJob).to have_been_enqueued.with(blog.posts.sole)
+  end
+
+  it "asks for nothing when the poll stored no posts" do
+    blog = create(:blog)
+    Blog::Poll.new(blog, fetch: returning(one_post)).save
+
+    Blog::Poll.new(blog.reload, fetch: returning(one_post)).save
+
+    expect(RemoteImagesJob).to have_been_enqueued.exactly(:once)
+  end
+
+  # A guid of nothing but NUL bytes normalises to "" on the way into the
+  # column, and #known reads through a partial index that excludes those — so
+  # the post is invisible to the next poll and stored again, every hour,
+  # forever. The key has to be computed the way the column stores it.
+  it "stores a post whose guid was nothing but null bytes only once" do
+    blog = create(:blog)
+    document = rss_document(<<~ITEM)
+      <item>
+        <title>Why your index is not being used</title>
+        <link>https://queryplanweekly.dev/unused-index</link>
+        <guid>#{0.chr}</guid>
+      </item>
+    ITEM
+    Blog::Poll.new(blog, fetch: returning(document)).save
+
+    Blog::Poll.new(blog.reload, fetch: returning(document)).save
+
+    expect(blog.posts.count).to eq(1)
+  end
+
+  # The fallback the empty key has to reach. Nothing is left to identify the
+  # post by but its address, and that is what the chain is for.
+  it "identifies such a post by its address instead" do
+    blog = create(:blog)
+    document = rss_document(<<~ITEM)
+      <item>
+        <title>Why your index is not being used</title>
+        <link>https://queryplanweekly.dev/unused-index</link>
+        <guid>#{0.chr}</guid>
+      </item>
+    ITEM
+
+    Blog::Poll.new(blog, fetch: returning(document)).save
+
+    expect(blog.posts.sole.guid).to eq("https://queryplanweekly.dev/unused-index")
+  end
+
+  # FIRST_POLL_WINDOW.ago is evaluated when the poll runs and the archive's
+  # own horizon is evaluated when the page renders, which is always later — so
+  # a post stamped exactly on the boundary is forever a hair too old to list.
+  # Stored and reachable from nowhere, against the constant's own claim that
+  # what an edition may cover on day one is what the archive is showing.
+  it "keeps an undated first-poll post inside the archive's own horizon" do
+    blog = create(:blog, polled_at: nil)
+
+    Blog::Poll.new(blog, fetch: returning(rss_document(unnamed_post("One")))).save
+
+    expect(blog.posts.sole.received_at).to be > Newsletter::Age::WINDOW.ago
   end
 end

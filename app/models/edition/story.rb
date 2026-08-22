@@ -23,10 +23,17 @@ class Edition::Story < ApplicationRecord
   # Scoped to the columns a citation is drawn from, the way the feed and the
   # pen are. Unscoped this selects newsletters.*, and an edition's
   # citations then read every cited body in full to print a list of senders.
-  has_many :newsletters, -> { for_citation }, through: :citations
+  #
+  # Ordered, and it has to be said rather than assumed. Without it the order
+  # is whichever index SQLite reaches for, which differs between a preloaded
+  # edition and a lazily-loaded one — so the page and the transcript could
+  # list one story's sources two different ways, and making the mail index
+  # partial to match the post one would silently re-order every edition
+  # already published. Oldest first is the order the prompt quoted them in.
+  has_many :newsletters, -> { for_citation.oldest_first }, through: :citations
   # The second source type, reached the same way and scoped the same way. A
   # story cites mail, posts, or both, and the page draws them as one list.
-  has_many :blog_posts, -> { for_citation }, through: :citations
+  has_many :blog_posts, -> { for_citation.oldest_first }, through: :citations
 
   validates :body, presence: true
   validates :position, presence: true, uniqueness: { scope: :edition }

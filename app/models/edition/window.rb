@@ -74,11 +74,14 @@ class Edition::Window
 
   private
 
+  # includes rather than a join, the way the archive does it: Edition::Prompt
+  # quotes each post under its blog's name, so without the preload a window of
+  # six posts reads six blogs one at a time.
   def arrived_posts
     Blog::Post
       .where("received_at > :after AND received_at <= :through",
         after: started_at, through: ended_at)
-      .oldest_first.to_a
+      .includes(:blog).oldest_first.to_a
   end
 
   # A stub is stored for the archive and kept out of the edition, per

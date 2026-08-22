@@ -224,4 +224,41 @@ RSpec.describe Edition::Story do
 
     expect(story).to be_valid
   end
+
+  # The presenter documents this order and until now nothing provided it: the
+  # rendered order was whichever index SQLite happened to reach for, so a
+  # preloaded edition and a lazily-loaded one listed one story's sources
+  # differently — and making the mail index partial, to match the post one,
+  # would silently re-order every published edition.
+  it "reads its cited newsletters oldest first" do
+    story = create(:edition_story)
+    newer = create(:newsletter, received_at: 1.hour.ago)
+    older = create(:newsletter, received_at: 2.hours.ago)
+    create(:edition_citation, story: story, newsletter: newer)
+    create(:edition_citation, story: story, newsletter: older)
+
+    expect(story.newsletters).to eq([ older, newer ])
+  end
+
+  it "reads its cited posts oldest first" do
+    story = create(:edition_story)
+    newer = create(:blog_post, received_at: 1.hour.ago)
+    older = create(:blog_post, received_at: 2.hours.ago)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: newer)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: older)
+
+    expect(story.blog_posts).to eq([ older, newer ])
+  end
+
+  it "reads its cited posts in the same order when they are preloaded" do
+    story = create(:edition_story)
+    newer = create(:blog_post, received_at: 1.hour.ago)
+    older = create(:blog_post, received_at: 2.hours.ago)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: newer)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: older)
+
+    loaded = Edition.for_reading.find(story.edition_id).stories.sole
+
+    expect(loaded.blog_posts).to eq([ older, newer ])
+  end
 end

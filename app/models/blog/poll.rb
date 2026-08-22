@@ -8,7 +8,7 @@ require "digest"
 # mostly has not changed, so storing nothing is the ordinary outcome rather
 # than the exceptional one.
 #
-# The fetch is injected the way Newsletter::RemoteImages injects its download,
+# The fetch is injected the way RemoteImages injects its download,
 # so a spec hands over an answer instead of standing up a server.
 class Blog::Poll
   # How far back a post can be published and still count as new on the first
@@ -32,7 +32,7 @@ class Blog::Poll
   # The fetch happens first and outside the transaction. A stalled host holds
   # its connection for up to Download::MAX_DURATION, and holding a database
   # transaction open across that — once per blog, across the roster — is
-  # exactly what Newsletter::RemoteImages documents itself as avoiding.
+  # exactly what RemoteImages documents itself as avoiding.
   #
   # What the transaction does wrap is the write, so a blog that records having
   # been polled has the posts that poll found.
@@ -77,9 +77,8 @@ class Blog::Poll
   # poll 304 without ever looking at the body again.
   def read(result)
     feed = Blog::Feed.new(result.document)
-    posts = stored(feed)
+    stored(feed)
     succeeded(feed, result)
-    posts
   rescue Blog::Feed::Malformed
     failed
   end
@@ -98,8 +97,14 @@ class Blog::Poll
     )
   end
 
+  # The images are asked for after the write and outside it, exactly as mail
+  # does at ingest: a slow or dead image host would otherwise hold the poll
+  # open, and the rest of the roster behind it. Until the job runs the body
+  # points where the publisher put it, which is what a download that fails
+  # leaves behind anyway.
   def stored(feed)
     unseen(feed).map { |key, post| blog.posts.create!(attributes_for(key, post)) }
+      .each { |post| RemoteImagesJob.perform_later(post) }
   end
 
   # Each post paired with its key, computed once. It used to be worked out
@@ -149,7 +154,17 @@ class Blog::Poll
   # the first post a blog publishes without a guid the last one it can ever
   # publish — every later unnamed post matches it and is skipped as seen.
   def key_for(post)
-    post.identity.presence || post.url.presence || digest_of(post)
+    stored_form(post.identity) || stored_form(post.url) || digest_of(post)
+  end
+
+  # Emptiness judged after the column's own normalisation rather than before
+  # it, because those are different questions. A guid of nothing but NUL bytes
+  # is present here and empty once stored — and #known reads through an index
+  # that excludes empty guids, so the post would be invisible to the next poll
+  # and stored again, every hour, forever. Asking the column how it would
+  # store the value is what keeps the key and the row in step.
+  def stored_form(value)
+    Blog::Post.normalize_value_for(:guid, value).presence
   end
 
   # Deterministic, which is the whole requirement: reading the same post next
@@ -166,7 +181,20 @@ class Blog::Poll
     return Time.current unless first_poll?
     return Time.current if demonstrably_new?(post)
 
-    post.published_at || FIRST_POLL_WINDOW.ago
+    post.published_at || floor
+  end
+
+  # As old as the guard ever needs anything to be, and a second inside the
+  # horizon rather than on it.
+  #
+  # The second is not a nicety. FIRST_POLL_WINDOW.ago is read when the poll
+  # runs and the archive's own window is read when the page renders, which is
+  # always later — so a post stamped exactly on the boundary is forever a hair
+  # too old to list: stored, and reachable from nowhere. Inside it, the post
+  # is in the archive and still outside every edition window, which is what
+  # the guard is actually for.
+  def floor
+    FIRST_POLL_WINDOW.ago + 1.second
   end
 
   # Note which way round this is. A post is admitted on a first poll only when

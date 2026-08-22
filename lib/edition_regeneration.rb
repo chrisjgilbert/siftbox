@@ -87,8 +87,11 @@ class EditionRegeneration
     Newsletter.where(id: cited(:newsletter_id)).oldest_first.to_a
   end
 
+  # Preloaded for the reason Edition::Window does it: the prompt quotes each
+  # post under its blog's name, and this set grows with the edition's
+  # citations rather than with a day.
   def cited_posts
-    Blog::Post.where(id: cited(:blog_post_id)).oldest_first.to_a
+    Blog::Post.where(id: cited(:blog_post_id)).includes(:blog).oldest_first.to_a
   end
 
   # One column at a time. A citation names one source and leaves the other
