@@ -12,8 +12,9 @@ RSpec.describe Newsletter::RemoteImages do
   end
 
   def stored_image
-    Download::Body
-      .new(bytes: "png-bytes", content_type: "image/png")
+    Download::Body.new(
+      bytes: "png-bytes", content_type: "image/png", etag: "", last_modified: ""
+    )
   end
 
   def newsletter_with(body_html)

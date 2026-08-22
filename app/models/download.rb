@@ -35,18 +35,29 @@ class Download
     URI::Error, Zlib::Error
   ].freeze
 
-  Body = Data.define(:bytes, :content_type)
+  Body = Data.define(:bytes, :content_type, :etag, :last_modified)
   Redirect = Data.define(:location)
+
+  # A 304: the server says what the caller already has is still current, which
+  # is a different answer from both "here it is" and "that did not work". A
+  # feed polled hourly answers this almost every time.
+  UNCHANGED = Data.define.new.freeze
 
   # types is an allowlist of content types worth reading, and nil means read
   # whatever comes back. An image is only worth fetching if this app would
   # serve it, so that caller names four; a feed is served under half a dozen
   # types and plenty of misconfigured spellings besides, and the parser is
   # what decides whether it is really a feed.
-  def initialize(url, max_bytes:, types: nil, resolver: Destination::RESOLVER)
+  #
+  # headers go out on every hop of the chain, which is what a conditional
+  # request needs: a redirect to the same resource should still be asked
+  # whether it has changed.
+  def initialize(url, max_bytes:, types: nil, headers: {},
+    resolver: Destination::RESOLVER)
     @url = url
     @max_bytes = max_bytes
     @types = types
+    @headers = headers
     @resolver = resolver
   end
 
@@ -70,7 +81,7 @@ class Download
 
   private
 
-  attr_reader :url, :max_bytes, :types, :resolver
+  attr_reader :url, :max_bytes, :types, :headers, :resolver
 
   def fetch(location)
     return if out_of_time?
@@ -94,11 +105,18 @@ class Download
   def get(uri, address)
     Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https",
       ipaddr: address, open_timeout: TIMEOUT, read_timeout: TIMEOUT) do |http|
-      http.request(Net::HTTP::Get.new(uri)) { |response| return yield(response) }
+      http.request(request_for(uri)) { |response| return yield(response) }
+    end
+  end
+
+  def request_for(uri)
+    Net::HTTP::Get.new(uri).tap do |request|
+      headers.each { |name, value| request[name] = value }
     end
   end
 
   def result_from(uri, response)
+    return UNCHANGED if response.is_a?(Net::HTTPNotModified)
     return body_from(response) unless response.is_a?(Net::HTTPRedirection)
     return if response["Location"].blank?
 
@@ -111,7 +129,10 @@ class Download
     bytes = capped_body(response)
     return if bytes.nil?
 
-    Body.new(bytes: bytes, content_type: content_type(response))
+    Body.new(
+      bytes: bytes, content_type: content_type(response),
+      etag: response["ETag"].to_s, last_modified: response["Last-Modified"].to_s
+    )
   end
 
   def worth_reading?(response)

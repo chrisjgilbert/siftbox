@@ -53,7 +53,15 @@ RSpec.describe Blog::Poll do
   end
 
   def returning(document)
-    ->(_blog) { document }
+    ->(_blog) { Blog::Fetch::Fetched.new(document: document, etag: "", last_modified: "") }
+  end
+
+  def unchanged
+    ->(_blog) { Blog::Fetch::UNCHANGED }
+  end
+
+  def failing
+    ->(_blog) { nil }
   end
 
   it "stores a post the blog has not published before" do
@@ -173,5 +181,69 @@ RSpec.describe Blog::Poll do
     Blog::Poll.new(blog, fetch: returning(document)).save
 
     expect(blog.posts.where(received_at: 6.days.ago..).count).to eq(0)
+  end
+
+  it "stores nothing when the feed says it has not changed" do
+    blog = create(:blog)
+    Blog::Poll.new(blog, fetch: returning(one_post)).save
+
+    Blog::Poll.new(blog.reload, fetch: unchanged).save
+
+    expect(blog.posts.count).to eq(1)
+  end
+
+  # What the next conditional request is built from. Without writing these
+  # back the poll asks unconditionally every hour and the publisher serves the
+  # whole feed every time.
+  it "records the validators the feed sent for next time" do
+    blog = create(:blog)
+    fetch = ->(_blog) do
+      Blog::Fetch::Fetched.new(document: one_post, etag: "\"abc\"", last_modified: "Wed")
+    end
+
+    Blog::Poll.new(blog, fetch: fetch).save
+
+    expect(blog.reload.etag).to eq("\"abc\"")
+  end
+
+  # A feed that has stopped answering is the failure the reader would
+  # otherwise never find out about: no posts, no error, and a blog that looks
+  # exactly like one that has stopped publishing.
+  it "marks a blog as failing when the fetch comes back with nothing" do
+    blog = create(:blog, failing_since: nil)
+
+    Blog::Poll.new(blog, fetch: failing).save
+
+    expect(blog.reload.failing_since).to be_present
+  end
+
+  it "keeps the first failure's time when it fails again" do
+    blog = create(:blog, failing_since: 3.days.ago)
+
+    Blog::Poll.new(blog, fetch: failing).save
+
+    expect(blog.reload.failing_since).to be < 2.days.ago
+  end
+
+  it "stops marking a blog as failing once it answers again" do
+    blog = create(:blog, failing_since: 3.days.ago)
+
+    Blog::Poll.new(blog, fetch: returning(one_post)).save
+
+    expect(blog.reload.failing_since).to be_nil
+  end
+
+  # The guard belongs to the first poll that actually stored anything, not to
+  # the first attempt. A blog whose first fetch failed has been polled — so
+  # keying on polled_at would drop the guard and let the back catalogue it has
+  # never yet read pour into the next edition the moment it recovers.
+  it "still guards the back catalogue after a first poll that failed" do
+    blog = create(:blog, polled_at: nil)
+    Blog::Poll.new(blog, fetch: failing).save
+
+    document = feed_document(dated_post("An old post", 2.years.ago))
+    Blog::Poll.new(blog.reload, fetch: returning(document)).save
+
+    expect(blog.posts.where(received_at: 1.week.ago..).count).to eq(0)
   end
 end
