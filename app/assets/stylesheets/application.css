@@ -814,6 +814,70 @@ a {
   }
 }
 
+/* Settings ------------------------------------------------------------------ */
+
+/* One section, one fact: the address a subscription gets pointed at. Same
+   shape as the pen's sections — a mono heading on the 2px rule — because it
+   is the same kind of page, a reference rather than something to act on. */
+.settings {
+  padding: 0 var(--gutter) 48px;
+}
+
+.settings__section {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding-top: 32px;
+}
+
+.settings__heading {
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.settings__address {
+  margin: 0;
+  padding: 24px 0 4px;
+  font-family: var(--mono);
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.settings__note {
+  margin: 0;
+  padding: 8px 0 4px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+@media (min-width: 720px) {
+  .settings {
+    padding: 0 var(--gutter) 72px;
+  }
+
+  .settings__section {
+    padding-top: 56px;
+  }
+
+  .settings__heading {
+    padding-bottom: 10px;
+    font-size: 11px;
+  }
+
+  .settings__address {
+    font-size: 19px;
+  }
+}
+
 /* Feed -------------------------------------------------------------------- */
 
 .feed {

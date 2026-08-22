@@ -30,6 +30,7 @@ en:
     masthead:
       archive: Archive
       originals: Originals
+      settings: Settings
       subscriptions: Subscriptions
   blogs:
     row:
@@ -121,6 +122,12 @@ en:
       password: Password
       submit: Sign in
       title: Sign in
+  settings:
+    show:
+      inbound_address:
+        heading: Inbound address
+        note: Point every subscription here. Nothing else lands in this feed.
+      line: Settings
   subscriptions:
     badge:
       line:
