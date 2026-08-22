@@ -7,7 +7,8 @@ RSpec.describe Blog::Feed do
   def rss_document(items)
     <<~XML
       <?xml version="1.0"?>
-      <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+      <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"
+           xmlns:dc="http://purl.org/dc/elements/1.1/">
         <channel>
           <title>Query Plan Weekly</title>
           <link>https://queryplanweekly.dev</link>
@@ -260,5 +261,66 @@ RSpec.describe Blog::Feed do
     feed = Blog::Feed.new(document)
 
     expect { feed.posts }.to raise_error(Blog::Feed::Malformed)
+  end
+
+  # Which element carries the article cannot be told from its name. The
+  # measurement behind docs/blogs-rss.md found Dan Luu publishing full
+  # articles in <summary> — 128 items, median 11,997 characters — so a fixed
+  # preference for <content> is a guess, and when it guesses wrong it hands
+  # the editor a teaser and the edition reports a full post as a stub.
+  it "takes the fuller body when a feed puts the article in the summary" do
+    document = atom_document(<<~ENTRY)
+      <entry>
+        <title>Why your index is not being used</title>
+        <id>https://queryplanweekly.dev/unused-index</id>
+        <updated>2026-08-21T06:30:00Z</updated>
+        <summary>The planner has its reasons, and here they are at length.</summary>
+        <content type="html">Read the rest on the site.</content>
+      </entry>
+    ENTRY
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.body_html)
+      .to eq("The planner has its reasons, and here they are at length.")
+  end
+
+  # Dublin Core's date, which RSS 1.0 has instead of pubDate rather than as
+  # well as it — so a feed in that format has no date at all without this, and
+  # published_at is what the archive sorts by and what the first-poll guard
+  # reads to decide whether a post is new.
+  it "reads a post's date from dc:date when there is no pubDate" do
+    document = rss_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <dc:date>2026-08-21T06:30:00+00:00</dc:date>
+      </item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.published_at).to eq(Time.utc(2026, 8, 21, 6, 30))
+  end
+
+  # The order Blogger and WordPress emit. An Atom entry may carry several
+  # links and only the one with no rel, or rel="alternate", is the post
+  # itself; the others are the comment feed and the editing endpoint. Taking
+  # whichever came first sends the reader to a comments document, and — since
+  # the address is also what identifies a post when it has no id — files it
+  # under the wrong key.
+  it "takes the alternate link when an Atom entry carries several" do
+    document = atom_document(<<~ENTRY)
+      <entry>
+        <title>t</title><id>i</id><updated>2026-08-21T06:30:00Z</updated>
+        <link rel="replies" href="https://queryplanweekly.dev/x/comments"/>
+        <link rel="edit" href="https://queryplanweekly.dev/api/1"/>
+        <link rel="alternate" href="https://queryplanweekly.dev/x"/>
+        <summary>s</summary>
+      </entry>
+    ENTRY
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.url).to eq("https://queryplanweekly.dev/x")
   end
 end

@@ -11,15 +11,22 @@ require "rss"
 # Takes the document rather than a URL. Fetching is Blog::Poll's job, and
 # keeping the two apart is what lets every example against this be a string.
 class Blog::Feed
-  # Tried in order, and the order prefers the fuller text. A blog publishing
-  # in full puts the article in content:encoded (RSS) or content (Atom) and
-  # leaves a summary in the other field, so reading the wrong one hands the
-  # editor a blurb — which it then reports as a stub, honestly and wrongly.
+  # Every field either format puts a post's body in. Deliberately not a
+  # preference order: the measurement behind docs/blogs-rss.md found Dan Luu
+  # publishing full articles in <summary> — 128 items, median 11,997
+  # characters — and Simon Willison publishing short link posts in the same
+  # element, so which element carries the article cannot be told from its
+  # name. The longest of them is taken instead, which is the only rule that
+  # does not amount to guessing.
   BODY_FIELDS = %i[content_encoded content description summary].freeze
 
   # Atom has two dates and only `updated` is required, so a feed that never
-  # sets `published` still dates its posts.
-  DATE_FIELDS = %i[pubDate published updated].freeze
+  # sets `published` still dates its posts. dc:date is last and is not an
+  # afterthought: RSS 1.0 has it *instead* of pubDate rather than as well as
+  # it, so without it every post from a feed in that format is undated — and
+  # published_at is what the archive sorts by and what the first-poll guard
+  # reads to decide whether a post is new enough to cover.
+  DATE_FIELDS = %i[pubDate published updated dc_date].freeze
 
   # The document could not be parsed. Feed XML is written by strangers and
   # arrives over the public internet, so this is an ordinary Tuesday rather
@@ -63,10 +70,26 @@ class Blog::Feed
 
   def item_from(item)
     Item.new(
-      title: value_of(item.title).to_s, url: value_of(item.link).to_s,
-      body_html: first_of(item, BODY_FIELDS).to_s,
+      title: value_of(item.title).to_s, url: address_of(item).to_s,
+      body_html: longest_of(item, BODY_FIELDS).to_s,
       published_at: first_of(item, DATE_FIELDS)
     )
+  end
+
+  # The one link that is the post itself. An Atom entry may carry several —
+  # the comment feed, the editing endpoint — and Blogger and WordPress both
+  # list those *before* the post's own, so taking whichever came first sends
+  # the reader to a comments document. Only Atom answers a list, so RSS falls
+  # through to its single link untouched.
+  def address_of(item)
+    return value_of(item.link) unless item.respond_to?(:links)
+
+    value_of(alternate(item.links) || item.link)
+  end
+
+  # No rel at all means alternate, per RFC 4287, so both spellings count.
+  def alternate(links)
+    links.detect { |link| link.rel.nil? || link.rel == "alternate" }
   end
 
   # RSS hands back the value itself; Atom hands back an element holding it,
@@ -78,6 +101,16 @@ class Blog::Feed
     field
   end
 
+  # The fullest text the feed offers, per BODY_FIELDS above.
+  def longest_of(item, fields)
+    values_of(item, fields).max_by(&:length)
+  end
+
+  # A date is a date, so the first the item answers with will do.
+  def first_of(item, fields)
+    values_of(item, fields).first
+  end
+
   # respond_to? rather than a check on the document's format: which fields an
   # item has is exactly what differs between the two, so asking the item is
   # asking the real question.
@@ -86,14 +119,13 @@ class Blog::Feed
   # Publishing tools emit an empty content:encoded or <content/> for a post
   # that has none, and on the Atom side that arrives as a perfectly present
   # element holding an empty string — so asking the element whether it is
-  # blank answers no, the preference stops there, and the editor is handed
-  # nothing while a real summary sits in the next field along.
-  def first_of(item, fields)
-    found = fields.filter_map do |field|
+  # blank answers no, and an empty string wins on existing alone.
+  def values_of(item, fields)
+    present = fields.filter_map do |field|
       value_of(item.public_send(field)) if item.respond_to?(field)
     end
 
-    found.detect(&:present?)
+    present.select(&:present?)
   end
 
   def parsed
