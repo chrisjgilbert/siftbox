@@ -61,8 +61,8 @@ en:
     index:
       empty: Nothing yet. Point a subscription at %{address} and it will show up here.
       end_of_feed:
-        one: End of feed — 1 issue
-        other: End of feed — %{count} issues
+        one: End of feed — 1 item
+        other: End of feed — %{count} items
       line: Originals
       no_image: No image in email
       no_image_compact: No image

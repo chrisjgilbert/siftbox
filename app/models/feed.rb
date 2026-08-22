@@ -1,12 +1,13 @@
-# The index view's collection: newsletters from the last week, grouped by the
-# day they arrived, each row already wrapped in its presenter.
+# The index view's collection: everything from the last week — mail and blog
+# posts alike — grouped by the day it arrived, each row already wrapped in its
+# presenter.
 #
 # Not scoped to a user. With one inbound address and one account, the
 # authentication gate is the scope; a user_id nothing filters on would be
 # theatre. See .claude/rules/security.md, and the note in README.md on what
 # multiple users would take.
 class Feed
-  Group = Struct.new(:label, :sublabel, :newsletters)
+  Group = Struct.new(:label, :sublabel, :items)
 
   # Memoised because the view asks twice: once to render, once to decide
   # between the end-of-list line and the empty state.
@@ -14,8 +15,8 @@ class Feed
     @_groups ||= numbered(grouped)
   end
 
-  def issue_count
-    newsletters.length
+  def item_count
+    items.length
   end
 
   private
@@ -24,7 +25,7 @@ class Feed
   # overlap: inclusive ranges that met at midnight put a newsletter into the
   # feed twice.
   def grouped
-    found = newsletters.group_by { |newsletter| bucket_for(newsletter) }
+    found = items.group_by { |item| bucket_for(item) }
 
     [ :today, :yesterday, :earlier ].filter_map { |name| [ name, found[name] ] if found[name] }
   end
@@ -32,10 +33,10 @@ class Feed
   # Everything the query returned is inside the window by definition. A row
   # can still bucket :older, because Age reads the clock again a moment after
   # the query did, and the filter_map above would then drop it from the page
-  # while #issue_count still counts it — an end-of-feed line claiming more
-  # issues than it shows, or an empty state with a newsletter behind it.
-  def bucket_for(newsletter)
-    bucket = Newsletter::Age.new(newsletter.received_at).bucket
+  # while #item_count still counts it — an end-of-feed line claiming more
+  # items than it shows, or an empty state with a row behind it.
+  def bucket_for(item)
+    bucket = Newsletter::Age.new(item.received_at).bucket
     return :earlier if bucket == :older
 
     bucket
@@ -47,8 +48,8 @@ class Feed
   def numbered(found)
     offset = 0
 
-    found.map do |name, newsletters|
-      group(name, newsletters, offset).tap { offset += newsletters.length }
+    found.map do |name, items|
+      group(name, items, offset).tap { offset += items.length }
     end
   end
 
@@ -93,8 +94,8 @@ class Feed
   # stops being a total order across two tables, where newsletter 5 and post 5
   # are not comparable. Without the class name between them, tied rows swap
   # places between page loads and the continuous numbering swaps with them.
-  def newsletters
-    @_newsletters ||= (mail + posts).sort_by { |item| ordering(item) }.reverse
+  def items
+    @_items ||= (mail + posts).sort_by { |item| ordering(item) }.reverse
   end
 
   def ordering(item)

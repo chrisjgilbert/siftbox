@@ -79,14 +79,14 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("No image in email")
   end
 
-  it "counts the issues at the end of the feed" do
+  it "counts the items at the end of the feed" do
     sign_in
     create(:newsletter)
     create(:newsletter, received_at: 2.hours.ago)
 
     get newsletters_path
 
-    expect(response.body).to include("End of feed — 2 issues")
+    expect(response.body).to include("End of feed — 2 items")
   end
 
   # With nothing to show there is no end-of-feed note, so this is the only
