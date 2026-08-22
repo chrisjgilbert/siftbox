@@ -21,6 +21,19 @@ class Blog::Feed
   # sets `published` still dates its posts.
   DATE_FIELDS = %i[pubDate published updated].freeze
 
+  # The document could not be parsed. Feed XML is written by strangers and
+  # arrives over the public internet, so this is an ordinary Tuesday rather
+  # than an exceptional case — Blog::Poll decides what a blog that sends one
+  # is worth, and nothing here does.
+  #
+  # An entity bomb arrives as one of these: REXML bounds expansion by default,
+  # so ten million characters of &a; stop at the parser rather than in memory.
+  # Its other refusal is quieter and raises nothing — an external entity is
+  # never resolved, so `&secret;` stays six characters of text instead of
+  # becoming a file off this server. Both are defaults rather than settings
+  # this app chose, which is exactly why the specs pin them.
+  Malformed = Class.new(StandardError)
+
   Item = Data.define(:title, :url, :body_html, :published_at)
 
   def initialize(document)
@@ -63,7 +76,12 @@ class Blog::Feed
     value_of(found.first)
   end
 
+  # Every RSS::Error becomes one error of ours, because the distinction the
+  # gem draws — not well formed, unknown version, missing a required field —
+  # is not one any caller here can act on differently.
   def parsed
     @_parsed ||= RSS::Parser.parse(document)
+  rescue RSS::Error => error
+    raise Malformed, "the feed could not be read: #{error.message}"
   end
 end

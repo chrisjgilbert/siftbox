@@ -43,6 +43,26 @@ RSpec.describe Blog::Feed do
     XML
   end
 
+  # A billion-laughs bomb: six levels of entity, each ten copies of the last,
+  # so &f; expands to ten million characters from a document of a few hundred
+  # bytes. Feed XML is written by strangers, so this is a document this app
+  # can be sent rather than one it would ever produce.
+  def entity_bomb
+    definitions = %w[a b c d e f].each_cons(2).map do |previous, this|
+      %(<!ENTITY #{this} "#{"&#{previous};" * 10}">)
+    end
+
+    <<~XML
+      <?xml version="1.0"?>
+      <!DOCTYPE rss [
+      <!ENTITY a "aaaaaaaaaa">
+      #{definitions.join("\n")}
+      ]>
+      <rss version="2.0"><channel><title>x</title><link>https://x.dev</link>
+      <description>&f;</description></channel></rss>
+    XML
+  end
+
   it "reads one post per item in an RSS document" do
     document = rss_document(<<~ITEMS)
       <item><title>Why your index is not being used</title></item>
@@ -124,5 +144,32 @@ RSpec.describe Blog::Feed do
         published_at: Time.utc(2026, 8, 21, 6, 30)
       )
     )
+  end
+
+  it "refuses a document whose entities expand without bound" do
+    feed = Blog::Feed.new(entity_bomb)
+
+    expect { feed.posts }.to raise_error(Blog::Feed::Malformed)
+  end
+
+  # The other half of the same worry. An external entity is a request for a
+  # file on this server, written into a document by whoever publishes the
+  # feed — so what matters is that the reference survives as text rather than
+  # being resolved into whatever it names.
+  it "does not resolve an external entity" do
+    document = <<~XML
+      <?xml version="1.0"?>
+      <!DOCTYPE rss [ <!ENTITY secret SYSTEM "file:///etc/hostname"> ]>
+      <rss version="2.0"><channel>
+      <title>Query Plan Weekly</title><link>https://queryplanweekly.dev</link>
+      <description>Notes on databases</description>
+      <item><title>Why your index is not being used</title>
+      <description>&secret;</description></item>
+      </channel></rss>
+    XML
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.body_html).to eq("&secret;")
   end
 end
