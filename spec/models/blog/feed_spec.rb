@@ -414,4 +414,21 @@ RSpec.describe Blog::Feed do
       )
     )
   end
+
+  # RSS 2.0 makes isPermaLink default to true, so a bare guid is a permalink
+  # unless the feed says otherwise — and a bare guid is how most feeds that
+  # use one spell it. The parser reports the missing attribute as nil rather
+  # than as the default, so nil has to be read as the yes it means.
+  it "takes the address from a guid that does not say it is a permalink" do
+    document = rss_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <guid>https://queryplanweekly.dev/unused-index</guid>
+      </item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.url).to eq("https://queryplanweekly.dev/unused-index")
+  end
 end

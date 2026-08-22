@@ -108,12 +108,18 @@ class Blog::Feed
   end
 
   # RSS 2.0 lets an item carry its address in the guid instead of a link,
-  # when the guid says it is one. Without this such a post has no address at
+  # when the guid is a permalink. Without this such a post has no address at
   # all: nothing for the archive to link to and nothing for the edition to
   # cite.
+  #
+  # Against false rather than for true, because the spec makes isPermaLink
+  # default to true and the parser reports a missing attribute as nil rather
+  # than as that default. A bare <guid> is how most feeds using one spell it,
+  # so reading nil as no would miss the common case and catch only the feeds
+  # that bothered to say what the spec already says.
   def permalink_of(item)
     guid = item.guid if item.respond_to?(:guid)
-    return unless guid&.isPermaLink
+    return if guid.nil? || guid.isPermaLink == false
 
     guid.content
   end
