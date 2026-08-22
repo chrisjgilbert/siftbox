@@ -34,6 +34,17 @@
 # Ignore master key for decrypting credentials and more.
 /config/master.key
 
+# Per-environment credentials. Rails' own convention commits the .enc and
+# ignores the .key, and that is right for an environment whose secrets the
+# whole team shares. These are not that: a test credentials file is scratch,
+# generated locally so the suite can boot where config/master.key is absent
+# — and one encrypted with a key nobody else holds would take precedence over
+# the shared credentials and fail to decrypt on every other machine. Committed
+# it would break the suite for everyone; delete these two lines the day the
+# test environment wants real, shared secrets.
+/config/credentials/*.key
+/config/credentials/test.yml.enc
+
 # Ignore the raw deploy secrets. /.kamal/secrets itself is safe for git and
 # stays committed; this is the file that holds actual values.
 /.kamal/secrets-common
