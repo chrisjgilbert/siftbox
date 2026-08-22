@@ -192,6 +192,34 @@ RSpec.describe "Editions" do
     expect(count_queries { get edition_path(edition) }).to eq(shallow)
   end
 
+  # A citation prints the blog's name, so an edition citing six posts read a
+  # blog apiece without the preload. Same shape as the citations above, and
+  # held the same way: the cost must not move with the number of posts.
+  it "reads an edition citing any number of posts in the same number of queries" do
+    sign_in
+    one_blog = edition_citing_posts(1)
+    six_blogs = edition_citing_posts(6)
+    get edition_path(one_blog)
+
+    counted = [ count_queries { get edition_path(one_blog) },
+                count_queries { get edition_path(six_blogs) } ]
+
+    expect(counted.last).to eq(counted.first)
+  end
+
+  it "names the blog behind a post it cited" do
+    sign_in
+    edition = create(:edition)
+    story = create(:edition_story, edition: edition, position: 1)
+    blog = create(:blog, title: "Query Plan Weekly")
+    create(:edition_citation, story: story, newsletter: nil,
+      blog_post: create(:blog_post, blog: blog))
+
+    get edition_path(edition)
+
+    expect(response.body).to include("Query Plan Weekly")
+  end
+
   it "answers 404 for an edition that was never published" do
     sign_in
 
@@ -211,6 +239,19 @@ RSpec.describe "Editions" do
 
   # An edition whose every story cites a newsletter of its own, which is the
   # shape the citation queries scale with.
+  # One story citing however many posts, each from a blog of its own — the
+  # shape that reads a blog per citation if the association is not preloaded.
+  def edition_citing_posts(posts)
+    edition = create(:edition)
+    story = create(:edition_story, edition: edition, position: 1)
+    posts.times do
+      create(:edition_citation, story: story, newsletter: nil,
+        blog_post: create(:blog_post, blog: create(:blog)))
+    end
+
+    edition
+  end
+
   def edition_of(stories)
     edition = create(:edition)
     stories.times do |index|

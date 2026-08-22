@@ -80,7 +80,7 @@ class EditionRegeneration
   # Read back through the associations the page will use, so a walk over every
   # story's citations is a handful of queries rather than one per story.
   def loaded(composed)
-    Edition.includes(stories: [ :blog_posts, :newsletters ]).find(composed.id)
+    Edition.for_reading.find(composed.id)
   end
 
   def cited_mail

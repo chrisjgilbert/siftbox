@@ -17,7 +17,7 @@
       <ul class="story__list">
         <% story.sources.each do |source| %>
           <li class="story__source">
-            <%= link_to source.sender, source.path, class: "story__link" %>
+            <%= link_to source.sender, source.path, class: "story__link", **source.attributes %>
           </li>
         <% end %>
       </ul>

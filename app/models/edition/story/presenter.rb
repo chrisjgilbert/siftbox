@@ -6,9 +6,12 @@
 # anywhere on this class. An edition is written by a model out of mail written
 # by strangers; see .claude/rules/security.md.
 class Edition::Story::Presenter
-  # One citation as the page draws it: who said it, and where the reader goes
-  # to read what they actually said.
-  Source = Struct.new(:sender, :path)
+  # One citation as the page draws it: who said it, where the reader goes to
+  # read what they actually said, and how that link opens. The attributes are
+  # what separates the two kinds — a newsletter's original is served by this
+  # app in a sandboxed frame and stays in the tab, where a post lives on
+  # somebody else's site.
+  Source = Struct.new(:sender, :path, :attributes)
 
   delegate :body, :headline, to: :story
 
@@ -27,10 +30,14 @@ class Edition::Story::Presenter
   # sender's own HTML in the sandboxed frame — because the edition is the app's
   # words and the only honest way to check them is the mail itself.
   #
+  # Mail first, then posts. Any total order would do — this is the order the
+  # prompt quotes them in, and it keeps a story's citations from reordering
+  # between two loads of the same page.
+  #
   # Memoised because the page asks three times per story — whether there are
   # any, what to call them, and then for each one.
   def sources
-    @_sources ||= story.newsletters.map { |newsletter| source(newsletter) }
+    @_sources ||= cited_mail + cited_posts
   end
 
   def cited?
@@ -47,15 +54,27 @@ class Edition::Story::Presenter
 
   attr_reader :story
 
-  # Through Newsletter::Presenter for the name, so mail with no From header at
-  # all reads the same here as it does in the archive rather than citing a
-  # blank.
-  def source(newsletter)
-    Source.new(Newsletter::Presenter.new(newsletter).sender, original_path(newsletter))
+  # Through each record's own feed presenter, so a citation reads the way the
+  # archive row for the same thing reads: mail with no From header at all
+  # says "Unknown sender" here too, and a post with no address falls back to
+  # its blog rather than citing an empty href.
+  def cited_mail
+    story.newsletters.map do |newsletter|
+      Source.new(Newsletter::Presenter.new(newsletter).sender, original_path(newsletter), {})
+    end
+  end
+
+  def cited_posts
+    story.blog_posts.map do |post|
+      presenter = Blog::Post::Presenter.new(post)
+
+      Source.new(presenter.sender, presenter.path, presenter.link_attributes)
+    end
   end
 
   # A presenter has no route helpers of its own, the way Newsletter's
-  # #inline_image_path has none either.
+  # #inline_image_path has none either. A post needs none: its address is
+  # somebody else's and is stored whole.
   def original_path(newsletter)
     Rails.application.routes.url_helpers.newsletter_original_path(newsletter)
   end
