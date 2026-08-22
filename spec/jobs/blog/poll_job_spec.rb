@@ -38,6 +38,16 @@ RSpec.describe Blog::PollJob do
       .to contain_exactly("From the first", "From the second")
   end
 
+  # Raised past Blog::Poll rather than out of the socket, and the difference
+  # matters: a SocketError is inside Download::FAILURES, so Blog::Poll records
+  # it as an ordinary failed poll and nothing ever reaches the job's rescue.
+  # Both examples below would pass with that rescue deleted if they stubbed
+  # the network instead. What is being pinned here is the unforeseen kind.
+  def poll_raising_for(blog)
+    allow(Blog::Poll).to receive(:new).and_call_original
+    allow(Blog::Poll).to receive(:new).with(blog).and_raise(ActiveRecord::RecordNotUnique)
+  end
+
   # One blog answering badly is an ordinary Tuesday, and it must not cost the
   # rest of the roster their poll — which is what an exception escaping here
   # would do, since the job would stop at whichever blog raised.
@@ -45,7 +55,7 @@ RSpec.describe Blog::PollJob do
     resolve_publicly
     broken = create(:blog)
     working = create(:blog)
-    stub_request(:get, broken.feed_url).to_raise(SocketError)
+    poll_raising_for(broken)
     stub_feed(working, one_post("From the working one"))
 
     Blog::PollJob.perform_now
@@ -54,9 +64,8 @@ RSpec.describe Blog::PollJob do
   end
 
   it "records a blog that raised as failing" do
-    resolve_publicly
     broken = create(:blog, failing_since: nil)
-    stub_request(:get, broken.feed_url).to_raise(SocketError)
+    poll_raising_for(broken)
 
     Blog::PollJob.perform_now
 

@@ -18,4 +18,16 @@ class Blog < ApplicationRecord
   # rather than as a RecordNotUnique out of the database, the way
   # Edition::Citation's does.
   validates :feed_url, presence: true, uniqueness: true
+
+  # This poll did not come home with a feed. Here rather than in Blog::Poll
+  # because the rule is a fact about the column: the first failure's time
+  # survives the ones after it, so the Sources page can say how long a blog
+  # has been broken rather than only that it is.
+  #
+  # Both callers used to write this line themselves — the poll for an ordinary
+  # failure, the job for the unforeseen kind — and reading failing_since to
+  # decide what to write back is the blog's own business rather than theirs.
+  def poll_failed
+    update!(polled_at: Time.current, failing_since: failing_since || Time.current)
+  end
 end

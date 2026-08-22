@@ -19,7 +19,7 @@ class Blog::Post::Presenter
   end
 
   def timestamp
-    I18n.l(post.received_at, format: format_for(post.received_at))
+    Newsletter::Age.new(post.received_at).timestamp
   end
 
   # The blog itself, which is a post's only honest original. A newsletter's
@@ -48,11 +48,11 @@ class Blog::Post::Presenter
     I18n.t("blogs.kind")
   end
 
+  def no_image
+    I18n.t("blogs.no_image")
+  end
+
   private
 
   attr_reader :post
-
-  def format_for(received_at)
-    Newsletter::Presenter::TIMESTAMP_FORMATS.fetch(Newsletter::Age.new(received_at).bucket)
-  end
 end

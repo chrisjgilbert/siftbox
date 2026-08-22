@@ -17,4 +17,25 @@ RSpec.describe Blog do
 
     expect(duplicate).not_to be_valid
   end
+
+  it "records the time when a poll fails" do
+    blog = create(:blog, polled_at: nil, failing_since: nil)
+
+    blog.poll_failed
+
+    expect(blog.polled_at).to be_present
+    expect(blog.failing_since).to be_present
+  end
+
+  # The first failure's time survives the ones after it, which is what lets
+  # the Sources page say how long a blog has been broken rather than only
+  # that it is.
+  it "keeps the first failure's time through a second failure" do
+    first = 3.days.ago
+    blog = create(:blog, failing_since: first)
+
+    blog.poll_failed
+
+    expect(blog.failing_since).to be_within(1.second).of(first)
+  end
 end

@@ -60,7 +60,9 @@ class Edition::Story::Presenter
   # its blog rather than citing an empty href.
   def cited_mail
     story.newsletters.map do |newsletter|
-      Source.new(Newsletter::Presenter.new(newsletter).sender, original_path(newsletter), {})
+      presenter = Newsletter::Presenter.new(newsletter)
+
+      Source.new(presenter.sender, presenter.path, {})
     end
   end
 
@@ -70,12 +72,5 @@ class Edition::Story::Presenter
 
       Source.new(presenter.sender, presenter.path, presenter.link_attributes)
     end
-  end
-
-  # A presenter has no route helpers of its own, the way Newsletter's
-  # #inline_image_path has none either. A post needs none: its address is
-  # somebody else's and is stored whole.
-  def original_path(newsletter)
-    Rails.application.routes.url_helpers.newsletter_original_path(newsletter)
   end
 end

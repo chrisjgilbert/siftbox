@@ -268,4 +268,14 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include('href="https://queryplanweekly.dev/unused-index"')
       .and include('rel="noopener noreferrer"')
   end
+
+  it "says a post with no image carried none, rather than calling it an email" do
+    sign_in
+    create(:blog_post, lead_image_url: "", received_at: 1.hour.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include("No image in post")
+    expect(response.body).not_to include("No image in email")
+  end
 end

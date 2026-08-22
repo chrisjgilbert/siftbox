@@ -17,7 +17,7 @@
     <img class="row__thumbnail" src="<%= row.lead_image_url %>" alt="" loading="lazy">
   <% else %>
     <span class="row__thumbnail row__thumbnail--empty">
-      <span class="row__fallback"><%= t("newsletters.index.no_image") %></span>
+      <span class="row__fallback"><%= row.no_image %></span>
       <span class="row__fallback row__fallback--compact">
         <%= t("newsletters.index.no_image_compact") %>
       </span>

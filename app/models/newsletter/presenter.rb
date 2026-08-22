@@ -10,15 +10,6 @@
 # header, and the archive needs the timestamp beside it. Deleting the class
 # outright would have copied #sender into three places.
 class Newsletter::Presenter
-  # Which timestamp format each row gets. Keyed by Newsletter::Age so the
-  # format always agrees with the group heading the row sits under.
-  TIMESTAMP_FORMATS = {
-    today: :row_time,
-    yesterday: :row_time,
-    earlier: :row_day,
-    older: :row_date
-  }.freeze
-
   delegate :held?, :lead_image?, :lead_image_url, :snippet, :subject,
     :to_param, to: :newsletter
 
@@ -55,7 +46,14 @@ class Newsletter::Presenter
   end
 
   def timestamp
-    I18n.l(newsletter.received_at, format: TIMESTAMP_FORMATS.fetch(age.bucket))
+    age.timestamp
+  end
+
+  # What a row with no image says in the space one would have taken. Asked
+  # rather than named in the template, because the sentence differs: a post
+  # was never in an email and saying so about one is simply wrong.
+  def no_image
+    I18n.t("newsletters.index.no_image")
   end
 
   # Where an original's top bar goes back to. The archive for content, and the

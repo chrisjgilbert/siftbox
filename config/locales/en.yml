@@ -22,6 +22,7 @@ en:
       subscriptions: Subscriptions
   blogs:
     kind: Blog
+    no_image: No image in post
   date:
     formats:
       edition_masthead: "%A %-d %B"

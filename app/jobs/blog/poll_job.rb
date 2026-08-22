@@ -33,10 +33,6 @@ class Blog::PollJob < ApplicationJob
     Blog::Poll.new(blog).save
   rescue StandardError => error
     Rails.logger.error("polling #{blog.feed_url} raised: #{error.message}")
-    failing(blog)
-  end
-
-  def failing(blog)
-    blog.update!(polled_at: Time.current, failing_since: blog.failing_since || Time.current)
+    blog.poll_failed
   end
 end

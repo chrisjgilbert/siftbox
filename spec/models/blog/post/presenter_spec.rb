@@ -37,4 +37,12 @@ RSpec.describe Blog::Post::Presenter do
 
     expect(presenter.sender).to eq("Query Plan Weekly")
   end
+
+  # A post was never in an email, so the archive's own placeholder is simply
+  # wrong over one.
+  it "says an imageless post carried no image" do
+    presenter = Blog::Post::Presenter.new(build_stubbed(:blog_post))
+
+    expect(presenter.no_image).to eq("No image in post")
+  end
 end

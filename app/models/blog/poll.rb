@@ -29,9 +29,6 @@ class Blog::Poll
     @fetch = fetch
   end
 
-  # The posts stored, which is usually none: a feed polled hourly has mostly
-  # not changed since the last visit.
-  #
   # The fetch happens first and outside the transaction. A stalled host holds
   # its connection for up to Download::MAX_DURATION, and holding a database
   # transaction open across that — once per blog, across the roster — is
@@ -62,8 +59,7 @@ class Blog::Poll
   end
 
   def failed
-    blog.update!(polled_at: Time.current, failing_since: blog.failing_since || Time.current)
-    []
+    blog.poll_failed
   end
 
   # The validators are left exactly as they were. A 304 says what we hold is
@@ -72,7 +68,6 @@ class Blog::Poll
   # reason for sending them at all.
   def unchanged
     blog.update!(polled_at: Time.current, failing_since: nil)
-    []
   end
 
   # A blog serving something that is not a feed has stopped answering, as far
