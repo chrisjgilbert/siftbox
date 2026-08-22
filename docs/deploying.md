@@ -311,17 +311,29 @@ anything new. It installs itself the same way and needs confirming the same
 way — the command above should list three entries once it has been deployed,
 not two.
 
-Nothing polls until a blog exists, and until the Sources page ships blogs are
-added by hand:
+Nothing polls until a blog exists. Blogs are added on the Subscriptions page,
+under Blogs: paste the feed address, or the blog's home page and siftbox will
+find the feed from it. The feed is read on the spot, so a blog appears with
+its posts already in the archive rather than waiting for the top of the hour.
 
-```bash
-bin/kamal app exec --reuse "bin/rails runner 'Blog.create!(feed_url: \"https://example.dev/feed\")'"
-```
+Two things get refused there, with a reason on the page:
+
+- **A link aggregator.** Hacker News, lobste.rs and Reddit publish items whose
+  whole body is a link back to their own thread — a median of eight
+  characters. `docs/blogs-rss.md` sets out why an edition composed from those
+  is unreadable. A feed fewer than half of whose items carry enough prose to
+  write from is turned away.
+- **An address that is not a feed and announces none.** Usually a typo, or a
+  page whose feed link has gone.
 
 The first poll of a new blog stores its whole back catalogue in the archive
 but keeps everything older than a week out of the edition window, so adding a
 long-running blog does not put years of writing into the next morning's
 edition.
+
+Removing a blog on the same page destroys its posts, and the citations in
+published editions that name them. That is the trade of removing a source
+rather than muting one.
 
 The first firing has three possible outcomes and they read differently in
 the log:

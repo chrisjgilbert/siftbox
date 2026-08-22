@@ -276,6 +276,20 @@ reader, but not the finished thing.
 This could swap places with Milestone 2 — it's lower risk and makes
 Milestone 1 usable by someone without console access.
 
+**What shipped.** All three, including the homepage lookup — readers know
+their blogs by their home pages and most sites never show a feed address, so
+it turned out to be the ordinary case rather than a nicety. The section lives
+on the Subscriptions page as agreed with the silencing branch, not on a page
+of its own. The aggregator rule is a majority: a feed fewer than half of
+whose items carry `Blog::Post::EDITORIAL_MINIMUM` characters of prose is
+refused. The measurements are miles either side of that line — aggregators
+median eight characters, 9 of 273 in-scope items under four hundred — so it
+separates them without a judgement call.
+
+Removing a blog destroys it, along with its posts and the citations in
+published editions naming them. Muting, which keeps the archive intact, is
+the silencing branch's.
+
 ---
 
 ## Working alongside the silencing branch
@@ -308,7 +322,7 @@ Things that don't happen automatically:
 |---|---|
 | 1 | Add `gem "rss"` to the Gemfile. It also pulls in `rexml`, which is currently test-only. Mention both in the commit message. |
 | 1 | After deploying, confirm the poll task actually registered — `docs/deploying.md` section 9 has the command. |
-| 1 | Add your feeds by hand until Milestone 3 exists. |
+| 3 | Nothing. Blogs are added on the Subscriptions page, under Blogs. |
 | 2 | One migration, additive. No backup needed; nothing is moved or deleted. |
 
 ## The three things most likely to go wrong
