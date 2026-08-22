@@ -4,18 +4,20 @@ require "resolv"
 # Whether a download may connect at all, and the address to dial when it
 # may.
 #
-# The URL arrives in email anyone can send and the fetch runs from inside
-# the network, so this is the whole of what stands between a newsletter and
-# the private side of it: server-side request forgery in its textbook shape.
+# The URL arrives from outside — an image a newsletter hotlinks, a feed the
+# reader subscribed to, a redirect either of them answers with — and the
+# fetch runs from inside the network, so this is the whole of what stands
+# between a stranger and the private side of it: server-side request forgery
+# in its textbook shape.
 #
 # Answering with the address rather than with a yes is the point. Handing a
 # hostname back to Net::HTTP would have it resolve the name a second time,
 # and a record on a short TTL can answer differently the second time, once
 # every check here has passed.
-class Newsletter::ImageDownload::Destination
+class Download::Destination
   SCHEMES = %w[http https].freeze
 
-  # The only IPv6 an image host answers on. An allowlist rather than another
+  # The only IPv6 a public host answers on. An allowlist rather than another
   # row of denied prefixes: unique-local, link-local, multicast, the
   # unspecified address and every scheme that carries an IPv4 address inside
   # an IPv6 one all sit outside it, so a spelling nobody here thought of is

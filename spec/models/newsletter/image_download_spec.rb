@@ -120,7 +120,7 @@ RSpec.describe Newsletter::ImageDownload do
   end
 
   it "gives up after too many redirects" do
-    (Newsletter::ImageDownload::MAX_REDIRECTS + 1).times do |hop|
+    (Download::MAX_REDIRECTS + 1).times do |hop|
       stub_redirect(
         "https://cdn.example.com/hop-#{hop}.png",
         "https://cdn.example.com/hop-#{hop + 1}.png"
