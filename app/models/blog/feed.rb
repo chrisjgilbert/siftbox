@@ -34,6 +34,19 @@ class Blog::Feed
   # this app chose, which is exactly why the specs pin them.
   Malformed = Class.new(StandardError)
 
+  # Off, and not because strictness is wrong in principle. The parser
+  # validates the whole document, so one field it dislikes discards every post
+  # in it — and the fields real feeds get wrong are the ones nobody notices,
+  # like an ISO-8601 date in RSS 2.0's RFC-822 pubDate, which every other
+  # reader accepts. A blog whose generator is a little loose would be
+  # unreadable forever rather than for one post, and indistinguishable from a
+  # blog that had simply gone away.
+  #
+  # It costs nothing that matters: the same documents still parse, that date
+  # still comes back as a Time, and the entity bomb is still refused — the
+  # specs below pin all three.
+  VALIDATE = false
+
   Item = Data.define(:title, :url, :body_html, :published_at)
 
   def initialize(document)
@@ -83,12 +96,32 @@ class Blog::Feed
     found.detect(&:present?)
   end
 
-  # Every RSS::Error becomes one error of ours, because the distinction the
-  # gem draws — not well formed, unknown version, missing a required field —
-  # is not one any caller here can act on differently.
   def parsed
-    @_parsed ||= RSS::Parser.parse(document)
-  rescue RSS::Error => error
+    @_parsed ||= read
+  end
+
+  # Every RSS::Error becomes one error of ours, because the distinction the
+  # gem draws — not well formed, unknown version — is not one any caller here
+  # can act on differently.
+  #
+  # ArgumentError and TypeError are here because they arrive from inside the
+  # parser rather than from it: bytes tagged as an encoding they are not raise
+  # the first, and a document that is not a string raises the second. Neither
+  # is an RSS::Error, so both would otherwise walk past a rescue written for
+  # the parser's own errors and out through a caller expecting one thing.
+  #
+  # The nil is the case a rescue alone misses, and it is the likeliest of the
+  # lot: the parser answers nothing rather than raising when a document is
+  # well-formed XML it does not recognise. A blog that moves and leaves an SPA
+  # fallback behind, a parked domain, a WAF interstitial — all serve HTML with
+  # a 200, and without this they reach the caller as a NoMethodError on nil
+  # instead of as the one error this class promises.
+  def read
+    feed = RSS::Parser.parse(document, VALIDATE)
+    return feed if feed
+
+    raise Malformed, "the document parsed as XML but is not a feed"
+  rescue RSS::Error, ArgumentError, TypeError => error
     raise Malformed, "the feed could not be read: #{error.message}"
   end
 end

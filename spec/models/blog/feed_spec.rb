@@ -215,4 +215,50 @@ RSpec.describe Blog::Feed do
 
     expect(feed.posts.first.body_html).to eq("The planner has its reasons.")
   end
+
+  # The shape that escapes a rescue on the parser's own errors: this is
+  # well-formed XML, so nothing raises — the parser simply does not recognise
+  # it and answers nothing at all. A blog that moves and leaves an SPA
+  # fallback, a parked domain, or a WAF interstitial serves exactly this,
+  # with a 200.
+  it "refuses a document that is well formed but is not a feed" do
+    feed = Blog::Feed.new(<<~XML)
+      <!DOCTYPE html>
+      <html><head><title>Blog moved</title></head>
+      <body><p>We are on Substack now.</p></body></html>
+    XML
+
+    expect { feed.posts }.to raise_error(Blog::Feed::Malformed)
+  end
+
+  # RSS 2.0 says pubDate is RFC-822, and static-site generators emit ISO-8601
+  # there all the time. Under the parser's strict default one such field
+  # discards every post in the document, so a blog whose generator is a little
+  # loose is unreadable forever rather than for one post.
+  it "reads a feed whose dates are in the wrong format for its own spec" do
+    document = rss_document(<<~ITEMS)
+      <item><title>Loose</title><pubDate>2026-08-21T06:30:00Z</pubDate></item>
+      <item><title>Correct</title><pubDate>Wed, 20 Aug 2026 09:00:00 +0000</pubDate></item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.map(&:title)).to eq([ "Loose", "Correct" ])
+  end
+
+  # Bytes tagged as the wrong encoding raise from inside the parser as an
+  # ArgumentError, which is not one of the parser's own errors and so walks
+  # straight past a rescue written for those. The fetch is what should be
+  # handing this class UTF-8, the way Newsletter::InboundMessage does for
+  # mail — but a class that promises one error has to keep the promise even
+  # when its caller is wrong.
+  it "refuses a document whose bytes are tagged as the wrong encoding" do
+    document = rss_document(<<~ITEMS).dup.force_encoding(Encoding::US_ASCII)
+      <item><title>Why your index is not being used — a note</title></item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect { feed.posts }.to raise_error(Blog::Feed::Malformed)
+  end
 end
