@@ -158,8 +158,17 @@ class Blog::Feed
     CGI.escapeHTML(field.content)
   end
 
+  # RFC 4287 makes text the default, so an absent type is a declaration of
+  # plain text rather than an absence of information — and `content` is the
+  # only field asked this, so a String answering nil to :type is not one of
+  # these. Checked against real feeds before trusting the default: all 120
+  # content and summary elements across the five Atom feeds measured for
+  # docs/blogs-rss.md say type="html" outright, so no publisher in that sample
+  # is relying on untyped meaning markup.
   def plain_text?(field)
-    field.respond_to?(:type) && field.type == "text"
+    return false unless field.respond_to?(:type)
+
+    field.type.nil? || field.type == "text"
   end
 
   # A date is a date, so the first the item answers with will do.
@@ -192,6 +201,18 @@ class Blog::Feed
   # gem draws — not well formed, unknown version — is not one any caller here
   # can act on differently.
   #
+  # A document with no angle bracket in it is not an empty feed, it is a
+  # location: the parser reads such a string as a path to open or a URL to
+  # fetch, and hands back whatever it finds there. What this class is given is
+  # the body a stranger's server returned, so without this a server that
+  # answers with "/etc/passwd" or "http://169.254.169.254/…" has this app read
+  # it — off its own disk, or from inside its own network. Verified rather
+  # than assumed: pointed at a path holding a valid feed, the parser returned
+  # that file's posts.
+  def markup?
+    document.is_a?(String) && document.include?("<")
+  end
+
   # ArgumentError and TypeError are here because they arrive from inside the
   # parser rather than from it: bytes tagged as an encoding they are not raise
   # the first, and a document that is not a string raises the second. Neither
@@ -205,6 +226,8 @@ class Blog::Feed
   # a 200, and without this they reach the caller as a NoMethodError on nil
   # instead of as the one error this class promises.
   def read
+    raise Malformed, "the document carries no markup" unless markup?
+
     feed = RSS::Parser.parse(document, VALIDATE, true, PARSER)
     return feed if feed
 

@@ -51,8 +51,14 @@ class Blog::Poll
     unseen.map { |post| blog.posts.create!(attributes_for(post)) }
   end
 
+  # uniq before the reject, not after: a feed that lists the same post twice —
+  # a generator bug, or a post edited into a second entry — otherwise passes
+  # both copies to the index, which refuses the second. That rolls the
+  # transaction back and takes polled_at with it, so the blog fails the same
+  # way on every poll afterwards and never stores anything again.
   def unseen
-    posts.reject { |post| known.include?(key_for(post)) }
+    posts.uniq { |post| key_for(post) }
+      .reject { |post| known.include?(key_for(post)) }
   end
 
   # What "seen this one before" is decided on: the publisher's own name for
@@ -81,14 +87,24 @@ class Blog::Poll
   # far below any watermark, so it lands in the archive and no edition ever
   # covers it. Every other post takes now.
   def received_at_for(post)
-    return post.published_at if back_catalogue?(post)
+    return Time.current unless first_poll
+    return Time.current if demonstrably_new?(post)
 
-    Time.current
+    post.published_at || FIRST_POLL_WINDOW.ago
   end
 
-  def back_catalogue?(post)
-    first_poll && post.published_at.present? &&
-      post.published_at < FIRST_POLL_WINDOW.ago
+  # Note which way round this is. A post is admitted on a first poll only when
+  # it can be shown to be recent, rather than being admitted unless it can be
+  # shown to be old — because an undated post cannot be shown to be either,
+  # and a feed with no dates at all is an ordinary shape: RSS 1.0 without
+  # dc:date, and plenty of hand-rolled feeds. Read the other way round, one
+  # such blog takes its whole archive into the next morning's edition, which
+  # is the failure the window exists to prevent.
+  #
+  # The undated ones are dated at the window's own floor, which is as old as
+  # this guard ever needs anything to be.
+  def demonstrably_new?(post)
+    post.published_at.present? && post.published_at >= FIRST_POLL_WINDOW.ago
   end
 
   # One query rather than one per post: a feed carries tens of items and most

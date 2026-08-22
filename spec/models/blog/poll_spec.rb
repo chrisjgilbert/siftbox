@@ -36,7 +36,6 @@ RSpec.describe Blog::Poll do
     <<~ITEMS
       <item>
         <title>#{title}</title>
-        <pubDate>Thu, 21 Aug 2026 06:30:00 +0000</pubDate>
         <description>Something happened.</description>
       </item>
     ITEMS
@@ -145,5 +144,34 @@ RSpec.describe Blog::Poll do
 
     expect(blog.posts.where(received_at: 1.week.ago..).pluck(:title))
       .to include("Written weeks ago")
+  end
+
+  # A feed that lists the same post twice — a generator bug, or a post edited
+  # into a second entry. The index refuses the duplicate, which rolls the
+  # transaction back, which un-stamps polled_at: the blog then fails the same
+  # way on every hourly poll from then on, and never stores anything again.
+  it "stores one post when a feed lists the same one twice" do
+    blog = create(:blog)
+    twice = feed_document(unnamed_post("Weeknotes") + unnamed_post("Weeknotes"))
+
+    Blog::Poll.new(blog, fetch: returning(twice)).save
+
+    expect(blog.posts.count).to eq(1)
+  end
+
+  # An undated post on a first poll cannot be shown to be new, and a feed
+  # with no dates at all is an ordinary shape — RSS 1.0 without dc:date, and
+  # plenty of hand-rolled feeds. Read as new they take the whole archive into
+  # the window, which is the failure the guard exists to prevent, so the
+  # honest reading of "no date" on a first poll is "not demonstrably new".
+  it "keeps undated posts out of the window on a first poll" do
+    blog = create(:blog, polled_at: nil)
+    document = feed_document(
+      unnamed_post("One") + unnamed_post("Two") + unnamed_post("Three")
+    )
+
+    Blog::Poll.new(blog, fetch: returning(document)).save
+
+    expect(blog.posts.where(received_at: 6.days.ago..).count).to eq(0)
   end
 end

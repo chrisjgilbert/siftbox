@@ -431,4 +431,41 @@ RSpec.describe Blog::Feed do
 
     expect(feed.posts.first.url).to eq("https://queryplanweekly.dev/unused-index")
   end
+
+  # The parser reads a document with no markup in it as somewhere to *get* a
+  # document: a path off this disk, or a URL it will fetch. What this class is
+  # handed is the body a stranger's server returned, so a server answering
+  # with a path or an address turns that into a read of this app's filesystem
+  # or a request from inside its network.
+  #
+  # Pointed at a file that really does hold a valid feed, so this passing
+  # means the location was refused rather than merely having failed to parse.
+  it "refuses a document that is a location rather than a feed" do
+    file = Tempfile.new([ "feed", ".xml" ])
+    file.write(rss_document("<item><title>Read off local disk</title></item>"))
+    file.close
+
+    feed = Blog::Feed.new(file.path)
+
+    expect { feed.posts }.to raise_error(Blog::Feed::Malformed)
+  end
+
+  # RFC 4287 makes text the default when the attribute is absent, so an
+  # untyped body is plain text and needs the same escaping as a declared one.
+  # Checked against the real feeds before adopting: all 120 content and
+  # summary elements across the five Atom feeds measured for
+  # docs/blogs-rss.md declare type="html" explicitly, so nothing in the wild
+  # is relying on untyped meaning markup.
+  it "escapes an Atom body that declares no type at all" do
+    document = atom_document(<<~ENTRY)
+      <entry>
+        <title>t</title><id>i</id><updated>2026-08-21T06:30:00Z</updated>
+        <content>if a &lt; b then print</content>
+      </entry>
+    ENTRY
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.body_html).to eq("if a &lt; b then print")
+  end
 end
