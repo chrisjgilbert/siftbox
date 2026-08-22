@@ -22,7 +22,7 @@ RSpec.describe Blog::Feed do
   # differently here — entry for item, link as an attribute, content and
   # published as elements with their own .content — which is the whole of what
   # the adapter below is for.
-  def atom_document
+  def atom_document(entry)
     <<~XML
       <?xml version="1.0" encoding="utf-8"?>
       <feed xmlns="http://www.w3.org/2005/Atom">
@@ -31,15 +31,22 @@ RSpec.describe Blog::Feed do
         <updated>2026-08-21T06:30:00Z</updated>
         <author><name>Query Plan Weekly</name></author>
         <link href="https://queryplanweekly.dev/"/>
-        <entry>
-          <title>Why your index is not being used</title>
-          <id>https://queryplanweekly.dev/unused-index</id>
-          <link href="https://queryplanweekly.dev/unused-index"/>
-          <published>2026-08-21T06:30:00Z</published>
-          <updated>2026-08-21T06:30:00Z</updated>
-          <content type="html">&lt;p&gt;The planner has its reasons.&lt;/p&gt;</content>
-        </entry>
+      #{entry}
       </feed>
+    XML
+  end
+
+  # The entry the Atom example reads, carrying every field the parser wants.
+  def atom_entry
+    <<~XML
+      <entry>
+        <title>Why your index is not being used</title>
+        <id>https://queryplanweekly.dev/unused-index</id>
+        <link href="https://queryplanweekly.dev/unused-index"/>
+        <published>2026-08-21T06:30:00Z</published>
+        <updated>2026-08-21T06:30:00Z</updated>
+        <content type="html">&lt;p&gt;The planner has its reasons.&lt;/p&gt;</content>
+      </entry>
     XML
   end
 
@@ -134,7 +141,7 @@ RSpec.describe Blog::Feed do
   end
 
   it "reads the same fields out of an Atom document" do
-    feed = Blog::Feed.new(atom_document)
+    feed = Blog::Feed.new(atom_document(atom_entry))
 
     expect(feed.posts.first).to eq(
       Blog::Feed::Item.new(
@@ -171,5 +178,41 @@ RSpec.describe Blog::Feed do
     feed = Blog::Feed.new(document)
 
     expect(feed.posts.first.body_html).to eq("&secret;")
+  end
+
+  # Publishing tools emit an empty content:encoded for a post that has none,
+  # and an empty string is not the same as an absent field: it wins the
+  # preference above on presence alone and hands the editor nothing at all.
+  it "falls back to the description when the encoded content is empty" do
+    document = rss_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <description>The planner has its reasons.</description>
+        <content:encoded></content:encoded>
+      </item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.body_html).to eq("The planner has its reasons.")
+  end
+
+  # The same hole on the Atom side, and it is the reason the emptiness has to
+  # be judged after the element is unwrapped: an empty <content> is a perfectly
+  # present object holding an empty string.
+  it "falls back to the summary when an Atom entry's content is empty" do
+    document = atom_document(<<~ENTRY)
+      <entry>
+        <title>Why your index is not being used</title>
+        <id>https://queryplanweekly.dev/unused-index</id>
+        <updated>2026-08-21T06:30:00Z</updated>
+        <summary>The planner has its reasons.</summary>
+        <content type="html"></content>
+      </entry>
+    ENTRY
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.body_html).to eq("The planner has its reasons.")
   end
 end

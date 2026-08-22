@@ -68,12 +68,19 @@ class Blog::Feed
   # respond_to? rather than a check on the document's format: which fields an
   # item has is exactly what differs between the two, so asking the item is
   # asking the real question.
+  #
+  # Unwrapped before it is judged empty, and that order is load-bearing.
+  # Publishing tools emit an empty content:encoded or <content/> for a post
+  # that has none, and on the Atom side that arrives as a perfectly present
+  # element holding an empty string — so asking the element whether it is
+  # blank answers no, the preference stops there, and the editor is handed
+  # nothing while a real summary sits in the next field along.
   def first_of(item, fields)
     found = fields.filter_map do |field|
-      item.public_send(field) if item.respond_to?(field)
+      value_of(item.public_send(field)) if item.respond_to?(field)
     end
 
-    value_of(found.first)
+    found.detect(&:present?)
   end
 
   # Every RSS::Error becomes one error of ours, because the distinction the
