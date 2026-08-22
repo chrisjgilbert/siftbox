@@ -7,7 +7,7 @@ RSpec.describe Blog::Feed do
   def rss_document(items)
     <<~XML
       <?xml version="1.0"?>
-      <rss version="2.0">
+      <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
         <channel>
           <title>Query Plan Weekly</title>
           <link>https://queryplanweekly.dev</link>
@@ -28,5 +28,63 @@ RSpec.describe Blog::Feed do
 
     expect(feed.posts.map(&:title))
       .to eq([ "Why your index is not being used", "Counting rows is harder than it looks" ])
+  end
+
+  it "reads a post's address from its link" do
+    document = rss_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <link>https://queryplanweekly.dev/unused-index</link>
+      </item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.url).to eq("https://queryplanweekly.dev/unused-index")
+  end
+
+  it "reads a post's body from its description" do
+    document = rss_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <description>&lt;p&gt;The planner has its reasons.&lt;/p&gt;</description>
+      </item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.body_html).to eq("<p>The planner has its reasons.</p>")
+  end
+
+  # The common shape for a blog that publishes full text: description carries
+  # a summary for readers who only get that far, content:encoded the article.
+  it "prefers a post's encoded content to its description" do
+    document = rss_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <description>The planner has its reasons.</description>
+        <content:encoded>&lt;p&gt;The planner has its reasons, and here they are in full.&lt;/p&gt;</content:encoded>
+      </item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.body_html)
+      .to eq("<p>The planner has its reasons, and here they are in full.</p>")
+  end
+
+  # RSS dates are RFC-822 and Atom's are ISO-8601. Reading both is most of why
+  # this is the rss gem's job rather than a few Nokogiri selectors.
+  it "reads a post's publication date as a time" do
+    document = rss_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <pubDate>Thu, 21 Aug 2026 06:30:00 +0000</pubDate>
+      </item>
+    ITEMS
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.published_at).to eq(Time.utc(2026, 8, 21, 6, 30))
   end
 end
