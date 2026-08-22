@@ -104,4 +104,50 @@ RSpec.describe Blog::Post do
 
     expect(post.reload.title).to eq("Rewriting the planner")
   end
+
+  it "has many attached inline images" do
+    expect(build(:blog_post)).to have_many_attached(:inline_images)
+  end
+
+  # Served by this app rather than by Active Storage's own routes, which sit
+  # outside the authentication gate and never expire.
+  it "serves a stored image from a path of its own" do
+    post = build_stubbed(:blog_post, id: 7)
+    blob = ActiveStorage::Blob.new(id: 3)
+
+    expect(post.inline_image_path(blob)).to eq("/blog_posts/7/images/3")
+  end
+
+  # Read again after RemoteImages has rewritten the body, so the archive
+  # thumbnail points at this app rather than at the publisher's CDN.
+  it "captures the lead image off the body it holds now" do
+    post = create(:blog_post, lead_image_url: "https://cdn.example.com/old.png")
+    post.update!(body_html: %(<img src="/blog_posts/1/images/2"><p>Words enough to matter.</p>))
+
+    post.capture_lead_image
+
+    expect(post.lead_image_url).to eq("/blog_posts/1/images/2")
+  end
+
+  # The factory's contract with the constant, asserted here rather than
+  # implied in the eight window and composition examples that depend on it.
+  # If it ever slips under, every negative example among those passes for the
+  # wrong reason.
+  it "is built with enough prose to be written from" do
+    expect(build_stubbed(:blog_post)).to be_enough_to_write_from
+  end
+
+  # The dedupe key, so a NUL here does not merely fail an INSERT — it changes
+  # what "seen this one before" means.
+  it "strips a null byte from a guid the feed carried" do
+    post = create(:blog_post, guid: "unused#{0.chr}-index")
+
+    expect(post.reload.guid).to eq("unused-index")
+  end
+
+  it "strips a null byte from an address the feed carried" do
+    post = create(:blog_post, url: "https://queryplanweekly.dev/a#{0.chr}b")
+
+    expect(post.reload.url).to eq("https://queryplanweekly.dev/ab")
+  end
 end

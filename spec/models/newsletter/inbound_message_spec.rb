@@ -175,7 +175,7 @@ RSpec.describe Newsletter::InboundMessage do
     message = Newsletter::InboundMessage.new(mail: inbound_mail)
 
     expect { message.save }
-      .to have_enqueued_job(Newsletter::RemoteImagesJob)
+      .to have_enqueued_job(RemoteImagesJob)
   end
 
   it "queues no download again for a redelivery" do
@@ -186,7 +186,7 @@ RSpec.describe Newsletter::InboundMessage do
       Newsletter::InboundMessage.new(
         mail: inbound_mail(message_id: identifier)
       ).save
-    }.not_to have_enqueued_job(Newsletter::RemoteImagesJob)
+    }.not_to have_enqueued_job(RemoteImagesJob)
   end
 
   it "renders a plain-text newsletter as paragraphs" do

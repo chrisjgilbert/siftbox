@@ -42,7 +42,7 @@ class Newsletter < ApplicationRecord
   # SQLite stops reading a string literal at a NUL, so one stray byte fails
   # the INSERT and loses the newsletter. Held here rather than where the mail
   # is read, because it is a fact about storing a string and not about
-  # reading MIME — Newsletter::InlineImages and Newsletter::RemoteImages both
+  # reading MIME — Newsletter::InlineImages and RemoteImages both
   # rewrite body_html later without going near the mail reader.
   normalizes :body_html, :sender_email, :sender_name, :snippet, :subject,
     with: ->(value) { value.delete("\0") }
@@ -219,7 +219,7 @@ class Newsletter < ApplicationRecord
   end
 
   # Where the rewritten image references in body_html point. Written by
-  # Newsletter::InlineImages at ingest and Newsletter::RemoteImages just
+  # Newsletter::InlineImages at ingest and RemoteImages just
   # after, then read back by Newsletter::Source — so it has to be built in
   # one place, not three.
   def inline_image_path(blob)

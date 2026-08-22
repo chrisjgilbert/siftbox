@@ -37,6 +37,12 @@ class Blog::Post < ApplicationRecord
 
   belongs_to :blog, touch: true
 
+  # The images the post hotlinked, fetched by this server at poll time and
+  # re-served from it — so the archive keeps its thumbnails after the
+  # publisher's CDN forgets them, and reading the archive tells the publisher
+  # nothing. Written by RemoteImages, exactly as a newsletter's are.
+  has_many_attached :inline_images
+
   # SQLite stops reading a string literal at a NUL, so one stray byte fails
   # the INSERT and loses the post. The same guard Newsletter carries, for the
   # same reason and against a source no less hostile: feed XML is written by
@@ -50,9 +56,16 @@ class Blog::Post < ApplicationRecord
   # the same column.
   validates :received_at, presence: true
 
-  # Tie-broken on id for the reason Newsletter's orderings are: a feed read
-  # in one poll stamps every post it found with the same received_at, so
-  # without the tie-break a batch reorders between one query and the next.
+  # Tie-broken on id for the reason Newsletter's orderings are: a feed read in
+  # one poll stamps every post it found with the same received_at, so without
+  # the tie-break a batch reorders between one query and the next.
+  #
+  # No spec, and deliberately none: SQLite returns ties in rowid order under
+  # every plan this query gets — index scan and temp b-tree alike — so an
+  # example asserting the result passes with the tie-break deleted. It is kept
+  # because the guarantee should not rest on which index the planner reaches
+  # for. Where it is genuinely load-bearing is Feed#ordering, which sorts in
+  # Ruby, where sort_by is not stable — and that one is specced.
   def self.oldest_first
     order(received_at: :asc, id: :asc)
   end
@@ -67,6 +80,21 @@ class Blog::Post < ApplicationRecord
 
   def lead_image?
     lead_image_url.present?
+  end
+
+  # Read again after RemoteImages has rewritten the body. The lead captured at
+  # poll time still points at the publisher's CDN, and left there the archive
+  # would hotlink a thumbnail per row on every load — the one request storing
+  # the images exists to stop making.
+  def capture_lead_image
+    update!(lead_image_url: Newsletter::LeadImage.new(Newsletter::Body.new(body_html)).url)
+  end
+
+  # This app's own path for a stored image, not Active Storage's: see
+  # BlogPosts::ImagesController for why. No route helpers on a model, the way
+  # Newsletter has none either.
+  def inline_image_path(blob)
+    Rails.application.routes.url_helpers.blog_post_image_path(self, blob)
   end
 
   # Measured on the same prose the editor would be shown rather than on the

@@ -46,7 +46,7 @@ class Newsletter::InboundMessage
         # cid: references to app paths, and reading the lead first would
         # store a URL no browser can resolve.
         #
-        # Newsletter::RemoteImagesJob captures it again once it has rewritten
+        # RemoteImagesJob captures it again once it has rewritten
         # the hotlinked images too. This one is what the feed shows until
         # then — the sender's own URL, which is where the body still points.
         stored.capture_lead_image
@@ -67,7 +67,7 @@ class Newsletter::InboundMessage
       end
     end
 
-    Newsletter::RemoteImagesJob.perform_later(newsletter)
+    RemoteImagesJob.perform_later(newsletter)
     newsletter
   end
 

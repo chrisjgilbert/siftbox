@@ -408,4 +408,21 @@ RSpec.describe Blog::Poll do
 
     expect(blog.posts.sole.received_at).to be > Newsletter::Age::WINDOW.ago
   end
+
+  # The memoisation, asserted for what it is rather than caught sideways. The
+  # posts are created one at a time, so asking the database again after the
+  # first would answer no for every post after it — and a blog whose whole
+  # back catalogue arrives on one poll would have all but its first item
+  # dated today and pulled into the next morning's edition.
+  it "dates every post of a back catalogue by the same first-poll rule" do
+    blog = create(:blog, polled_at: nil)
+    document = rss_document(
+      dated_post("One", 3.years.ago) + dated_post("Two", 2.years.ago) +
+        dated_post("Three", 1.year.ago)
+    )
+
+    Blog::Poll.new(blog, fetch: returning(document)).save
+
+    expect(blog.posts.where(received_at: Blog::Poll::FIRST_POLL_WINDOW.ago..).count).to eq(0)
+  end
 end

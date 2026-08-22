@@ -1,4 +1,10 @@
 Rails.application.routes.draw do
+  # No show of its own: a post is read on the blog that published it, and the
+  # archive links straight out. What this app serves is the images it fetched
+  # off the publisher's CDN so the reader's browser never has to.
+  resources :blog_posts, only: [] do
+    resources :images, only: :show, module: :blog_posts
+  end
   resources :editions, only: [ :index, :show ]
   resources :newsletters, only: :index do
     # The two ways out of the pen, as nouns: creating a dismissal is the
