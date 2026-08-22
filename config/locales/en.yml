@@ -39,9 +39,9 @@ en:
         every hour.
       heading: Blogs
       label: Feed address
-      note: The feed, not the blog's home page. Siftbox reads it hourly and puts
-        new posts in the archive and the next edition.
-      placeholder: https://example.dev/feed.xml
+      note: The feed address, or the blog's home page — siftbox will find the feed
+        from it. Read hourly; new posts go in the archive and the next edition.
+      placeholder: https://example.dev
       submit: Follow
     count:
       one: 1 post

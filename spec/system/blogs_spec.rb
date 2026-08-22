@@ -7,11 +7,23 @@ RSpec.describe "The blogs on the Subscriptions page" do
   # The one thing a system spec cannot let out of the process. Stopped at the
   # seam Blog::Subscription takes for its sample, so everything on this side
   # of it — the form, the refusal, the roster — is the real thing.
-  def feed_answering(document)
-    fetched = Blog::Fetch::Fetched.new(document: document, etag: "", last_modified: "")
+  def feed_answering(*documents)
+    answers = documents.dup
     allow(Blog::Subscription).to receive(:new).and_wrap_original do |original, blog, **|
-      original.call(blog, fetch: ->(_blog) { fetched })
+      original.call(blog, fetch: lambda do |_blog|
+        Blog::Fetch::Fetched.new(document: answers.shift, etag: "", last_modified: "")
+      end)
     end
+  end
+
+  # A blog's home page, announcing where its feed is.
+  def home_page(feed_url)
+    <<~HTML
+      <!DOCTYPE html>
+      <html><head><title>Query Plan Weekly</title>
+      <link rel="alternate" type="application/rss+xml" href="#{feed_url}"></head>
+      <body><p>Notes on databases.</p></body></html>
+    HTML
   end
 
   def article(title)
@@ -108,5 +120,17 @@ RSpec.describe "The blogs on the Subscriptions page" do
     visit subscriptions_path
 
     expect(page).to have_text("Not checked yet")
+  end
+
+  # Readers know their blogs by their home pages. Most sites never show a feed
+  # address at all, so pasting one is the case, not the exception.
+  it "follows the feed a pasted home page announces" do
+    feed_answering(home_page("/feed"), rss_document(article("One")))
+    sign_in_through_the_form
+
+    visit subscriptions_path
+    follow("https://queryplanweekly.dev")
+
+    expect(page).to have_text("https://queryplanweekly.dev/feed").and have_text("1 post")
   end
 end

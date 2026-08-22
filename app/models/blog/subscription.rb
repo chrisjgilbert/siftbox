@@ -1,5 +1,10 @@
-# The reader following a blog: read the feed once, decide whether it is one
-# this app reads at all, and put it on the roster if it is.
+# The reader following a blog: read what they pasted, decide whether it is a
+# feed this app reads at all, and put it on the roster if it is.
+#
+# What they pasted may be the blog's home page rather than its feed — which is
+# how readers know their blogs, since most sites never show a feed address.
+# So a document that is not a feed is read once for the feed it announces, and
+# that is fetched instead.
 #
 # A domain object rather than a validation on Blog, because deciding this
 # means asking the publisher's server — and a validation that fetches would
@@ -55,12 +60,38 @@ class Blog::Subscription
   end
 
   def readable?
+    announced if posts.nil?
+
     return refuse(:unreachable) if fetched.nil?
     return refuse(:unreadable) if posts.nil?
     return refuse(:empty) if posts.empty?
     return refuse(:aggregator) if stubs?
 
     true
+  end
+
+  # What the reader pasted was a home page rather than a feed, which is how
+  # readers know their blogs: most of them never show a feed address at all.
+  # So the page is read for the one it announces and that is fetched instead.
+  #
+  # Once, and only from a document that was not a feed. A page announcing
+  # itself, or two announcing each other, would otherwise walk until something
+  # else stopped it — and the second fetch goes through Download the same as
+  # the first, so a discovered address gets every refusal the pasted one got.
+  def announced
+    address = Blog::FeedLink.new(fetched&.document, blog.feed_url).url
+    return if address.nil?
+
+    blog.feed_url = address
+    reread
+  end
+
+  # Assigned rather than re-memoised, so there is one place either of these is
+  # read from and no window where the two disagree about which fetch they came
+  # from.
+  def reread
+    @_fetched = fetch.call(blog)
+    @_posts = read
   end
 
   def refuse(reason)
@@ -86,11 +117,17 @@ class Blog::Subscription
   # two refusals stay different sentences: a parked domain and a blog between
   # posts are not the same thing to tell the reader.
   def posts
-    return @_posts if defined?(@_posts)
+    @_posts = read unless defined?(@_posts)
 
-    @_posts = Blog::Feed.new(fetched.document).posts
+    @_posts
+  end
+
+  def read
+    return if fetched.nil?
+
+    Blog::Feed.new(fetched.document).posts
   rescue Blog::Feed::Malformed
-    @_posts = nil
+    nil
   end
 
   # UNCHANGED cannot arrive: a blog being added has no validators to send, so

@@ -37,6 +37,27 @@ RSpec.describe Blog::Subscription do
     ITEM
   end
 
+  # A blog's home page, announcing where its feed is.
+  def home_page(feed_url)
+    <<~HTML
+      <!DOCTYPE html>
+      <html><head><title>Query Plan Weekly</title>
+      <link rel="alternate" type="application/rss+xml" href="#{feed_url}"></head>
+      <body><p>Notes on databases.</p></body></html>
+    HTML
+  end
+
+  # Two answers in turn, which is what following a home page takes: the page
+  # first, then the feed it announced.
+  def returning_each(*documents)
+    answers = documents.dup
+
+    ->(_blog) do
+      document = answers.shift
+      Blog::Fetch::Fetched.new(document: document, etag: "", last_modified: "")
+    end
+  end
+
   def follow(feed_url, fetch)
     blog = Blog.new(feed_url: feed_url)
 
@@ -129,5 +150,61 @@ RSpec.describe Blog::Subscription do
 
     expect(followed).to be(false)
     expect(blog.errors[:feed_url]).to be_present
+  end
+
+  # Readers know their blogs by their home pages, not by their feed
+  # addresses. Pasting the home page has to work, or the feature asks the
+  # reader to go and find something most blogs do not show them.
+  it "follows the feed a home page announces" do
+    followed, blog = follow("https://queryplanweekly.dev", returning_each(
+      home_page("https://queryplanweekly.dev/feed"),
+      rss_document(article("One"))
+    ))
+
+    expect(followed).to be(true)
+    expect(blog.reload.feed_url).to eq("https://queryplanweekly.dev/feed")
+  end
+
+  it "stores the posts from the feed a home page announced" do
+    follow("https://queryplanweekly.dev", returning_each(
+      home_page("https://queryplanweekly.dev/feed"), rss_document(article("One"))
+    ))
+
+    expect(Blog::Post.count).to eq(1)
+  end
+
+  it "still refuses an aggregator reached through its home page" do
+    followed, blog = follow("https://news.ycombinator.com", returning_each(
+      home_page("https://news.ycombinator.com/rss"),
+      rss_document(link("One") + link("Two"))
+    ))
+
+    expect(followed).to be(false)
+    expect(blog.errors[:feed_url]).to include(/link aggregator/)
+  end
+
+  # One hop and no more. A page announcing itself, or two pages announcing
+  # each other, would otherwise walk until something else stopped it.
+  it "does not follow a second page announced by the first" do
+    asked = []
+    fetch = lambda do |blog|
+      asked << blog.feed_url
+      Blog::Fetch::Fetched.new(
+        document: home_page("https://queryplanweekly.dev/#{asked.length}"),
+        etag: "", last_modified: ""
+      )
+    end
+
+    follow("https://queryplanweekly.dev", fetch)
+
+    expect(asked.length).to eq(2)
+  end
+
+  it "says a page announcing no feed is not a feed" do
+    followed, blog = follow("https://queryplanweekly.dev",
+      returning("<html><head><title>Query Plan Weekly</title></head><body></body></html>"))
+
+    expect(followed).to be(false)
+    expect(blog.errors[:feed_url]).to include(/not a feed/)
   end
 end
