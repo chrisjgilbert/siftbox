@@ -1,12 +1,6 @@
 require "rails_helper"
 
 RSpec.describe Download::Destination do
-  # 203.0.113.9 is TEST-NET-3 (RFC 5737): never routable, so nothing can
-  # accidentally connect, yet unmistakably public to the range checks here.
-  def public_resolver
-    ->(_host) { [ "203.0.113.9" ] }
-  end
-
   def address_for(url, resolver: public_resolver)
     Download::Destination.new(URI.parse(url), resolver: resolver).address
   end

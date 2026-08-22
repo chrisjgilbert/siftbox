@@ -1,25 +1,11 @@
 require "rails_helper"
 
 RSpec.describe Blog::Poll do
-  # One RSS 2.0 channel carrying whatever items the example needs, the way
-  # Blog::Feed's own spec builds one. The fetch is injected rather than
-  # performed, so every example here is a string.
-  def feed_document(items)
-    <<~XML
-      <?xml version="1.0"?>
-      <rss version="2.0">
-        <channel>
-          <title>Query Plan Weekly</title>
-          <link>https://queryplanweekly.dev</link>
-          <description>Notes on databases</description>
-      #{items}
-        </channel>
-      </rss>
-    XML
-  end
-
+  # The fetch is injected rather than performed, so every example here is a
+  # string. rss_document wraps the items in the channel furniture the format
+  # requires; see spec/support/feed_documents.rb.
   def one_post
-    feed_document(<<~ITEMS)
+    rss_document(<<~ITEMS)
       <item>
         <title>Why your index is not being used</title>
         <link>https://queryplanweekly.dev/unused-index</link>
@@ -91,10 +77,10 @@ RSpec.describe Blog::Poll do
   # already seen.
   it "stores a second post the feed never named" do
     blog = create(:blog)
-    first = feed_document(unnamed_post("Weeknotes for August"))
+    first = rss_document(unnamed_post("Weeknotes for August"))
     Blog::Poll.new(blog, fetch: returning(first)).save
 
-    both = feed_document(unnamed_post("Weeknotes for August") + unnamed_post("A note on locks"))
+    both = rss_document(unnamed_post("Weeknotes for August") + unnamed_post("A note on locks"))
     Blog::Poll.new(blog, fetch: returning(both)).save
 
     expect(blog.posts.pluck(:title))
@@ -107,7 +93,7 @@ RSpec.describe Blog::Poll do
   # writing into tomorrow morning's edition.
   it "keeps a back catalogue out of the window on a blog's first poll" do
     blog = create(:blog, polled_at: nil)
-    document = feed_document(
+    document = rss_document(
       dated_post("An old post", 2.years.ago) + dated_post("A new post", 1.hour.ago)
     )
 
@@ -122,7 +108,7 @@ RSpec.describe Blog::Poll do
   # browse it — it is only the edition window that should not see it.
   it "still stores the back catalogue it kept out of the window" do
     blog = create(:blog, polled_at: nil)
-    document = feed_document(
+    document = rss_document(
       dated_post("An old post", 2.years.ago) + dated_post("A new post", 1.hour.ago)
     )
 
@@ -147,7 +133,7 @@ RSpec.describe Blog::Poll do
     blog = create(:blog, polled_at: nil)
     Blog::Poll.new(blog, fetch: returning(one_post)).save
 
-    later = feed_document(dated_post("Written weeks ago", 3.weeks.ago))
+    later = rss_document(dated_post("Written weeks ago", 3.weeks.ago))
     Blog::Poll.new(blog.reload, fetch: returning(later)).save
 
     expect(blog.posts.where(received_at: 1.week.ago..).pluck(:title))
@@ -160,7 +146,7 @@ RSpec.describe Blog::Poll do
   # way on every hourly poll from then on, and never stores anything again.
   it "stores one post when a feed lists the same one twice" do
     blog = create(:blog)
-    twice = feed_document(unnamed_post("Weeknotes") + unnamed_post("Weeknotes"))
+    twice = rss_document(unnamed_post("Weeknotes") + unnamed_post("Weeknotes"))
 
     Blog::Poll.new(blog, fetch: returning(twice)).save
 
@@ -174,7 +160,7 @@ RSpec.describe Blog::Poll do
   # honest reading of "no date" on a first poll is "not demonstrably new".
   it "keeps undated posts out of the window on a first poll" do
     blog = create(:blog, polled_at: nil)
-    document = feed_document(
+    document = rss_document(
       unnamed_post("One") + unnamed_post("Two") + unnamed_post("Three")
     )
 
@@ -241,7 +227,7 @@ RSpec.describe Blog::Poll do
     blog = create(:blog, polled_at: nil)
     Blog::Poll.new(blog, fetch: failing).save
 
-    document = feed_document(dated_post("An old post", 2.years.ago))
+    document = rss_document(dated_post("An old post", 2.years.ago))
     Blog::Poll.new(blog.reload, fetch: returning(document)).save
 
     expect(blog.posts.where(received_at: 1.week.ago..).count).to eq(0)
@@ -252,7 +238,7 @@ RSpec.describe Blog::Poll do
   # already exists and already knows nothing about mail.
   it "reads a snippet off the post's body" do
     blog = create(:blog)
-    document = feed_document(<<~ITEMS)
+    document = rss_document(<<~ITEMS)
       <item>
         <title>Why your index is not being used</title>
         <guid>unused-index</guid>
@@ -267,7 +253,7 @@ RSpec.describe Blog::Poll do
 
   it "reads a lead image off the post's body" do
     blog = create(:blog)
-    document = feed_document(<<~ITEMS)
+    document = rss_document(<<~ITEMS)
       <item>
         <title>Why your index is not being used</title>
         <guid>unused-index</guid>

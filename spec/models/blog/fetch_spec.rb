@@ -1,22 +1,6 @@
 require "rails_helper"
 
 RSpec.describe Blog::Fetch do
-  # 203.0.113.9 is TEST-NET-3 (RFC 5737): never routable, so nothing can
-  # accidentally connect, yet unmistakably public to the range checks.
-  def public_resolver
-    ->(_host) { [ "203.0.113.9" ] }
-  end
-
-  def feed_bytes
-    <<~XML
-      <?xml version="1.0"?>
-      <rss version="2.0"><channel>
-      <title>Query Plan Weekly</title><link>https://queryplanweekly.dev</link>
-      <description>Notes on databases</description>
-      </channel></rss>
-    XML
-  end
-
   def fetched(blog)
     Blog::Fetch.new(blog, resolver: public_resolver).result
   end
@@ -24,7 +8,7 @@ RSpec.describe Blog::Fetch do
   it "answers the document a feed served" do
     blog = create(:blog, feed_url: "https://queryplanweekly.dev/feed")
     stub_request(:get, blog.feed_url).to_return(
-      body: feed_bytes, headers: { "Content-Type" => "application/rss+xml" }
+      body: rss_document, headers: { "Content-Type" => "application/rss+xml" }
     )
 
     expect(fetched(blog).document).to include("Query Plan Weekly")
@@ -38,7 +22,7 @@ RSpec.describe Blog::Fetch do
   it "answers a document tagged as UTF-8" do
     blog = create(:blog, feed_url: "https://queryplanweekly.dev/feed")
     stub_request(:get, blog.feed_url).to_return(
-      body: feed_bytes.dup.force_encoding(Encoding::ASCII_8BIT),
+      body: rss_document.dup.force_encoding(Encoding::ASCII_8BIT),
       headers: { "Content-Type" => "application/rss+xml" }
     )
 
@@ -48,7 +32,7 @@ RSpec.describe Blog::Fetch do
   it "carries back the validators the server sent" do
     blog = create(:blog, feed_url: "https://queryplanweekly.dev/feed")
     stub_request(:get, blog.feed_url).to_return(
-      body: feed_bytes,
+      body: rss_document,
       headers: {
         "Content-Type" => "application/rss+xml", "ETag" => "\"abc\"",
         "Last-Modified" => "Wed, 20 Aug 2026 09:00:00 GMT"

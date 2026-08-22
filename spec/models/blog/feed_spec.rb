@@ -1,24 +1,6 @@
 require "rails_helper"
 
 RSpec.describe Blog::Feed do
-  # An RSS 2.0 channel carrying whatever items the example needs. The channel
-  # furniture is required by the format and says nothing the parser is being
-  # asked about, so it lives here rather than in every example.
-  def rss_document(items)
-    <<~XML
-      <?xml version="1.0"?>
-      <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"
-           xmlns:dc="http://purl.org/dc/elements/1.1/">
-        <channel>
-          <title>Query Plan Weekly</title>
-          <link>https://queryplanweekly.dev</link>
-          <description>Notes on databases</description>
-      #{items}
-        </channel>
-      </rss>
-    XML
-  end
-
   # The same blog, published as Atom. Every field the parser wants is spelled
   # differently here — entry for item, link as an attribute, content and
   # published as elements with their own .content — which is the whole of what

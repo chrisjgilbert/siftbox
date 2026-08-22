@@ -1,12 +1,6 @@
 require "rails_helper"
 
 RSpec.describe Newsletter::ImageDownload do
-  # 203.0.113.9 is TEST-NET-3 (RFC 5737): never routable, so nothing can
-  # accidentally connect, yet unmistakably public to the range checks here.
-  def public_resolver
-    ->(_host) { [ "203.0.113.9" ] }
-  end
-
   def stub_image(url, bytes: "png-bytes", content_type: "image/png")
     stub_request(:get, url)
       .to_return(body: bytes, headers: { "Content-Type" => content_type })

@@ -6,12 +6,6 @@ require "rails_helper"
 # of it. What is here is what only became reachable once the caller could
 # choose: an allowlist that is off, and a cap that is an argument.
 RSpec.describe Download do
-  # 203.0.113.9 is TEST-NET-3 (RFC 5737): never routable, so nothing can
-  # accidentally connect, yet unmistakably public to the range checks.
-  def public_resolver
-    ->(_host) { [ "203.0.113.9" ] }
-  end
-
   def stub_body(url, bytes:, content_type:)
     stub_request(:get, url)
       .to_return(body: bytes, headers: { "Content-Type" => content_type })
