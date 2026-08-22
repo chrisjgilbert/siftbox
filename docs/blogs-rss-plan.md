@@ -158,9 +158,24 @@ one. That trick stops working across two tables — newsletter 5 and post 5
 aren't comparable. The sort needs a third component so the order is stable.
 Get this wrong and rows shuffle between page loads.
 
+**A post's row says it's a post.** Each archive row carries a small line of
+fixed-width text above the headline — the row number, who sent it, and the
+time. A post gets one more field on that line: `Simon Willison / Blog`. The
+line already draws slashes between its fields, so this is a third field
+rather than a badge added on top.
+
+Only posts are marked, not newsletters. Newsletters are the common case —
+twenty a day against three — so marking the rarer thing keeps the archive
+quieter.
+
 **"View original" on a post is an external link** to the blog. Newsletters
 show the original email in a sandboxed frame; a post's real original is the
-blog itself.
+blog itself. That difference is what the marker is for: you can see where a
+row goes before you click it.
+
+The marker is drawn in the app's blue, the same colour as the row number.
+If it reads loud once there's a real archive behind it, dropping it to the
+grey the rest of that line uses is a one-word change.
 
 ### Scheduling
 
