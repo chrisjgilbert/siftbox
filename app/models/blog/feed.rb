@@ -93,9 +93,7 @@ class Blog::Feed
   end
 
   def site_url
-    return value_of(alternate(channel.links) || channel.link).to_s if channel.respond_to?(:links)
-
-    value_of(channel.link).to_s
+    address_of(channel).to_s
   end
 
   private
@@ -119,15 +117,21 @@ class Blog::Feed
     )
   end
 
-  # The one link that is the post itself. An Atom entry may carry several —
-  # the comment feed, the editing endpoint — and Blogger and WordPress both
-  # list those *before* the post's own, so taking whichever came first sends
-  # the reader to a comments document. Only Atom answers a list, so RSS falls
-  # through to its single link untouched.
-  def address_of(item)
-    return value_of(alternate(item.links) || item.link) if item.respond_to?(:links)
+  # The one link that is the thing itself, for an item or for the feed as a
+  # whole. An Atom entry may carry several — the comment feed, the editing
+  # endpoint — and Blogger and WordPress both list those *before* the post's
+  # own, so taking whichever came first sends the reader to a comments
+  # document. Only Atom answers a list, so RSS falls through to its single
+  # link untouched.
+  #
+  # A channel goes through here as well as an item. The permalink tail below
+  # is about item guids, and neither RSS::Rss::Channel nor RSS::RDF::Channel
+  # answers to :guid — so it returns nothing for a channel and the fallback
+  # is the empty string either way.
+  def address_of(element)
+    return value_of(alternate(element.links) || element.link) if element.respond_to?(:links)
 
-    value_of(item.link).presence || permalink_of(item)
+    value_of(element.link).presence || permalink_of(element)
   end
 
   # RSS 2.0 lets an item carry its address in the guid instead of a link,
@@ -195,10 +199,7 @@ class Blog::Feed
   end
 
   # A date is a date, so the first the item answers with will do.
-  def first_of(item, fields)
-    values_of(item, fields).first
-  end
-
+  #
   # respond_to? rather than a check on the document's format: which fields an
   # item has is exactly what differs between the two, so asking the item is
   # asking the real question.
@@ -208,12 +209,10 @@ class Blog::Feed
   # that has none, and on the Atom side that arrives as a perfectly present
   # element holding an empty string — so asking the element whether it is
   # blank answers no, and an empty string wins on existing alone.
-  def values_of(item, fields)
-    present = fields.filter_map do |field|
-      value_of(item.public_send(field)) if item.respond_to?(field)
-    end
-
-    present.select(&:present?)
+  def first_of(item, fields)
+    fields
+      .filter_map { |field| value_of(item.public_send(field)) if item.respond_to?(field) }
+      .detect(&:present?)
   end
 
   def parsed
@@ -236,11 +235,13 @@ class Blog::Feed
     document.is_a?(String) && document.include?("<")
   end
 
-  # ArgumentError and TypeError are here because they arrive from inside the
-  # parser rather than from it: bytes tagged as an encoding they are not raise
-  # the first, and a document that is not a string raises the second. Neither
-  # is an RSS::Error, so both would otherwise walk past a rescue written for
+  # ArgumentError is here because it arrives from inside the parser rather
+  # than from it: bytes tagged as an encoding they are not raise it, and it is
+  # not an RSS::Error, so it would otherwise walk past a rescue written for
   # the parser's own errors and out through a caller expecting one thing.
+  # TypeError keeps it company as a backstop rather than for a case anyone can
+  # name — the parser raises it for a document that is not a String, and
+  # #markup? has already refused those one line earlier.
   #
   # The nil is the case a rescue alone misses, and it is the likeliest of the
   # lot: the parser answers nothing rather than raising when a document is

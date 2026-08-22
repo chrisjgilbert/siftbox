@@ -359,13 +359,6 @@ RSpec.describe Blog::Feed do
     expect(feed.posts.first.identity).to eq("tag:queryplanweekly.dev,2026:1481")
   end
 
-  it "reads a post's identity from an Atom id" do
-    feed = Blog::Feed.new(atom_document(atom_entry))
-
-    expect(feed.posts.first.identity)
-      .to eq("https://queryplanweekly.dev/unused-index")
-  end
-
   # RSS 2.0 lets an item carry its address in the guid instead of a link,
   # when the guid is marked as a permalink. Without this such a post has no
   # address at all — nothing for the archive to link to, and nothing for the

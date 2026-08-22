@@ -99,7 +99,15 @@ class Blog::Poll
   end
 
   def stored(feed)
-    unseen(feed).map { |post| blog.posts.create!(attributes_for(post)) }
+    unseen(feed).map { |key, post| blog.posts.create!(attributes_for(key, post)) }
+  end
+
+  # Each post paired with its key, computed once. It used to be worked out
+  # inside the uniq, again inside the reject, and a third time when the row
+  # was built — and for a feed with neither guid nor link that is three
+  # SHA256 digests per item per hour, forever.
+  def keyed(feed)
+    feed.posts.map { |post| [ key_for(post), post ] }
   end
 
   # uniq before the reject, not after: a feed that lists the same post twice —
@@ -108,16 +116,17 @@ class Blog::Poll
   # transaction back and takes polled_at with it, so the blog fails the same
   # way on every poll afterwards and never stores anything again.
   def unseen(feed)
-    feed.posts
-      .uniq { |post| key_for(post) }
-      .reject { |post| known.include?(key_for(post)) }
+    posts = keyed(feed).uniq(&:first)
+    stored = known(posts.map(&:first))
+
+    posts.reject { |key, _post| stored.include?(key) }
   end
 
-  def attributes_for(post)
+  def attributes_for(key, post)
     body = Newsletter::Body.new(post.body_html)
 
     {
-      title: post.title, url: post.url, guid: key_for(post),
+      title: post.title, url: post.url, guid: key,
       body_html: post.body_html, published_at: post.published_at,
       received_at: received_at_for(post), snippet: snippet_of(body),
       lead_image_url: Newsletter::LeadImage.new(body).url
@@ -181,14 +190,38 @@ class Blog::Poll
   # keying on that would drop the guard for a blog whose back catalogue this
   # app has never actually read — and the moment it recovered, all of it would
   # pour into the next edition.
+  #
+  # Its own query rather than reading #known, and it has to be: #known is
+  # narrowed to the keys this feed carries, so an established blog that
+  # publishes nothing but new posts would answer empty and re-open the guard.
+  #
+  # Memoised, and that is load-bearing rather than a saving. The posts are
+  # created one at a time, so asking the database again after the first would
+  # answer no for every post after it — and a feed whose whole back catalogue
+  # arrives on one poll would have all but its first item dated today. Read
+  # once, before anything is written, so it answers what was true when the
+  # poll started. `defined?` rather than `||=`, which cannot memoise false.
   def first_poll?
-    known.empty?
+    return @_first_poll if defined?(@_first_poll)
+
+    @_first_poll = blog.posts.none?
   end
 
-  # One query rather than one per post: a feed carries tens of items and most
-  # polls store none of them. Read before anything is written, so it also
-  # answers what was true when the poll started.
-  def known
-    @_known ||= blog.posts.pluck(:guid)
+  # Which of the keys this feed carries are already stored, rather than every
+  # guid the blog has ever had. One query either way; the difference is that
+  # it stops growing with the archive, and that the reject above stops being a
+  # scan of the whole catalogue once per feed item.
+  #
+  # The `guid <> ''` is why index_blog_posts_on_present_guid applies at all:
+  # it is partial, so SQLite will not reach for it unless the query repeats
+  # its predicate — and with it the read is a covering index scan rather than
+  # a walk through every row's overflow pages to reach a column stored after
+  # body_html. Nothing is excluded by saying so: #key_for is never empty, and
+  # the column is NOT NULL DEFAULT ''.
+  #
+  # Read before anything is written, so it answers what was true when the poll
+  # started.
+  def known(keys)
+    blog.posts.where.not(guid: "").where(guid: keys).pluck(:guid).to_set
   end
 end
