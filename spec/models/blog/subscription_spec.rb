@@ -42,6 +42,34 @@ RSpec.describe Blog::Subscription do
   # What a feed set to publish excerpts carries: WordPress's default is 55
   # words, which reads through Newsletter::Prose at a little over three
   # hundred characters.
+  # What an aggregator publishes once its template has wrapped the word in an
+  # anchor: markup enough to clear any floor measured on the body.
+  def wrapped_link(title)
+    anchor = %(&lt;a href="https://news.ycombinator.com/item?id=4083356782" ) +
+      %(rel="nofollow noopener noreferrer" target="_blank" class="comments-link" ) +
+      %(data-item="4083356782"&gt;Comments&lt;/a&gt;)
+    <<~ITEM
+      <item>
+        <title>#{title}</title>
+        <link>https://news.ycombinator.com/item?id=1</link>
+        <guid>hn-#{title.parameterize}</guid>
+        <description>#{anchor}</description>
+      </item>
+    ITEM
+  end
+
+  # Longer than "Comments" and still a pointer rather than writing.
+  def pointer(title)
+    <<~ITEM
+      <item>
+        <title>#{title}</title>
+        <link>https://queryplanweekly.dev/#{title.parameterize}</link>
+        <guid>#{title.parameterize}</guid>
+        <description>Read the rest here.</description>
+      </item>
+    ITEM
+  end
+
   def excerpt(title)
     <<~ITEM
       <item>
@@ -169,20 +197,69 @@ RSpec.describe Blog::Subscription do
   # A feed's character shows in its first items, and reading a back catalogue
   # of 128 to decide told us nothing the first twenty did — measured at ten
   # seconds of the twenty-one a real blog's first subscription took.
-  it "judges a feed on a sample rather than on all of it" do
-    items = (1..(Blog::Subscription::SAMPLE + 20)).map { |number| rss_article("Post #{number}") }
-    read = []
-    fetch = lambda do |_blog|
-      Blog::Fetch::Fetched.new(document: rss_document(items.join), etag: "", last_modified: "")
-    end
-    allow(Newsletter::Body).to receive(:prose).and_wrap_original do |original, html|
-      read << html
-      original.call(html)
-    end
+  #
+  # Asserted on the decision rather than on how many bodies were read: an
+  # example counting calls to Newsletter::Body.prose passes for any mutation
+  # that keeps calling it, which is how a version measuring markup instead of
+  # prose stayed green. This holds both ends — a sample too large reaches the
+  # articles and admits the feed, a sample read from the wrong end does too.
+  it "judges a feed on its newest items rather than on its back catalogue" do
+    stubs = (1..Blog::Subscription::SAMPLE).map { |number| link("Stub #{number}") }.join
+    articles = (1..Blog::Subscription::SAMPLE).map { |number| rss_article("Post #{number}") }.join
 
-    follow("https://queryplanweekly.dev/feed", fetch)
+    followed, _blog = follow("https://news.ycombinator.com/rss",
+      returning(rss_document(stubs + articles)))
 
-    expect(read.length).to eq(Blog::Subscription::SAMPLE)
+    expect(followed).to be(false)
+  end
+
+  # An aggregator that wraps its one word in an anchor: 238 characters of
+  # markup around 8 of prose. Measured against a real Hacker News item's
+  # shape, and the reason the floor is read off the prose rather than off the
+  # body — a rule the sampling example above cannot hold on its own.
+  it "refuses an aggregator whose links carry more markup than writing" do
+    followed, _blog = follow("https://news.ycombinator.com/rss",
+      returning(rss_document(wrapped_link("One") + wrapped_link("Two"))))
+
+    expect(followed).to be(false)
+  end
+
+  # The share, from below as well as above. Every aggregator elsewhere in this
+  # file has no readable items at all, so a rule admitting one item in ten
+  # would still refuse them.
+  it "refuses a feed where two items in five carry writing" do
+    items = rss_article("One") + rss_article("Two") +
+      (3..5).map { |number| link("Stub #{number}") }.join
+
+    followed, _blog = follow("https://queryplanweekly.dev/feed", returning(rss_document(items)))
+
+    expect(followed).to be(false)
+  end
+
+  it "follows a feed where three items in five carry writing" do
+    items = (1..3).map { |number| rss_article("Article #{number}") }.join +
+      link("Stub four") + link("Stub five")
+
+    followed, _blog = follow("https://queryplanweekly.dev/feed", returning(rss_document(items)))
+
+    expect(followed).to be(true)
+  end
+
+  # At least half is the rule, so half is enough.
+  it "follows a feed exactly half of which is writing" do
+    followed, _blog = follow("https://queryplanweekly.dev/feed",
+      returning(rss_document(rss_article("One") + link("Two"))))
+
+    expect(followed).to be(true)
+  end
+
+  # The stub floor from below. The only stub elsewhere in this file is the
+  # literal word "Comments", so any floor above eight refused it.
+  it "refuses a feed of one-line pointers" do
+    followed, _blog = follow("https://news.ycombinator.com/rss",
+      returning(rss_document(pointer("One") + pointer("Two"))))
+
+    expect(followed).to be(false)
   end
 
   # A blog that publishes two-line excerpts and a "read more" link is a blog.
@@ -275,5 +352,23 @@ RSpec.describe Blog::Subscription do
     follow("https://queryplanweekly.dev/", fetch)
 
     expect(asked).to eq([ "https://queryplanweekly.dev/" ])
+  end
+
+  # "Once, and only from a document that was not a feed." The once was held;
+  # the only-from-a-non-feed was not, so a feed that also carries an alternate
+  # link earned a second fetch and was followed at an address the reader never
+  # typed.
+  it "does not chase an alternate link out of a document that is a feed" do
+    asked = []
+    fetch = lambda do |blog|
+      asked << blog.feed_url
+      document = rss_document(rss_article("One")).sub("<channel>",
+        %(<channel><link rel="alternate" type="application/rss+xml" href="/other"/>))
+      Blog::Fetch::Fetched.new(document: document, etag: "", last_modified: "")
+    end
+
+    follow("https://queryplanweekly.dev/feed", fetch)
+
+    expect(asked).to eq([ "https://queryplanweekly.dev/feed" ])
   end
 end

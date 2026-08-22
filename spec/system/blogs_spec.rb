@@ -129,4 +129,29 @@ RSpec.describe "The blogs on the Subscriptions page" do
 
     expect(page).to have_text("https://queryplanweekly.dev/feed").and have_text("1 post")
   end
+
+  # rack_test runs no JavaScript, so the dialog cannot be driven — but the
+  # attribute can be held. Without it the button was deleted-and-still-green,
+  # on the one irreversible cascade in this app.
+  it "asks before removing a blog, because its posts and citations go too" do
+    create(:blog, title: "Query Plan Weekly")
+    sign_in_through_the_form
+
+    visit subscriptions_path
+
+    expect(find_button("Remove")["data-turbo-confirm"]).to include("Query Plan Weekly")
+  end
+
+  # Every row's button says "Remove", so a reader who cannot see which row
+  # they are in has nothing to tell three of them apart.
+  it "names the blog on each row's Remove button" do
+    create(:blog, title: "Query Plan Weekly")
+    create(:blog, title: "The Diff", feed_url: "https://thediff.co/feed")
+    sign_in_through_the_form
+
+    visit subscriptions_path
+
+    expect(page.all("button").map { |button| button["aria-label"] })
+      .to include("Remove Query Plan Weekly", "Remove The Diff")
+  end
 end

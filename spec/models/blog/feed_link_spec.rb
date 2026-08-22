@@ -128,4 +128,66 @@ RSpec.describe Blog::FeedLink do
   it "ignores an empty feed link, which resolves to the page too" do
     expect(found_in(%(<link rel="alternate" type="application/rss+xml" href="">))).to be_nil
   end
+
+  # An href a stranger's template wrote. A space or a stray percent is what
+  # actually raises URI::InvalidURIError — javascript: and file: parse fine
+  # and are turned away a line later — so without this the rescue was never
+  # reached and a sloppy feed link was a 500 on an ordinary home page.
+  it "finds nothing when the announced address will not parse" do
+    head = %(<link rel="alternate" type="application/rss+xml" href="/feed 2.xml">)
+
+    expect(found_in(head)).to be_nil
+  end
+
+  it "finds nothing when the announced address is a stray percent" do
+    head = %(<link rel="alternate" type="application/rss+xml" href="%%">)
+
+    expect(found_in(head)).to be_nil
+  end
+
+  # An hreflang alternate is on a very large share of real sites, and it is an
+  # alternate with a type — so the type list is what keeps it out. Followed,
+  # it fetches the French homepage and tells the reader their blog is not a
+  # blog.
+  it "ignores an alternate link announcing another page rather than a feed" do
+    head = %(<link rel="alternate" type="text/html" hreflang="fr" href="/fr/">)
+
+    expect(found_in(head)).to be_nil
+  end
+
+  # rel="self" is what a feed uses to point at itself, not what a page uses to
+  # announce one.
+  it "ignores a feed type announced under a relation that is not alternate" do
+    head = %(<link rel="self" type="application/rss+xml" href="/feed">)
+
+    expect(found_in(head)).to be_nil
+  end
+
+  it "finds a feed announced as application/xml" do
+    head = %(<link rel="alternate" type="application/xml" href="/feed.xml">)
+
+    expect(found_in(head)).to eq("https://queryplanweekly.dev/feed.xml")
+  end
+
+  it "finds a feed announced as text/xml" do
+    head = %(<link rel="alternate" type="text/xml" href="/feed.xml">)
+
+    expect(found_in(head)).to eq("https://queryplanweekly.dev/feed.xml")
+  end
+
+  it "finds a feed whose type is written with spaces around it" do
+    head = %(<link rel="alternate" type=" application/rss+xml " href="/feed.xml">)
+
+    expect(found_in(head)).to eq("https://queryplanweekly.dev/feed.xml")
+  end
+
+  # Older templates announce feed:// first. Taking the first announcement
+  # rather than the first followable one would stop at it and never reach the
+  # real feed underneath.
+  it "passes over an announced address it could not follow and takes the next" do
+    head = %(<link rel="alternate" type="application/rss+xml" href="feed://queryplanweekly.dev/rss">) +
+      %(<link rel="alternate" type="application/rss+xml" href="/feed">)
+
+    expect(found_in(head)).to eq("https://queryplanweekly.dev/feed")
+  end
 end

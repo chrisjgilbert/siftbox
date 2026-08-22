@@ -109,4 +109,28 @@ RSpec.describe "Blogs" do
 
     expect(Blog.count).to eq(1)
   end
+
+  # The one endpoint here that dials out on a reader's say-so. Every other
+  # create in this app is limited the same way and each of those has an
+  # example; this one did not, so the whole declaration could be deleted with
+  # the suite still green.
+  it "turns away a reader submitting one feed after another" do
+    sign_in
+    resolve_publicly
+    6.times { |index| serving("https://queryplanweekly.dev/feed-#{index}", rss_document(rss_article("One"))) }
+
+    6.times { |index| add("https://queryplanweekly.dev/feed-#{index}") }
+
+    expect(Blog.count).to eq(5)
+  end
+
+  it "says why it turned them away" do
+    sign_in
+    resolve_publicly
+    6.times { |index| serving("https://queryplanweekly.dev/feed-#{index}", rss_document(rss_article("One"))) }
+
+    6.times { |index| add("https://queryplanweekly.dev/feed-#{index}") }
+
+    expect(flash[:alert]).to eq("That is a lot of feeds at once. Try again in a minute.")
+  end
 end
