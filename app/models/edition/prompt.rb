@@ -53,9 +53,11 @@ class Edition::Prompt
   }.freeze
 
   # The two tags that quote a source, and so the two strings a source must not
-  # be able to write. A sender who closes one early would have the rest of its
-  # email read as the reader talking rather than as source material — which is
-  # the whole difference between "report this" and "do this". Taken out of
+  # be able to write. A publisher who closes one early would have the rest of
+  # its writing read as the reader talking rather than as source material —
+  # which is the whole difference between "report this" and "do this". One who
+  # opens one invents a source that was never in the window, and an id that
+  # was passes the editor's completeness check unchanged. Taken out of
   # everything the stranger wrote: body, subject, title and name alike. An
   # unclosed `</newsletter` survives, and harmlessly: it is not a tag, so it
   # closes nothing.
@@ -63,7 +65,11 @@ class Edition::Prompt
   # Both tags are stripped from both kinds of source rather than each from its
   # own. A newsletter cannot be allowed to write `</post>` either: it would
   # close whichever post the prompt happens to quote after it.
-  QUOTE = %r{</?\s*(newsletter|post)\b[^>]*>}i
+  #
+  # Whitespace is allowed before the slash as well as after it. `< /post>` is
+  # not a tag any parser would accept, but what reads this prompt is not a
+  # parser — it is reading for where one source stops and the next begins.
+  QUOTE = %r{<\s*/?\s*(newsletter|post)\b[^>]*>}i
 
   INSTRUCTIONS = <<~TEXT.freeze
     You are the editor of a daily briefing, working the way The Week does:
@@ -223,7 +229,22 @@ class Edition::Prompt
     Newsletter::Prose.new(Newsletter::Body.new(html)).text
   end
 
+  # Until it stops changing, and one pass is not enough — this was a real hole
+  # rather than a theoretical one. gsub deletes, deleting joins the characters
+  # either side of what it removed, and those can spell the tag that was just
+  # taken out: `</po</post>st>` loses its inner tag and becomes `</post>`.
+  # gsub never re-scans its own output, so the reconstituted tag survives the
+  # pass that built it.
+  #
+  # Terminates because every pass that changes anything strictly shortens the
+  # string, and a string cannot shrink forever. What is left at the fixed
+  # point contains no match by definition.
   def scrubbed(text)
-    text.gsub(QUOTE, "")
+    loop do
+      shorter = text.gsub(QUOTE, "")
+      return text if shorter == text
+
+      text = shorter
+    end
   end
 end

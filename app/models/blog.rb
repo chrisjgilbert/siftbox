@@ -7,6 +7,16 @@
 # Not scoped to a user, the way Feed and Subscriptions are not: one reader,
 # one roster, and the authentication gate is the scope.
 class Blog < ApplicationRecord
+  # What a fetch could actually follow. Download::Destination already refuses
+  # anything else, and refuses it at every redirect hop — so this is not the
+  # SSRF guard. It is here so a roster row that can never be fetched is
+  # refused while the reader is standing there, rather than failing silently
+  # on every poll forever and reading as a blog that went away.
+  #
+  # It is also what lets Blog::Post::Presenter end its fallback chain here:
+  # the last link a row can be pointed at is one a browser can follow.
+  FETCHABLE = %r{\Ahttps?://}i
+
   # Cascaded in the database as well, so a delete that goes round Rails still
   # takes the posts with it; declared here for the destroy callbacks on the
   # way out.
@@ -17,7 +27,7 @@ class Blog < ApplicationRecord
   # the index. This is here so the ordinary case reads as a validation failure
   # rather than as a RecordNotUnique out of the database, the way
   # Edition::Citation's does.
-  validates :feed_url, presence: true, uniqueness: true
+  validates :feed_url, presence: true, uniqueness: true, format: { with: FETCHABLE }
 
   # This poll did not come home with a feed. Here rather than in Blog::Poll
   # because the rule is a fact about the column: the first failure's time

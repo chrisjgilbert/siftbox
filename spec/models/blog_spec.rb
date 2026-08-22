@@ -38,4 +38,24 @@ RSpec.describe Blog do
 
     expect(blog.failing_since).to be_within(1.second).of(first)
   end
+
+  # Not an SSRF — Download::Destination refuses anything that is not http or
+  # https, and refuses it at every redirect hop. This is so a roster row that
+  # can never be fetched is refused when it is added, rather than failing
+  # silently on every poll forever and reading as a blog that went away.
+  it "refuses a feed address a fetch could never follow" do
+    expect(build(:blog, feed_url: "file:///etc/passwd")).not_to be_valid
+  end
+
+  it "refuses a feed address with no scheme at all" do
+    expect(build(:blog, feed_url: "queryplanweekly.dev/feed")).not_to be_valid
+  end
+
+  it "accepts an ordinary https feed address" do
+    expect(build(:blog, feed_url: "https://queryplanweekly.dev/feed")).to be_valid
+  end
+
+  it "accepts a plain http feed address, which plenty of blogs still serve" do
+    expect(build(:blog, feed_url: "http://queryplanweekly.dev/feed")).to be_valid
+  end
 end
