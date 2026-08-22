@@ -5,8 +5,8 @@
 # the whole feed rather than restarting per group, so the archive reads as an
 # index.
 class Feed::Row
-  delegate :lead_image?, :lead_image_url, :sender, :snippet, :subject,
-    :timestamp, :to_param, to: :presenter
+  delegate :kind, :link_attributes, :lead_image?, :lead_image_url, :path, :sender,
+    :snippet, :subject, :timestamp, to: :presenter
 
   def initialize(presenter, position)
     @presenter = presenter

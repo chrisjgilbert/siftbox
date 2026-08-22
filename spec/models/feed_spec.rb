@@ -168,4 +168,37 @@ RSpec.describe Feed do
 
     expect(Feed.new.issue_count).to eq(2)
   end
+
+  it "lists blog posts alongside newsletters" do
+    create(:newsletter, subject: "Ruby 3.4 lands", received_at: 2.hours.ago)
+    create(:blog_post, title: "Why your index is not used", received_at: 1.hour.ago)
+
+    rows = Feed.new.groups.flat_map(&:newsletters)
+
+    expect(rows.map(&:subject))
+      .to eq([ "Why your index is not used", "Ruby 3.4 lands" ])
+  end
+
+  # Every ordering in this app breaks ties on the id, because arrival times
+  # carry whole seconds and a batch lands on one instant. That stops working
+  # across two tables — newsletter 5 and post 5 are not comparable — so the
+  # order needs a third key, or tied rows swap places between page loads and
+  # the continuous numbering swaps with them.
+  it "orders a newsletter and a post that arrived on the same instant the same way twice" do
+    landed = 1.hour.ago
+    create(:newsletter, subject: "A newsletter", received_at: landed)
+    create(:blog_post, title: "A post", received_at: landed)
+
+    first = Feed.new.groups.flat_map(&:newsletters).map(&:subject)
+    second = Feed.new.groups.flat_map(&:newsletters).map(&:subject)
+
+    expect(first).to eq(second)
+  end
+
+  it "counts posts in the end-of-feed tally" do
+    create(:newsletter, received_at: 1.hour.ago)
+    create(:blog_post, received_at: 1.hour.ago)
+
+    expect(Feed.new.issue_count).to eq(2)
+  end
 end

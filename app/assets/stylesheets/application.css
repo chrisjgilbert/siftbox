@@ -917,6 +917,19 @@ a {
   white-space: nowrap;
 }
 
+/* The one field that says a row is a blog post rather than a newsletter. The
+   mono line already reads as slash-separated fields, so the separator is
+   drawn here rather than written into the locale — the same way the story
+   sources list draws its own. */
+.row__kind {
+  color: var(--blue);
+}
+
+.row__kind::before {
+  content: "\00a0/\00a0";
+  color: var(--mute);
+}
+
 .row__subject {
   grid-area: subject;
   margin-top: 6px;

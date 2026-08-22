@@ -68,14 +68,49 @@ class Feed
   end
 
   def present(found, offset)
-    found.each_with_index.map do |newsletter, index|
-      Feed::Row.new(Newsletter::Presenter.new(newsletter), offset + index + 1)
+    found.each_with_index.map do |item, index|
+      Feed::Row.new(presenter_for(item), offset + index + 1)
     end
   end
 
-  # Loaded once and partitioned in Ruby: three date groups off one query.
+  # Each kind answers the same questions about itself, so the row and its
+  # template never learn which they are holding.
+  def presenter_for(item)
+    return Blog::Post::Presenter.new(item) if item.is_a?(Blog::Post)
+
+    Newsletter::Presenter.new(item)
+  end
+
+  # Loaded once and partitioned in Ruby: three date groups off two queries.
+  #
+  # Merged and sorted here rather than in SQL because the page already holds
+  # its whole window in memory to group it by day, and a UNION over two tables
+  # with different columns would buy nothing back.
+  #
+  # The order is over three keys, and the third is the one that is easy to
+  # miss. Every ordering in this app breaks ties on the id, because arrival
+  # times carry whole seconds and a batch send lands on one instant — but that
+  # stops being a total order across two tables, where newsletter 5 and post 5
+  # are not comparable. Without the class name between them, tied rows swap
+  # places between page loads and the continuous numbering swaps with them.
   def newsletters
-    @_newsletters ||= within_window.for_feed.newest_first.to_a
+    @_newsletters ||= (mail + posts).sort_by { |item| ordering(item) }.reverse
+  end
+
+  def ordering(item)
+    [ item.received_at, item.class.name, item.id ]
+  end
+
+  def mail
+    within_window.for_feed.to_a
+  end
+
+  # includes rather than a join, and blog_id is in FEED_COLUMNS for it: the
+  # row prints the blog's name, and asking per row would be an N+1 under the
+  # one query the archive is meant to cost.
+  def posts
+    Blog::Post.where(received_at: Newsletter::Age::WINDOW.ago..)
+      .for_feed.includes(:blog).to_a
   end
 
   # .content, not a bare Newsletter: a subscription confirmation sitting in

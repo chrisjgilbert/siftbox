@@ -234,4 +234,38 @@ RSpec.describe "Newsletters" do
 
     expect(response.headers["Content-Security-Policy"]).to include("object-src 'none'")
   end
+
+  it "lists blog posts in the same feed as the newsletters" do
+    sign_in
+    create(:newsletter, subject: "Ruby 3.4 lands", received_at: 2.hours.ago)
+    create(:blog_post, title: "Why your index is not used", received_at: 1.hour.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include("Why your index is not used")
+  end
+
+  # The row's own line says which it is, so the reader can tell before
+  # clicking whether it opens an email or somebody's website.
+  it "marks a blog post as one" do
+    sign_in
+    create(:blog_post, title: "Why your index is not used")
+
+    get newsletters_path
+
+    expect(response.body).to include("row__kind")
+  end
+
+  # A post's original is the blog, which is somebody else's site — so the link
+  # leaves the app, and leaves it without handing the opened page a reference
+  # back through window.opener.
+  it "sends a blog post's row to the blog, in a new tab" do
+    sign_in
+    create(:blog_post, url: "https://queryplanweekly.dev/unused-index")
+
+    get newsletters_path
+
+    expect(response.body).to include('href="https://queryplanweekly.dev/unused-index"')
+      .and include('rel="noopener noreferrer"')
+  end
 end

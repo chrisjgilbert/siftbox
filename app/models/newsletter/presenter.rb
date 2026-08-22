@@ -33,6 +33,27 @@ class Newsletter::Presenter
       I18n.t("newsletters.unknown_sender")
   end
 
+  # Where the row goes, and whether following it leaves the app. A newsletter
+  # opens its own stored original in the sandboxed frame; a post opens the
+  # blog. The template asks rather than deciding, so it never has to know
+  # which kind of thing it is drawing.
+  def path
+    routes.newsletter_original_path(newsletter)
+  end
+
+  # Nothing, because the link stays here. The template spreads whatever it is
+  # given rather than asking which kind of row it is drawing.
+  def link_attributes
+    {}
+  end
+
+  # What the mono line says after the sender. Nothing, for mail: newsletters
+  # are twenty a day against three posts, so marking the common case would put
+  # a word on every row of the archive to say the usual thing.
+  def kind
+    nil
+  end
+
   def timestamp
     I18n.l(newsletter.received_at, format: TIMESTAMP_FORMATS.fetch(age.bucket))
   end

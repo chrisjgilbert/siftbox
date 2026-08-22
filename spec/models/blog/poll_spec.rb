@@ -246,4 +246,37 @@ RSpec.describe Blog::Poll do
 
     expect(blog.posts.where(received_at: 1.week.ago..).count).to eq(0)
   end
+
+  # The archive row shows a line of the post and a thumbnail, and both are
+  # read off the body the same way a newsletter's are — by the pipeline that
+  # already exists and already knows nothing about mail.
+  it "reads a snippet off the post's body" do
+    blog = create(:blog)
+    document = feed_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <guid>unused-index</guid>
+        <description>&lt;p&gt;The planner has its reasons.&lt;/p&gt;</description>
+      </item>
+    ITEMS
+
+    Blog::Poll.new(blog, fetch: returning(document)).save
+
+    expect(blog.posts.first.snippet).to eq("The planner has its reasons.")
+  end
+
+  it "reads a lead image off the post's body" do
+    blog = create(:blog)
+    document = feed_document(<<~ITEMS)
+      <item>
+        <title>Why your index is not being used</title>
+        <guid>unused-index</guid>
+        <description>&lt;img src="https://queryplanweekly.dev/plan.png"&gt;&lt;p&gt;Text.&lt;/p&gt;</description>
+      </item>
+    ITEMS
+
+    Blog::Poll.new(blog, fetch: returning(document)).save
+
+    expect(blog.posts.first.lead_image_url).to eq("https://queryplanweekly.dev/plan.png")
+  end
 end

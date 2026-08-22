@@ -4,10 +4,12 @@
 
     The row opens the original, not the reader: the reader is gone, and a
     story's citation and an archive row share the one destination. %>
-<%= link_to newsletter_original_path(row),
+<%= link_to row.path, **row.link_attributes,
       class: "row" do %>
   <span class="row__number"><%= row.number %></span>
-  <span class="row__sender"><%= row.sender %></span>
+  <span class="row__sender">
+    <%= row.sender %><% if row.kind %><span class="row__kind"><%= row.kind %></span><% end %>
+  </span>
   <span class="row__subject"><%= row.subject %></span>
   <span class="row__snippet"><%= row.snippet %></span>
 
