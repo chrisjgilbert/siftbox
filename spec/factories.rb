@@ -16,10 +16,22 @@ FactoryBot.define do
     sequence(:feed_url) { |n| "https://queryplanweekly#{n}.dev/feed" }
   end
 
+  # Long enough to clear Blog::Post::EDITORIAL_MINIMUM, because a post that
+  # carries its article is the ordinary case and a stub is the exception. A
+  # spec that wants the exception says so by passing a short body.
   factory :blog_post, class: "Blog::Post" do
     blog
     title { "Why your index is not being used" }
     received_at { 1.hour.ago }
+    body_html do
+      "<p>The planner will not reach for a partial index unless the query " \
+        "repeats the index's own predicate, which is easy to miss because " \
+        "nothing warns you about it. The plan simply comes back as a scan, " \
+        "and a scan over a table small enough to fit in cache is fast " \
+        "enough that nobody notices until the table is not small any more. " \
+        "What follows is four months of watching that happen, and the two " \
+        "lines of SQL that turned it back into a seek.</p>"
+    end
   end
 
   factory :edition_citation, class: "Edition::Citation" do

@@ -23,6 +23,18 @@ class Blog::Post < ApplicationRecord
   # them.
   CITATION_COLUMNS = %i[id blog_id title url].freeze
 
+  # How much prose a post has to carry before an edition may be written from
+  # it. Real blogs publish the occasional stub — a title, a link and two lines
+  # — and 9 of the 273 posts measured for docs/blogs-rss.md fell under this,
+  # mostly Martin Fowler publishing one essay as a run of linked fragments.
+  # Asked to write a lead story from two lines, the editor writes the rest.
+  #
+  # A floor rather than a guess at what kind of post this is. Length says
+  # nothing about whether a feed is truncating — Dan Luu publishes whole
+  # articles in <summary> and Simon Willison publishes short posts on purpose
+  # — so this only answers whether there is enough here to write from at all.
+  EDITORIAL_MINIMUM = 400
+
   belongs_to :blog, touch: true
 
   # The column is NOT NULL and that is what actually holds. This is here so an
@@ -48,5 +60,19 @@ class Blog::Post < ApplicationRecord
 
   def lead_image?
     lead_image_url.present?
+  end
+
+  # Measured on the same prose the editor would be shown rather than on the
+  # HTML, so a post that is markup around nothing is judged on what is left of
+  # it. Through the pipeline the prompt uses, for the same reason the snippet
+  # goes through it: it takes an HTML string and knows nothing about mail.
+  def enough_to_write_from?
+    prose.length >= EDITORIAL_MINIMUM
+  end
+
+  private
+
+  def prose
+    Newsletter::Prose.new(Newsletter::Body.new(body_html)).text
   end
 end

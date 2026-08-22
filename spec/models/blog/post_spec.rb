@@ -60,4 +60,32 @@ RSpec.describe Blog::Post do
 
     expect(second).to be_persisted
   end
+
+  # 9 of the 273 posts measured for docs/blogs-rss.md fell under this, mostly
+  # Martin Fowler publishing one essay as a run of linked fragments.
+  it "is enough to write from when the feed carried the article" do
+    post = build_stubbed(:blog_post, body_html: "<p>#{"word " * 200}</p>")
+
+    expect(post).to be_enough_to_write_from
+  end
+
+  it "is not enough to write from when the feed carried two lines" do
+    post = build_stubbed(:blog_post, body_html: "<p>A note on the planner. More soon.</p>")
+
+    expect(post).not_to be_enough_to_write_from
+  end
+
+  # Measured on the same prose the editor would be shown rather than on the
+  # HTML, so a post that is mostly markup is judged on what is left of it.
+  it "is not enough to write from when the body is markup around nothing" do
+    post = build_stubbed(:blog_post, body_html: "<div>#{"<span></span>" * 200}</div>")
+
+    expect(post).not_to be_enough_to_write_from
+  end
+
+  it "is not enough to write from when the feed carried no body at all" do
+    post = build_stubbed(:blog_post, body_html: "")
+
+    expect(post).not_to be_enough_to_write_from
+  end
 end

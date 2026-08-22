@@ -268,9 +268,9 @@ RSpec.describe Edition::Window do
   # body_html, and the feed's column list leaves it out.
   it "reads a post's whole row" do
     published_through(yesterday_morning)
-    create(:blog_post, body_html: "<p>Hi</p>", received_at: yesterday_morning + 2.hours)
+    post = create(:blog_post, received_at: yesterday_morning + 2.hours)
 
-    expect(window.posts.sole.body_html).to eq("<p>Hi</p>")
+    expect(window.posts.sole.body_html).to eq(post.body_html)
   end
 
   it "is not empty when only a post arrived" do
@@ -289,5 +289,40 @@ RSpec.describe Edition::Window do
 
     expect(sources.newsletters).to eq([ newsletter ])
     expect(sources.posts).to eq([ post ])
+  end
+
+  # A stub is stored for the archive and kept out of the edition. A blog that
+  # publishes an essay as a run of linked fragments would otherwise have the
+  # editor write a lead story from a title and two lines, which means writing
+  # the rest of it.
+  def stub_post(received_at:)
+    create(:blog_post, received_at: received_at, body_html: "<p>More soon.</p>")
+  end
+
+  it "leaves a post the editor could not write from out of the sources" do
+    published_through(yesterday_morning)
+    stub_post(received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts).to be_empty
+  end
+
+  it "is empty when the only post that arrived was a stub" do
+    published_through(yesterday_morning)
+    stub_post(received_at: yesterday_morning + 2.hours)
+
+    expect(window).to be_empty
+  end
+
+  # Held back, not dropped in silence. A post that never reached an edition
+  # and a post nobody wrote about look identical from the reader's side, and
+  # only one of them is this app's doing.
+  it "says which post it held back" do
+    published_through(yesterday_morning)
+    post = stub_post(received_at: yesterday_morning + 2.hours)
+    allow(Rails.logger).to receive(:info)
+
+    window.posts
+
+    expect(Rails.logger).to have_received(:info).with(/post #{post.id} /)
   end
 end

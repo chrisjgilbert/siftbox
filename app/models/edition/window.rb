@@ -44,10 +44,7 @@ class Edition::Window
   # released out of, so the moment it became the reader's to read and the
   # moment it arrived are the same moment.
   def posts
-    @_posts ||= Blog::Post
-      .where("received_at > :after AND received_at <= :through",
-        after: started_at, through: ended_at)
-      .oldest_first.to_a
+    @_posts ||= editable(arrived_posts)
   end
 
   def sources
@@ -76,6 +73,30 @@ class Edition::Window
   end
 
   private
+
+  def arrived_posts
+    Blog::Post
+      .where("received_at > :after AND received_at <= :through",
+        after: started_at, through: ended_at)
+      .oldest_first.to_a
+  end
+
+  # A stub is stored for the archive and kept out of the edition, per
+  # Blog::Post::EDITORIAL_MINIMUM.
+  #
+  # Held back rather than dropped in silence: a post that never reached an
+  # edition and a post nobody wrote about look identical from the reader's
+  # side, and only one of them is this app's doing.
+  def editable(posts)
+    enough, thin = posts.partition(&:enough_to_write_from?)
+    thin.each { |post| Rails.logger.info(held_back(post)) }
+
+    enough
+  end
+
+  def held_back(post)
+    "post #{post.id} carries too little to write from; left out of the edition"
+  end
 
   # Half-open, and both ends matter. The previous edition's window is closed
   # at its top, so mail landing on that exact instant belongs to it rather
