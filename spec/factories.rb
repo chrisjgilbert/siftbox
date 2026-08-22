@@ -30,7 +30,13 @@ FactoryBot.define do
         "and a scan over a table small enough to fit in cache is fast " \
         "enough that nobody notices until the table is not small any more. " \
         "What follows is four months of watching that happen, and the two " \
-        "lines of SQL that turned it back into a seek.</p>"
+        "lines of SQL that turned it back into a seek. The planner is not " \
+        "wrong to do it, and that is the part worth sitting with: a scan is " \
+        "cheaper than a seek right up until the table stops fitting in " \
+        "memory, and nothing anywhere announces the day it stops. The fix " \
+        "was to repeat the predicate. The lesson was that a partial index " \
+        "is a promise the query has to make too, and that an index nobody " \
+        "is using looks exactly like an index nobody needs.</p>"
     end
   end
 

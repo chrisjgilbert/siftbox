@@ -79,4 +79,30 @@ RSpec.describe Blog::Post::Presenter do
 
     expect(Blog::Post::Presenter.new(post).path).to eq("//queryplanweekly.dev/planner")
   end
+
+  # Rewritten when the format table moved onto Newsletter::Age, and covered by
+  # nothing until now: the whole archive row prints through this.
+  it "shows the time of day for a post that arrived today" do
+    travel_to Time.zone.parse("2026-08-06 18:00") do
+      post = build_stubbed(:blog_post, received_at: Time.zone.parse("2026-08-06 09:02"))
+
+      expect(Blog::Post::Presenter.new(post).timestamp).to eq("09:02")
+    end
+  end
+
+  it "shows the day for a post that arrived earlier in the week" do
+    travel_to Time.zone.parse("2026-08-06 18:00") do
+      post = build_stubbed(:blog_post, received_at: Time.zone.parse("2026-08-03 09:02"))
+
+      expect(Blog::Post::Presenter.new(post).timestamp).to eq("Mon")
+    end
+  end
+
+  it "shows the date for a post older than the week" do
+    travel_to Time.zone.parse("2026-08-06 18:00") do
+      post = build_stubbed(:blog_post, received_at: Time.zone.parse("2026-06-11 09:02"))
+
+      expect(Blog::Post::Presenter.new(post).timestamp).to eq("11 Jun")
+    end
+  end
 end

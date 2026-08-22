@@ -362,4 +362,21 @@ RSpec.describe Edition::Editor do
 
     expect(edition.reload.stories.sole.blog_posts).to eq([ source ])
   end
+
+  # Every failure at once, so a second run is not needed to discover the rest
+  # — which is what the class promises and what a short circuit on the first
+  # kind would quietly stop doing.
+  it "names a missed newsletter and an invented post in one complaint" do
+    mail = newsletter
+    missed = newsletter(subject: "The Diff")
+    written = post
+    client = FakeAnthropic.new(
+      text: answer(story(cites: [ mail.id ], posts: [ written.id, written.id + 404 ]))
+    )
+
+    expect { compose([ mail, missed ], client, posts: [ written ]) }.to raise_error(
+      Edition::Editor::Incomplete,
+      /no story cited newsletter #{missed.id}\b.*cited post #{written.id + 404}/m
+    )
+  end
 end

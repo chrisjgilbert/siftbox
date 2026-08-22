@@ -105,4 +105,13 @@ RSpec.describe Edition::Citation do
 
     expect(citation).to be_valid
   end
+
+  # Its own example rather than only through Newsletter.uncited, because what
+  # it exists for is the NULL that a post's citation leaves behind.
+  it "narrows to the citations that name mail" do
+    mail = create(:edition_citation, newsletter: create(:newsletter))
+    create(:edition_citation, newsletter: nil, blog_post: create(:blog_post))
+
+    expect(Edition::Citation.citing_mail).to eq([ mail ])
+  end
 end

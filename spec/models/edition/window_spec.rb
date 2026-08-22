@@ -325,4 +325,22 @@ RSpec.describe Edition::Window do
 
     expect(Rails.logger).to have_received(:info).with(/post #{post.id} /)
   end
+
+  # Both ends, for the reason the mail side has both: inclusive at the bottom
+  # puts one post into two editions, exclusive at the top drops a post that
+  # arrived while the model was writing out of every edition there will ever
+  # be. Separate SQL from the mail clauses, so it needs its own examples.
+  it "leaves out a post first seen at the instant the last window closed" do
+    published_through(yesterday_morning)
+    create(:blog_post, received_at: yesterday_morning)
+
+    expect(window.posts).to be_empty
+  end
+
+  it "covers a post first seen at the instant composition started" do
+    published_through(yesterday_morning)
+    post = create(:blog_post, received_at: morning)
+
+    expect(window.posts).to eq([ post ])
+  end
 end

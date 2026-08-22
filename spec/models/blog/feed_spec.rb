@@ -443,4 +443,38 @@ RSpec.describe Blog::Feed do
 
     expect(feed.posts.first.body_html).to eq("if a &lt; b then print")
   end
+
+  # The channel goes through the same links/alternate branch an entry does,
+  # which is what the refactor was for — and until now only the RSS side of it
+  # was reached, indirectly, from Blog::Poll's own spec.
+  it "reads the site address out of an Atom feed" do
+    feed = Blog::Feed.new(atom_document(atom_entry))
+
+    expect(feed.site_url).to eq("https://queryplanweekly.dev/")
+  end
+
+  it "reads the site address out of an RSS channel" do
+    feed = Blog::Feed.new(rss_document)
+
+    expect(feed.site_url).to eq("https://queryplanweekly.dev")
+  end
+
+  # A channel is not an item and has no guid to fall back on, so the permalink
+  # tail of the shared method has to answer nothing rather than raise.
+  it "answers an empty address for a channel with no link at all" do
+    document = <<~XML
+      <?xml version="1.0"?>
+      <rss version="2.0"><channel>
+      <title>Query Plan Weekly</title><description>Notes on databases</description>
+      </channel></rss>
+    XML
+
+    expect(Blog::Feed.new(document).site_url).to eq("")
+  end
+
+  it "reads the feed's own title out of an Atom document" do
+    feed = Blog::Feed.new(atom_document(atom_entry))
+
+    expect(feed.title).to eq("Query Plan Weekly")
+  end
 end
