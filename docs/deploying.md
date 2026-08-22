@@ -305,6 +305,24 @@ Two entries, one of them `Edition::CompositionJob.perform_later() [ 0 7 * * *
 Europe/London ]`. Nothing there means the scheduler did not start; the app
 logs say why.
 
+**A second recurring task joined it.** `poll_blogs` runs `Blog::PollJob`
+every hour at minute 20, asking each blog on the roster whether its feed has
+anything new. It installs itself the same way and needs confirming the same
+way — the command above should list three entries once it has been deployed,
+not two.
+
+Nothing polls until a blog exists, and until the Sources page ships blogs are
+added by hand:
+
+```bash
+bin/kamal app exec --reuse "bin/rails runner 'Blog.create!(feed_url: \"https://example.dev/feed\")'"
+```
+
+The first poll of a new blog stores its whole back catalogue in the archive
+but keeps everything older than a week out of the edition window, so adding a
+long-running blog does not put years of writing into the next morning's
+edition.
+
 The first firing has three possible outcomes and they read differently in
 the log:
 

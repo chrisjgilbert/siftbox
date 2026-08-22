@@ -21,6 +21,19 @@ production:
     class: Edition::CompositionJob
     schedule: every day at 7am Europe/London
 
+  # The hourly round of the blog roster. Hourly against a daily edition, so
+  # the cadence only decides how stale a post can be when the window closes —
+  # an hour is noise against that, and conditional requests mean an unchanged
+  # feed answers 304 with no body. Away from the top of the hour, where the
+  # cleanup below and everything else a host runs on the hour already are.
+  #
+  # Production only, for the reason the edition is: the scheduler is what
+  # fires this, and a development machine fetching a dozen strangers' feeds
+  # on the hour for nobody is a cost with no reader.
+  poll_blogs:
+    class: Blog::PollJob
+    schedule: every hour at minute 20
+
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
