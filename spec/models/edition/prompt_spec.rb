@@ -252,6 +252,20 @@ RSpec.describe Edition::Prompt do
     expect(message).to include("Query Plan Weekly", "Rewriting the planner", "2026-08-14T06:12:00")
   end
 
+  # Not hypothetical: Dan Luu's feed ships <title></title>, so a roster of
+  # three real blogs already has one. The instructions make the blog's name
+  # load-bearing — "attribute it to the blog, by the blog's name" — so a bare
+  # "Blog:" line has the model invent one while the citation under the story
+  # prints the feed URL, and the story and its own attribution disagree.
+  it "falls back to the feed address when the blog published no title" do
+    blog = build_stubbed(:blog, title: "", feed_url: "https://danluu.com/atom.xml")
+    post = build_stubbed(:blog_post, blog: blog)
+
+    message = Edition::Prompt.new(sources_of(posts: [ post ])).message
+
+    expect(message).to include("Blog: https://danluu.com/atom.xml")
+  end
+
   # An undated post still has to carry a date the editor can order by. A feed
   # in RSS 1.0 with no dc:date publishes every item undated, and received_at
   # is the one clock this app always has.
