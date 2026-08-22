@@ -80,3 +80,9 @@ gem "honeybadger", "~> 6.9"
 
 # The model that writes the edition [https://github.com/anthropics/anthropic-sdk-ruby]
 gem "anthropic", "~> 1.62"
+
+# Reads the blogs' RSS and Atom feeds [https://github.com/ruby/rss]. A bundled
+# gem rather than a default one, so it has to be declared here or `require
+# "rss"` raises under Bundler. It brings rexml with it, which until now was a
+# test-only dependency of webmock's.
+gem "rss", "~> 0.3"
