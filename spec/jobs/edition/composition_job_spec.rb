@@ -100,14 +100,14 @@ RSpec.describe Edition::CompositionJob do
     expect(Edition::Editor).not_to have_received(:new)
   end
 
-  # A morning with no mail and a morning the job never ran look identical
-  # otherwise, and the difference is the one thing worth knowing.
+  # A morning with nothing in the window and a morning the job never ran look
+  # identical otherwise, and the difference is the one thing worth knowing.
   it "says in the log that the window was empty" do
     allow(Rails.logger).to receive(:info)
 
     Edition::CompositionJob.perform_now
 
-    expect(Rails.logger).to have_received(:info).with(/no newsletters/)
+    expect(Rails.logger).to have_received(:info).with(/nothing has arrived/)
   end
 
   # Three full-price requests have already been spent on this window. A retry

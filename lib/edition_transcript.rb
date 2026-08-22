@@ -9,11 +9,16 @@
 # - the masthead carries the window and the cost, because the first question
 #   about a bad edition is what it was composed from and the second is what
 #   iterating on the prompt is going to cost;
-# - each story carries its citations by id, sender and subject, because
-#   attribution is checked by reading the story against the mail it names, and
-#   the id is what to grep the stored raw response for;
+# - each story carries its citations by id, publisher and title, because
+#   attribution is checked by reading the story against the source it names,
+#   and the id is what to grep the stored raw response for;
 # - the sources list at the end covers what reading the edition cannot: which
-#   newsletters it was written from and which of them earned only a line.
+#   sources it was written from and which of them earned only a line.
+#
+# A citation's id carries a letter — [N4] for mail, [P4] for a post — because
+# the two are separate sequences and the raw response keeps them in separate
+# lists. Without it a bare [4] names two different things and grepping for it
+# finds the wrong one.
 #
 # The three sections print in the order the page will render them, and the
 # reading list disappears when it is empty for the same reason the page's does.
@@ -46,9 +51,9 @@ class EditionTranscript
   INPUT_COST = 5.0 / 1_000_000
   OUTPUT_COST = 25.0 / 1_000_000
 
-  def initialize(edition, newsletters)
+  def initialize(edition, sources)
     @edition = edition
-    @newsletters = newsletters
+    @sources = sources
   end
 
   def text
@@ -57,7 +62,7 @@ class EditionTranscript
 
   private
 
-  attr_reader :edition, :newsletters
+  attr_reader :edition, :sources
 
   def masthead
     [ HEAVY_RULE, number, window, provenance, HEAVY_RULE ]
@@ -69,9 +74,12 @@ class EditionTranscript
     "NO. #{edition.number} · #{edition.published_on.strftime("%A %e %B").squish.upcase}"
   end
 
+  # Counted apart because they are read apart: a morning of twenty newsletters
+  # and one post is a different edition from the other way round, and what
+  # went in is the first thing a judgement about the copy below needs.
   def window
     "WINDOW #{stamp(edition.window_started_at)} → #{stamp(edition.window_ended_at)} " \
-      "· #{newsletters.length} NEWSLETTERS"
+      "· #{sources.newsletters.length} NEWSLETTERS · #{sources.posts.length} POSTS"
   end
 
   def stamp(time)
@@ -115,39 +123,52 @@ class EditionTranscript
     "#{story.position.to_s.ljust(INDENT.length)}#{story.headline}".truncate(WIDTH)
   end
 
+  # Each association is already typed, so no line here has to ask what it is
+  # holding — the two lists are built from the two ends and concatenated.
   def cited(story)
-    story.newsletters.map do |newsletter|
-      "#{INDENT}[#{newsletter.id}] #{newsletter.sender_name} — #{newsletter.subject}"
-        .truncate(WIDTH)
-    end
+    mail_lines(story.newsletters) { |newsletter| newsletter.subject } +
+      post_lines(story.blog_posts) { |post| post.title }
   end
 
   # Coverage, which is the one check that cannot be made by reading the
-  # edition: a newsletter cited by nothing leaves no trace in the copy above.
+  # edition: a source cited by nothing leaves no trace in the copy above.
   # Composition refuses to publish an edition in that state, so a zero here is
   # either a hand-built edition or a guarantee that has stopped holding — both
-  # worth seeing rather than hiding.
+  # worth seeing rather than hiding. It covers both kinds because the
+  # guarantee does.
   def inventory
-    [ "", "SOURCES", RULE, "" ] + newsletters.map { |newsletter| source(newsletter) } + [ "" ]
+    lines = mail_lines(sources.newsletters) { |newsletter| coverage(newsletter) } +
+      post_lines(sources.posts) { |post| coverage(post) }
+
+    [ "", "SOURCES", RULE, "" ] + lines + [ "" ]
   end
 
-  def source(newsletter)
-    "#{INDENT}[#{newsletter.id}] #{newsletter.sender_name} — #{coverage(newsletter)}"
-      .truncate(WIDTH)
+  def mail_lines(newsletters)
+    newsletters.map { |newsletter| line("N#{newsletter.id}", newsletter.sender_name, yield(newsletter)) }
   end
 
-  def coverage(newsletter)
-    count = citations.fetch(newsletter, 0)
+  def post_lines(posts)
+    posts.map { |post| line("P#{post.id}", post.blog.title, yield(post)) }
+  end
+
+  def line(tag, name, tail)
+    "#{INDENT}[#{tag}] #{name} — #{tail}".truncate(WIDTH)
+  end
+
+  def coverage(source)
+    count = citations.fetch(source, 0)
     return "cited by no story" if count.zero?
 
     "cited by #{count} #{"story".pluralize(count)}"
   end
 
   # Keyed by the record rather than by its id: two instances of one row are ==
-  # and hash alike in Active Record, so the window's newsletters find
-  # themselves here without either side being reloaded.
+  # and hash alike in Active Record, so the window's sources find themselves
+  # here without either side being reloaded — and a Newsletter never collides
+  # with a Blog::Post of the same id, because both are keyed on the class too.
   def citations
-    @_citations ||= edition.stories.flat_map(&:newsletters).tally
+    @_citations ||= edition.stories
+      .flat_map { |story| story.newsletters + story.blog_posts }.tally
   end
 
   # A word longer than the measure is left to run past it rather than broken:

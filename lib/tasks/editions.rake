@@ -42,7 +42,7 @@ end
 # money — tens of cents a run, printed in the masthead.
 module Backtest
   EMPTY_WINDOW =
-    "No newsletters since the last edition closed — an empty window skips silently.".freeze
+    "Nothing since the last edition closed — an empty window skips silently.".freeze
 
   # Nothing is kept. A backtest rehearses an edition rather than publishing
   # one: the same window gets read again after the next prompt change, and a
@@ -51,12 +51,17 @@ module Backtest
   # part of iterating. The corpus's newsletters are created inside the same
   # transaction and go with it, so running this leaves the database exactly as
   # it was found.
+  # No posts: the corpus is seven newsletters chosen to disagree with each
+  # other, and what it pins is the clustering across them. A blog post is
+  # another source of prose rather than another kind of disagreement, so
+  # edition:backtest is where posts get read.
   def self.corpus
     Edition.transaction do
       ingested = EditionCorpus.ingest
       newsletters = Newsletter.content.where(id: ingested.values.map(&:id)).oldest_first.to_a
+      sources = Edition::Sources.new(newsletters: newsletters, posts: [])
 
-      rehearse(newsletters, rehearsal(newsletters.first.received_at, Time.current))
+      rehearse(sources, rehearsal(newsletters.first.received_at, Time.current))
       raise ActiveRecord::Rollback
     end
   end
@@ -76,18 +81,25 @@ module Backtest
     window = Edition::Window.new(Time.current)
 
     Edition.transaction do
-      rehearse(window.newsletters, window.edition)
+      rehearse(window.sources, window.edition)
       raise ActiveRecord::Rollback
     end
   end
 
-  def self.rehearse(newsletters, edition)
-    return puts EMPTY_WINDOW if newsletters.empty?
+  def self.rehearse(sources, edition)
+    return puts EMPTY_WINDOW if sources.empty?
     return if published?(edition.published_on)
 
-    puts "Reading #{newsletters.length} newsletters. Expect a minute or two."
-    puts EditionTranscript.new(composed(newsletters, edition), newsletters).text
+    puts "Reading #{reading(sources)}. Expect a minute or two."
+    puts EditionTranscript.new(composed(sources, edition), sources).text
     puts "Nothing was saved. A backtest rehearses an edition; it does not publish one."
+  end
+
+  # Counted apart because they are read apart: a morning of twenty
+  # newsletters and one post is a different rehearsal from the other way
+  # round, and the whole point of a backtest is knowing what went in.
+  def self.reading(sources)
+    "#{sources.newsletters.length} newsletters and #{sources.posts.length} posts"
   end
 
   # A rehearsal is validated exactly as the real composition is, so a day that
@@ -107,10 +119,10 @@ module Backtest
   # Read back through the association the edition page will use, so the
   # transcript's walk over every story's citations is four queries rather than
   # one per story.
-  def self.composed(newsletters, edition)
-    composed = Edition::Editor.new(edition, newsletters).compose
+  def self.composed(sources, edition)
+    composed = Edition::Editor.new(edition, sources).compose
 
-    Edition.includes(stories: :newsletters).find(composed.id)
+    Edition.for_reading.find(composed.id)
   end
 
   # The corpus's own edition, numbered and dated as the real thing would be
@@ -159,8 +171,8 @@ module Regeneration
   # be destroyed, and nothing here writes them anywhere else first.
   def self.opening(edition, sources)
     "Rewriting no. #{edition.number} of #{edition.published_on} over " \
-      "#{sources.length} newsletters. It was written by #{edition.editor_model} " \
-      "on prompt #{edition.prompt_version}, and that row goes with it. " \
-      "Expect a minute or two."
+      "#{sources.newsletters.length} newsletters and #{sources.posts.length} posts. " \
+      "It was written by #{edition.editor_model} on prompt " \
+      "#{edition.prompt_version}, and that row goes with it. Expect a minute or two."
   end
 end
