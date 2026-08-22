@@ -52,9 +52,9 @@ RSpec.describe Blog::Feed do
   end
 
   # A billion-laughs bomb: six levels of entity, each ten copies of the last,
-  # so &f; expands to ten million characters from a document of a few hundred
-  # bytes. Feed XML is written by strangers, so this is a document this app
-  # can be sent rather than one it would ever produce.
+  # so &f; unpacks to a million characters from a few hundred bytes. Feed XML
+  # is written by strangers, so this is a document this app can be sent rather
+  # than one it would ever produce.
   def entity_bomb
     definitions = %w[a b c d e f].each_cons(2).map do |previous, this|
       %(<!ENTITY #{this} "#{"&#{previous};" * 10}">)
@@ -381,5 +381,37 @@ RSpec.describe Blog::Feed do
     feed = Blog::Feed.new(document)
 
     expect(feed.posts.first.url).to eq("https://queryplanweekly.dev/unused-index")
+  end
+
+  # Atom requires `updated` and makes `published` optional, so this is the
+  # shape a feed that sets only the required date arrives in. Without the
+  # fallback every post from such a blog is undated.
+  it "dates an Atom entry from updated when it has no published" do
+    document = atom_document(<<~ENTRY)
+      <entry>
+        <title>t</title><id>i</id>
+        <updated>2026-08-21T06:30:00Z</updated>
+        <summary>s</summary>
+      </entry>
+    ENTRY
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first.published_at).to eq(Time.utc(2026, 8, 21, 6, 30))
+  end
+
+  # A legal item carrying nothing but a title. Written down because these are
+  # the values Blog::Poll has to decide about — an undated post cannot be
+  # placed in a window, and an addressless one cannot be linked to.
+  it "reads an item that carries nothing but a title" do
+    document = rss_document("<item><title>Bare</title></item>")
+
+    feed = Blog::Feed.new(document)
+
+    expect(feed.posts.first).to eq(
+      Blog::Feed::Item.new(
+        title: "Bare", url: "", body_html: "", published_at: nil, identity: ""
+      )
+    )
   end
 end

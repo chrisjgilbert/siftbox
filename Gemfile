@@ -85,4 +85,10 @@ gem "anthropic", "~> 1.62"
 # gem rather than a default one, so it has to be declared here or `require
 # "rss"` raises under Bundler. It brings rexml with it, which until now was a
 # test-only dependency of webmock's.
-gem "rss", "~> 0.3"
+#
+# Pinned to the patch line rather than the usual pessimistic minor. Blog::Feed
+# reads this gem's element shapes directly — which classes answer #content
+# against #href, which answer content_encoded or dc_date, that #link is one
+# element and #links is a list — and none of that is documented API on a
+# pre-1.0 gem, so a minor bump wants a person rather than a bundle update.
+gem "rss", "~> 0.3.3"

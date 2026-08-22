@@ -10,6 +10,12 @@ require "rss"
 #
 # Takes the document rather than a URL. Fetching is Blog::Poll's job, and
 # keeping the two apart is what lets every example against this be a string.
+#
+# Refer to it by its full name from anywhere else under Blog::. This app
+# namespaces compactly — `class Blog::Poll` rather than nested modules — so
+# Module.nesting there is [Blog::Poll] alone, a bare `Feed` is not looked for
+# in Blog, and lookup falls through to the top-level Feed, which is the
+# newsletter archive's collection and an entirely different object.
 class Blog::Feed
   # Every field either format puts a post's body in. Deliberately not a
   # preference order: the measurement behind docs/blogs-rss.md found Dan Luu
@@ -33,8 +39,9 @@ class Blog::Feed
   # than an exceptional case — Blog::Poll decides what a blog that sends one
   # is worth, and nothing here does.
   #
-  # An entity bomb arrives as one of these: REXML bounds expansion by default,
-  # so ten million characters of &a; stop at the parser rather than in memory.
+  # An entity bomb arrives as one of these: REXML bounds the number of
+  # expansions, so a document that would unpack to a million characters stops
+  # at the parser rather than in memory.
   # Its other refusal is quieter and raises nothing — an external entity is
   # never resolved, so `&secret;` stays six characters of text instead of
   # becoming a file off this server. Both are defaults rather than settings
@@ -53,6 +60,13 @@ class Blog::Feed
   # still comes back as a Time, and the entity bomb is still refused — the
   # specs below pin all three.
   VALIDATE = false
+
+  # Named rather than left to the gem's own search. RSS::Parser picks the
+  # first library it can load out of xmlparser, xmlscan and REXML, and only
+  # the last of those is what the two refusals below are a property of — so
+  # a gem added for some unrelated reason could silently change this app's
+  # XML posture. Stating it means that would be a failing build instead.
+  PARSER = RSS::REXMLParser
 
   # The publisher's own name for a post: guid in RSS, id in Atom. Neither is
   # guaranteed, so what a post is identified by when both are absent is
@@ -185,7 +199,7 @@ class Blog::Feed
   # a 200, and without this they reach the caller as a NoMethodError on nil
   # instead of as the one error this class promises.
   def read
-    feed = RSS::Parser.parse(document, VALIDATE)
+    feed = RSS::Parser.parse(document, VALIDATE, true, PARSER)
     return feed if feed
 
     raise Malformed, "the document parsed as XML but is not a feed"

@@ -693,7 +693,7 @@ the fetch section above and is now closed. Backed by REXML, whose defaults
 are `entity_expansion_limit = 10000` and `entity_expansion_text_limit =
 10240`:
 
-- **Billion laughs: refused.** A six-level bomb that would expand to 10
+- **Billion laughs: refused.** A six-level bomb that would unpack to a
   million characters comes back as
   `RSS::NotWellFormedError: number of entity expansions exceeded`.
 - **External entities: not resolved.** A `<!ENTITY x SYSTEM
