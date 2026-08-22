@@ -84,9 +84,32 @@ class Blog::Feed
     parsed.items.map { |item| item_from(item) }
   end
 
+  # What the feed calls itself, and where it says the writing lives. Both are
+  # channel-level in RSS and feed-level in Atom, and both arrive in the same
+  # two shapes as everything else — a plain string one side, an element with
+  # its value inside it the other.
+  def title
+    value_of(channel.title).to_s
+  end
+
+  def site_url
+    return value_of(alternate(channel.links) || channel.link).to_s if channel.respond_to?(:links)
+
+    value_of(channel.link).to_s
+  end
+
   private
 
   attr_reader :document
+
+  # RSS hangs the feed's own title and link off <channel>, where Atom puts
+  # them at the top of the document. The items are reachable either way, which
+  # is why only these two need asking.
+  def channel
+    return parsed.channel if parsed.respond_to?(:channel)
+
+    parsed
+  end
 
   def item_from(item)
     Item.new(

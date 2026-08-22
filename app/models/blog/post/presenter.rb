@@ -24,8 +24,14 @@ class Blog::Post::Presenter
 
   # The blog itself, which is a post's only honest original. A newsletter's
   # original is the mail this app stored; nothing here was ever sent to us.
+  #
+  # A feed item with neither a link nor a permalink guid is stored with no
+  # address at all, and an empty href is a link back to the page you are on —
+  # so the row would silently reload the archive. The blog is the nearest
+  # true answer to "where is this", and where the feed is fetched from is the
+  # nearest true answer to that.
   def path
-    post.url
+    post.url.presence || post.blog.site_url.presence || post.blog.feed_url
   end
 
   # A new tab, because the link leaves this app for somebody else's site —

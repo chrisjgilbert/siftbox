@@ -211,4 +211,15 @@ RSpec.describe Newsletter::ImageDownload do
 
     expect(peak).to eq(1)
   end
+
+  # Nothing here sends a validator, so a 304 is a server answering a question
+  # it was not asked. It still has to come back as "no image" rather than as
+  # the not-modified marker, which the caller would try to read bytes off.
+  it "reports no image when a host answers that nothing has changed" do
+    stub_request(:get, "https://cdn.example.com/hero.png").to_return(status: 304)
+
+    image = image_from("https://cdn.example.com/hero.png")
+
+    expect(image).to be_nil
+  end
 end

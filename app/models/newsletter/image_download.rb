@@ -15,8 +15,16 @@ class Newsletter::ImageDownload
   # A Download::Body, which answers #bytes and #content_type, or nothing when
   # the fetch found no image this app would serve. Named for what the caller
   # wanted rather than for what came back.
+  #
+  # Nothing here sends a validator, so a 304 is a server answering a question
+  # it was not asked — but it still arrives as the not-modified marker, and a
+  # caller that tried to read bytes off that would fail the whole job. There
+  # is no image either way.
   def image
-    download.body
+    body = download.body
+    return if body.equal?(Download::UNCHANGED)
+
+    body
   end
 
   private

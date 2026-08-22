@@ -279,4 +279,75 @@ RSpec.describe Blog::Poll do
 
     expect(blog.posts.first.lead_image_url).to eq("https://queryplanweekly.dev/plan.png")
   end
+
+  # A 304 says "what you have is current", so the validators that earned it
+  # are still the right ones to send next time. Clearing them makes the next
+  # poll unconditional and the publisher serves the whole feed again — which
+  # undoes the only reason for sending them.
+  it "keeps the validators when the feed says it has not changed" do
+    blog = create(:blog, etag: "\"abc\"", last_modified_header: "Wed")
+
+    Blog::Poll.new(blog, fetch: unchanged).save
+
+    expect(blog.reload.etag).to eq("\"abc\"")
+  end
+
+  # A blog serving something that is not a feed has stopped answering as far
+  # as the reader cares, and recording that as a success leaves it looking
+  # healthy forever while storing nothing.
+  it "marks a blog as failing when its feed cannot be read" do
+    blog = create(:blog, failing_since: nil)
+
+    Blog::Poll.new(blog, fetch: returning("<html><body>gone</body></html>")).save
+
+    expect(blog.reload.failing_since).to be_present
+  end
+
+  it "keeps no validators from a feed it could not read" do
+    blog = create(:blog)
+
+    fetch = ->(_blog) do
+      Blog::Fetch::Fetched.new(document: "<html/>", etag: "\"abc\"", last_modified: "")
+    end
+    Blog::Poll.new(blog, fetch: fetch).save
+
+    expect(blog.reload.etag).to eq("")
+  end
+
+  # A stalled host holds its connection for up to Download::MAX_DURATION.
+  # Holding a database transaction open across that, once per blog, is what
+  # Newsletter::RemoteImages documents itself as avoiding.
+  it "does not hold a transaction open across the fetch" do
+    blog = create(:blog)
+    # The example itself runs inside a transaction, so depth rather than
+    # openness is what says whether the poll opened one of its own.
+    outside = ActiveRecord::Base.connection.open_transactions
+    depth_during_fetch = nil
+    fetch = ->(_blog) do
+      depth_during_fetch = ActiveRecord::Base.connection.open_transactions
+      Blog::Fetch::UNCHANGED
+    end
+
+    Blog::Poll.new(blog, fetch: fetch).save
+
+    expect(depth_during_fetch).to eq(outside)
+  end
+
+  # Otherwise every row of the archive prints the feed's address where the
+  # blog's name should be.
+  it "takes the blog's name from the feed" do
+    blog = create(:blog, title: "")
+
+    Blog::Poll.new(blog, fetch: returning(one_post)).save
+
+    expect(blog.reload.title).to eq("Query Plan Weekly")
+  end
+
+  it "takes the blog's address from the feed" do
+    blog = create(:blog, site_url: "")
+
+    Blog::Poll.new(blog, fetch: returning(one_post)).save
+
+    expect(blog.reload.site_url).to eq("https://queryplanweekly.dev")
+  end
 end

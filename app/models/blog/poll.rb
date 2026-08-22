@@ -32,11 +32,17 @@ class Blog::Poll
   # The posts stored, which is usually none: a feed polled hourly has mostly
   # not changed since the last visit.
   #
-  # One transaction, so a blog that records having been polled has the posts
-  # that poll found. Without it a failure between the two leaves the blog
-  # stamped and the posts missing.
+  # The fetch happens first and outside the transaction. A stalled host holds
+  # its connection for up to Download::MAX_DURATION, and holding a database
+  # transaction open across that — once per blog, across the roster — is
+  # exactly what Newsletter::RemoteImages documents itself as avoiding.
+  #
+  # What the transaction does wrap is the write, so a blog that records having
+  # been polled has the posts that poll found.
   def save
-    blog.transaction { record(fetch.call(blog)) }
+    result = fetch.call(blog)
+
+    blog.transaction { record(result) }
   end
 
   private
@@ -50,9 +56,9 @@ class Blog::Poll
   # looks exactly like one that has stopped publishing.
   def record(result)
     return failed if result.nil?
-    return succeeded if result.equal?(Blog::Fetch::UNCHANGED)
+    return unchanged if result.equal?(Blog::Fetch::UNCHANGED)
 
-    stored(result.document).tap { succeeded(result) }
+    read(result)
   end
 
   def failed
@@ -60,22 +66,45 @@ class Blog::Poll
     []
   end
 
+  # The validators are left exactly as they were. A 304 says what we hold is
+  # current, so what earned it is still the right thing to send next time —
+  # clearing them would make every later poll unconditional and undo the only
+  # reason for sending them at all.
+  def unchanged
+    blog.update!(polled_at: Time.current, failing_since: nil)
+    []
+  end
+
+  # A blog serving something that is not a feed has stopped answering, as far
+  # as the reader is concerned. Recorded as the failure it is rather than as a
+  # poll that found nothing — otherwise the blog reads as healthy forever
+  # while storing nothing, and keeps the validators that would let the next
+  # poll 304 without ever looking at the body again.
+  def read(result)
+    feed = Blog::Feed.new(result.document)
+    posts = stored(feed)
+    succeeded(feed, result)
+    posts
+  rescue Blog::Feed::Malformed
+    failed
+  end
+
   # failing_since is cleared rather than left, so the Sources page stops
   # saying a blog is broken the moment it is not. The first failure's time is
   # kept while it lasts, which is what lets the page say how long.
-  def succeeded(result = nil)
+  #
+  # The name and address come from the feed on every read rather than only
+  # once: the feed is the only thing that knows them, and nothing else writes
+  # them today. That changes the day the reader can rename a blog.
+  def succeeded(feed, result)
     blog.update!(
-      polled_at: Time.current, failing_since: nil,
-      etag: result&.etag.to_s, last_modified_header: result&.last_modified.to_s
+      polled_at: Time.current, failing_since: nil, title: feed.title,
+      site_url: feed.site_url, etag: result.etag, last_modified_header: result.last_modified
     )
   end
 
-  # Malformed is a failure like any other from here: a blog serving something
-  # that is not a feed has stopped answering as far as the reader cares.
-  def stored(document)
-    unseen(document).map { |post| blog.posts.create!(attributes_for(post)) }
-  rescue Blog::Feed::Malformed
-    []
+  def stored(feed)
+    unseen(feed).map { |post| blog.posts.create!(attributes_for(post)) }
   end
 
   # uniq before the reject, not after: a feed that lists the same post twice —
@@ -83,8 +112,8 @@ class Blog::Poll
   # both copies to the index, which refuses the second. That rolls the
   # transaction back and takes polled_at with it, so the blog fails the same
   # way on every poll afterwards and never stores anything again.
-  def unseen(document)
-    Blog::Feed.new(document).posts
+  def unseen(feed)
+    feed.posts
       .uniq { |post| key_for(post) }
       .reject { |post| known.include?(key_for(post)) }
   end
