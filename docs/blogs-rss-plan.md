@@ -1,383 +1,292 @@
-# Plan: blogs via RSS
+# Plan: adding blogs via RSS
 
-The decisions behind this are in `docs/blogs-rss.md`, taken against the
-built code and a measurement of ten real feeds. Settled going in:
+## What we're building
 
-- **Storage is a sibling table.** `blogs` and `blog_posts` beside
-  `newsletters`, with typed foreign keys throughout and no polymorphic
-  pointer anywhere — per GitLab's database guidelines, and because it
-  migrates nothing that already exists.
-- **Aggregator feeds are out of scope.** A feed whose items carry no body
-  is a list of links, not a source.
-- **Parsing is `rss` (ruby/rss), wrapped in one adapter.** Verified against
-  the eight in-scope feeds: all eight parse in strict mode, dates come back
-  as `Time`, and its REXML backing refuses entity bombs and does not
-  resolve external entities.
-- **Names.** `Blog`, `Blog::Post`, `Blog::Feed`, `Blog::Feed::Item`,
-  `Blog::Poll`, `Blog::PollJob` — because `Feed`, `Newsletter::Source` and
-  `Edition::Story::Presenter::Source` are all taken.
+siftbox currently only receives newsletters, by email. This adds blogs.
 
-Four milestones, each a branch and a deploy on its own. There is no
-refactor milestone: an earlier draft of this plan opened with one, moving
-the whole archive under a shared `items` table before a single post
-existed. Option B deletes it.
+The app will check a list of blog feeds on a schedule. New posts get stored
+like newsletters do: they appear in the archive, and they go into the daily
+edition alongside the newsletters.
 
-## How each one is worked
+The reasoning behind the decisions below is in `docs/blogs-rss.md`. This
+document is just the work.
 
-Not restated per milestone, because it is the same every time:
+## What's already decided
 
-- **The test comes first.** `.claude/rules/testing.md` — red, green,
-  refactor, no implementation ahead of a failing test. Setup inside the
-  example; no `let`, no `before`.
-- **Migrations are generated**, never hand-written, and never edited once
-  merged. `db/schema.rb` is committed with them.
-- **`bin/ci` is the gate**: rspec, rubocop, brakeman, bundle-audit.
-- **Style-only changes go in their own commit.**
-- **Comments carry the reasoning, in this codebase's register.** Several of
-  the classes being generalised have their rationale written above them; it
-  moves with them, updated where the move makes it untrue.
+- **Two new tables, `blogs` and `blog_posts`.** The existing `newsletters`
+  table is not touched. Nothing already in the database gets migrated.
+- **Aggregator feeds are out of scope** — Hacker News, Reddit, lobste.rs.
+  Only real blogs. Their items contain no text, and the AI editor is
+  required to write a line about every source it's shown.
+- **Use the `rss` gem** to read feeds. Tested against eight real feeds.
+- **A shared `sources` table with the silencing work.** See "Working
+  alongside the silencing branch" below.
 
-## Coordinating with the silencing branch
+Four milestones. Each one is a branch and a deploy of its own.
 
-`claude/mute-newsletters-reports-kh0rro` (`docs/silencing.md`) is scoping
-silencing at the same time, and the two branches share a roster. Agreed
-here, with one open difference recorded in Decision 1b of
-`docs/blogs-rss.md`:
+## Ground rules for all of them
 
-- **One `sources` table serves both kinds.** Conceded — this branch's
-  earlier objection assumed the two cases would arrive months apart, and
-  they are concurrent.
-- **Settled: typed references, not a shared identifier string.** `sources`
-  carries `sender_email` for mail and a `blog_id` foreign key for feeds,
-  with a check constraint that exactly one is set, another that
-  `sender_email` is non-empty, and no `kind` column. `Blog` stays whole.
-- **Settled: `NOT EXISTS`, not a guarded subquery**, on both branches, for
-  structural immunity to the NULL trap rather than a guard every future
-  scope has to remember.
-- **Sequenced so their branch is not blocked.** `sources` ships mail-only
-  there; the `blog_id` column, its check constraint and its index arrive
-  additively here in Milestone 1, against a table that already exists.
-- **`Newsletter::Source` → `Newsletter::Markup`** lands there, in its own
-  commit, before either branch references a top-level `Source`. Nothing
-  here adds new references to it in the meantime.
-- **`Edition::Window` is edited by both.** They take the rebase if they
-  land second. Milestone 2 below merges two relations; the silence test
-  applies to **both** of them, as a correlated `NOT EXISTS`.
-- **The Subscriptions page.** That branch owns the Sources section and the
-  mute state; this one contributes the add-a-feed form and the aggregator
-  refusal in Milestone 3, rendering into their section rather than beside
-  it.
-- **Silencing is not staged here.** It is that branch's feature on that
-  branch's timeline. It appears under Parked below only so this plan does
-  not look as though it forgot.
+- Write the test first. That's `.claude/rules/testing.md` and it isn't
+  optional here.
+- Generate migrations with `bin/rails generate migration`. Don't hand-write
+  them, don't edit them after they've merged.
+- `bin/ci` has to pass — tests, RuboCop, Brakeman, bundle-audit.
+- Style-only changes go in a separate commit from behaviour changes.
 
-## Milestone 0 — finish the measurement
+---
 
-The spike in `docs/blogs-rss.md` was run by hand, once, against a plausible
-feed list. Make it a task and point it at the real one.
+## Milestone 0 — measure the real feeds
 
-**Build**
+**Why:** the numbers behind the decisions above came from ten feeds I
+picked, measured once. They're not your feeds. This is cheap and it's the
+last chance to find out something's wrong before there's a database table.
 
-- `lib/tasks/feeds.rake` — `feeds:measure`, development only, taking a list
-  of feed URLs. Fetches, parses, runs each item through
-  `Newsletter::Prose`, and prints per feed: item count, items in the last
-  1/7/30 days, prose length median and maximum, how many hit
-  `MAXIMUM_CHARACTERS`, and how many fall under a candidate prose floor.
-- Store nothing. No migration, no model, no route.
+**Build:** a rake task, `feeds:measure`, development only. Give it a list
+of feed URLs. It fetches each one, and for every post prints how much text
+it actually contains after the app's existing text extraction runs over it.
 
-**Done when** it has run against the reader's own feeds on several
-different days, and two numbers have come out of it: the prose floor, and
-whether any intended subscription behaves like an aggregator.
+It stores nothing. No table, no model, no route.
 
-**Why it is first** — the ten feeds measured are not the reader's, and one
-snapshot already reversed a conclusion in the investigation. It is cheap,
-and it is the last chance to find out the scope is wrong before a table
-exists.
+**Done when:** it's been run against your real feed list on a few different
+days, and you know two things — roughly how much a day's worth of posts
+adds up to, and whether any feed you actually want behaves like an
+aggregator.
 
-## Milestone 1 — fetch and store
+---
 
-Blogs arrive. Posts appear in the archive. Editions do not see them yet.
+## Milestone 1 — fetch and store posts
 
-### The schema
+Blogs get added, polled, and stored. Posts show up in the archive. They do
+**not** go into editions yet.
 
-Two migrations, both additive, neither touching `newsletters`:
+### Database
 
-1. **`blogs`** — `title`, `feed_url` (unique), `site_url`, `polled_at`,
-   `etag`, `last_modified_header`, `failing_since`. Optional strings
-   default to `""`. `last_modified_header` is deliberately not `_at`: it
-   stores the header as text because servers compare it as text, and a
-   re-emitted timestamp is how you get a 200 on every poll.
-2. **`blog_posts`** — `blog_id` (FK, `on_delete: :cascade`), `guid`, `url`,
-   `title`, `body_html`, `snippet`, `lead_image_url`, `published_at`,
-   `received_at`. Partial unique index on `(blog_id, guid) where guid <> ''`,
-   the shape `newsletters` already uses for `message_id`. Index
-   `received_at`.
+Two new tables. Neither touches anything that exists.
 
-The columns mirror `newsletters` on purpose — the reading pipeline is
-already shared, and this is what lets it stay shared.
+**`blogs`** — the subscription and its polling state:
 
-**Plus a third, if the silencing branch has landed:** `sources` gains
-`blog_id` (FK, `on_delete: :cascade`), the check constraint tying it to
-`sender_email` so exactly one is set, and a partial unique index. Additive
-against a table that already exists — that sequencing is what keeps their
-branch from being blocked on this one.
+| Column | What it's for |
+|---|---|
+| `title`, `site_url` | Display |
+| `feed_url` | Where to fetch, unique |
+| `polled_at` | Last check |
+| `etag`, `last_modified_header` | So a poll can ask "changed since last time?" and usually get told no |
+| `failing_since` | Set when fetches start failing, cleared when they work again |
 
-It also carries a spec that could not be written on their branch, because
-it needs `blog_id` to exist: **a silenced source with no `sender_email`
-must not empty the window.** That is the `NOT IN` trap, and the correlated
-`NOT EXISTS` is what makes it pass. Flagged on both sides so neither
-assumes the other has it.
+`last_modified_header` stores the HTTP header as text rather than as a
+timestamp, because servers compare it as text. Reformatting it means you
+get a full response every time instead of "not changed".
 
-### The ingest path
+**`blog_posts`** — one row per post: `blog_id`, `guid`, `url`, `title`,
+`body_html`, `snippet`, `lead_image_url`, `published_at`, `received_at`.
+The columns deliberately mirror `newsletters`, because the code that
+cleans up HTML and extracts text already works on any of them.
 
-- **`Blog::Feed`** and **`Blog::Feed::Item`** — the parsed document and one
-  normalised entry. This is the fifteen-line adapter over `rss`: `items` is
-  uniform across formats, the four fields under it are not (`title` against
-  `title.content`, `guid.content` against `id.content`,
-  `content_encoded || description` against
-  `content.content || summary.content`, `pubDate` against
-  `published.content || updated.content`). Pin the entity limits here with
-  a spec rather than inheriting a REXML default a later Ruby could move.
-- **`Blog::Poll`** — one visit to a feed, with `#save`, deliberately
-  echoing `Newsletter::InboundMessage#save`. The two are the same job: read
-  something from outside, store what is new, be idempotent about the rest.
-  The parallel is worth being able to see.
-- **`Blog::PollJob`** — one blog, off the request path.
-- **Dedupe**: `guid`, falling back to the item's link, falling back to a
-  digest of title and published date, scoped to the blog. First fetch wins;
-  an edited post is not re-stored, because a citation is a promise about
-  what was read.
-- **The first-poll guard**, per Decision 4. Feeds carry back catalogues —
-  the eight in-scope feeds hold 273 items and 520k tokens of prose between
-  them, against a 200k context. On a blog's first poll everything is stored
-  for the archive, but only items published inside a bounded recency window
-  get a `received_at` above the watermark. One clearly-named method with the
-  reasoning above it, not an incidental `.limit`.
+### Reading feeds
 
-### The fetch
+- **`Blog::Feed`** wraps the `rss` gem and hands back a normalised post,
+  regardless of whether the feed is RSS or Atom. The two formats name their
+  fields differently — that's about fifteen lines of translation.
+- **`Blog::Poll`** does one visit to one feed: fetch, parse, store what's
+  new. Running it twice must store nothing the second time.
+- **`Blog::PollJob`** runs it in the background.
 
-- **`Newsletter::ImageDownload::Destination` moves up unchanged.** It
-  already takes a bare `URI` and answers with an address to dial, checks
-  every address a name resolves to, and unmaps IPv4-in-IPv6. Nothing in it
-  mentions images. Feed URLs are typed by the reader rather than sent by
-  strangers, which does not lower the stakes: a blog can redirect to
-  `169.254.169.254`, and this app follows redirects from inside its own
-  network.
-- **`ImageDownload` splits.** Its generic half — redirect ceiling, byte
-  cap, wall-clock deadline, the `FAILURES` list, the streamed body checked
-  against both `Content-Length` and the actual bytes — becomes a shared
-  fetcher. `ImageDownload` keeps its content-type allowlist and calls it.
-- **Feeds get their own byte cap, larger than the image one.** Dan Luu's
-  feed measured 11.2MB against `MAX_BYTES` of 5MB, so borrowing the image
-  ceiling silently refuses a legitimate blog.
-- **Read feed bytes as UTF-8 explicitly**, decided in the fetch rather than
-  at the parse. A US-ASCII-tagged string fails every feed in the measured
-  set with `ArgumentError: invalid byte sequence` — the same class of
-  problem `Newsletter::InboundMessage#utf8` exists to solve on the mail
-  path. A feed declares its encoding twice, in the XML declaration and the
-  HTTP `charset`, and the two are free to disagree or both be missing.
-- **Conditional GET.** Send the stored `etag` and `last_modified_header`
-  back; a 304 is the common case and costs nothing.
+### Fetching safely
+
+The app already has a careful HTTP fetcher, used for downloading images out
+of newsletters. It caps redirects, caps how many bytes it'll read, caps how
+long it'll spend, and — importantly — refuses to connect to internal
+network addresses. That last part matters: a blog can redirect us to an
+internal address, and we'd be making that request from inside our own
+network.
+
+That fetcher gets split so feeds can use it too. Three specifics:
+
+- **Feeds need a bigger size limit than images.** The image limit is 5MB.
+  Dan Luu's feed is 11.2MB, because it contains his entire archive. Reusing
+  the image limit would silently reject a legitimate blog.
+- **Read the bytes as UTF-8 explicitly.** Every feed I tested failed
+  outright without this. The app already handles the same problem for
+  email, in `Newsletter::InboundMessage`.
+- **Send the stored `etag` and `last_modified_header` back** on each poll,
+  so an unchanged feed costs almost nothing.
+
+### Not storing the same post twice
+
+Use the feed's own id for the post (`guid` in RSS, `id` in Atom). If
+there isn't one, fall back to the post's link; if there's no link either,
+a hash of the title and date. Scoped per blog, since two blogs can use the
+same id.
+
+If a post changes after we've stored it, we ignore the change. The edition
+links a claim to what we read; swapping the text out afterwards breaks
+that.
+
+### The first poll of a new blog
+
+A feed usually contains the blog's back catalogue, not just what's new. The
+eight feeds I measured hold 273 posts between them. If the first poll
+treated all of those as "just arrived", they'd all land in one edition —
+which would be far too big to send to the model at all.
+
+So: store everything for the archive, but only let recent posts count as
+new. This needs to be one clearly-named method with the reasoning written
+above it, not a `.limit` tucked into a query.
 
 ### Images
 
-`Newsletter::RemoteImages` goes generic and leaves the `Newsletter::`
-namespace. It already asks the record for `body_html`, `inline_images`,
-`inline_image_path`, `transaction` and `update!` — a rename and a moved
-file, not a rewrite. `Blog::Post` answers all five.
+Newsletters have their images downloaded and re-served by the app, so the
+archive keeps working after the sender's server forgets them. Posts should
+work the same way, and the existing code needs almost no change to do it.
 
-**A post needs its own images route, and the existing one must not move.**
-`Newsletters::ImagesController` says why in its own comment: the paths it
-serves "are baked into `body_html` at ingest". Every stored newsletter body
-contains `/newsletters/:id/images/:blob` as literal text. So
-`#inline_image_path` stays a method each record answers for itself, posts
-get `/blog_posts/:id/images/:blob`, and nothing rewrites a stored body.
-
-`Newsletter::InlineImages` does not move and gains nothing: a post has no
-MIME parts and no `cid:` references, so it is the one part of the pipeline
-posts have no use for.
+**One thing that must not change:** the URLs the app serves images at are
+written into the stored HTML when a newsletter arrives. Every stored
+newsletter body literally contains `/newsletters/5/images/...` as text. So
+posts get their own separate image URLs, and the newsletter ones stay
+exactly as they are. Changing them means rewriting every stored newsletter.
 
 ### The archive
 
-`Feed` merges two queries. It already loads its whole window into memory to
-partition it by day, so this is a merge in Ruby rather than a `UNION`.
+The archive page has to show newsletters and posts together, which means
+combining two queries. It already loads everything into memory to group it
+by day, so this is straightforward.
 
-**Ordering needs a third key.** Every ordering in this app breaks ties on
-`id`, because date headers carry whole seconds and a batch send ties.
-That argument does not survive a merge — newsletter 5 and post 5 are not
-comparable — so the merged ordering is over `(received_at, type, id)`, and
-the comment explaining why the tie-break exists has to say so. Get this
-wrong and rows reorder between page loads, which is what the existing
-comments are warning about.
+**The one tricky bit is sort order.** Every list in this app sorts by
+arrival time and breaks ties using the database id, because email
+timestamps only go down to the second and a batch of newsletters can share
+one. That trick stops working across two tables — newsletter 5 and post 5
+aren't comparable. The sort needs a third component so the order is stable.
+Get this wrong and rows shuffle between page loads.
 
-`Feed::Row` and the `newsletters/_row` partial take a presenter, so a post
-needs a presenter answering the same handful of methods, not a second
-partial.
+**"View original" on a post is an external link** to the blog. Newsletters
+show the original email in a sandboxed frame; a post's real original is the
+blog itself.
 
-**A post's "view original" leaves the app.** For mail the original is the
-sender's HTML in a sandboxed frame, and `Newsletter::Source` embeds inline
-images as data URIs because that frame has an opaque origin. A post has no
-inline images and its real original is the blog's own URL, always present
-in the feed item — so it is an external link. Simpler than the mail case,
-and the PRD's parked "canonical web links" idea arriving free on one source
-type.
+### Scheduling
 
-### Keeping posts out of editions, on purpose
+Add an hourly poll to `config/recurring.yml`, production only. Hourly is
+plenty — the edition is daily, so polling frequency only affects how fresh
+a post is when the edition is written.
 
-`Edition::Window` queries `Newsletter` today, so under Option B posts stay
-out of editions by simply not being added yet. No temporary scope, no flag,
-nothing to remember to delete — a second thing Option B saves that Option C
-would have cost.
-
-### The schedule
-
-`config/recurring.yml` gains a poll task, production only, hourly. Cadence
-barely matters against a daily edition — it only decides how stale an item
-can be when the window closes — and hourly is polite with conditional GET
-doing the work. `spec/config/recurring_spec.rb` gains the matching checks:
-the class resolves, and Fugit reads the schedule as a `Fugit::Cron` rather
-than a duration or an interval.
-
-**This is a deploy step.** The task does not install itself — the row in
-`solid_queue_recurring_tasks` is written when the scheduler boots, so the
-schedule exists only after a deploy that carries it. `docs/deploying.md`
-§9 documents this for `compose_edition` and gains the same for polling,
-including the `SolidQueue::RecurringTask.all` confirmation command.
+**This is a deploy step.** The scheduled task doesn't install itself; the
+schedule only exists after a deploy that includes it. `docs/deploying.md`
+section 9 explains this for the existing edition job — add the same for
+polling, including the command to confirm it registered.
 
 ### Done when
 
-Feeds seeded by hand poll on schedule; posts appear in the archive
-interleaved with newsletters in a stable order; opening one goes to the
-blog; images are stored locally and served from this app; a second poll of
-an unchanged feed stores nothing and ideally fetches nothing. `bin/ci`
-green, and `spec/support/query_counter.rb` used on the archive — a merged
-feed is where an N+1 would appear.
+Feeds added by hand get polled on schedule. Posts appear in the archive
+mixed in with newsletters, in a stable order. Clicking one goes to the
+blog. Images are stored locally. Polling an unchanged feed a second time
+stores nothing and ideally fetches nothing.
 
-## Milestone 2 — into editions
+---
 
-**The schema**: one migration. `edition_citations` gains nullable
-`blog_post_id` with a foreign key and an explicit `on_delete`, plus a check
-constraint that exactly one of the two source columns is set.
+## Milestone 2 — put posts into editions
 
-**The edition path**, and this is where Option B's permanent cost lands —
-roughly eighty lines across six files:
+**Database:** one migration. The `edition_citations` table — which records
+which sources each story in an edition was written from — gains a
+`blog_post_id` column, alongside its existing `newsletter_id`. Exactly one
+of the two is set per row.
 
-- `Edition::Window` merges two relations, with the same
-  `(received_at, type, id)` total order as the archive, and the second
-  clause for mail released out of the pen still applying only to mail.
-  **If silencing has landed, the silence test applies to both relations** —
-  the blog one is the easy one to miss, because it arrives already written.
-  It wants a spec that fails when either is left out, and the `NOT IN`
-  NULL guard from Decision 1b.
-- `Edition::Prompt` quotes posts as `<post id="...">` beside
-  `<newsletter id="...">`, and `SCHEMA` gains `post_ids` beside
-  `newsletter_ids`. Keeping them separate rather than unifying is
-  deliberate: attribution differs by kind, and "the newsletter reports" is
-  wrong over a blog. `VERSION` goes to 2.
-- `Edition::Editor#faults_in` does its set arithmetic twice, and the
-  `Incomplete` message names which kind went uncited.
-- `Edition::Citation` gains `belongs_to :blog_post, optional: true` and a
-  validation that exactly one target is set — the check constraint is the
-  floor, this is so it reads as a validation failure rather than a
-  database error.
-- `Edition::Story` grows a second `has_many :through`, scoped to citation
-  columns the way the first is; `Edition::Story::Presenter#sources` unions
-  them in citation order.
+**Code**, and this is the bulk of the milestone, roughly eighty lines
+across six files:
 
-**Also in this milestone:**
+- The query that decides what an edition covers now reads both tables, with
+  the same stable sort order as the archive.
+- The prompt gets told about posts as well as newsletters, and the response
+  format gains a list of post ids beside the newsletter ids. They stay
+  separate deliberately — attribution differs, and "the newsletter reports"
+  is wrong over a blog.
+- The check that every source got written about now runs over both lists.
+- The prompt's version number goes up. Editions are immutable and record
+  which prompt wrote them, so this is how a change gets tracked.
 
-- **The prose floor** from Milestone 0: an item under it is stored for the
-  archive but never enters a window. Legitimate blogs still carry stubs —
-  9 of the 273 measured items came in under 400 characters, mostly Martin
-  Fowler's linked essay fragments and Simon Willison's release notes. It is
-  this app deciding an item is not worth reporting, so it says so rather
-  than dropping quietly.
-- **The truncation marker**, per Decision 3: a feed carrying a summary only
-  gets a line saying so in the prose the editor reads, the way
-  `Newsletter::Prose::OMISSION` already names this app's own cut. Without
-  it the editor classifies a summary feed as the PRD's *teaser* nature and
-  reports a blog as paywalled, which is a falsehood. "Truncated" has no
-  reliable detector — Dan Luu ships full articles in `<summary>`, Simon
-  Willison's short posts are short by design — so this is a heuristic and
-  should read as one.
+**Two additions on top:**
 
-**Not doing**: relaxing the completeness guarantee, and a per-blog cap. At
-3.1 items a day across eight blogs neither is needed, and
-`.claude/rules/ruby.md` is explicit about not writing code for
-functionality that does not exist yet.
+- **A minimum text length.** A post below it is stored for the archive but
+  never sent to the editor. Real blogs still publish the occasional stub —
+  9 of the 273 posts I measured were under 400 characters, mostly Martin
+  Fowler publishing an essay in linked fragments. When this holds something
+  back it should say so somewhere, not drop it quietly.
+- **A note when a feed only gives a summary.** Some blogs publish the first
+  two lines and a "read more" link. Without a marker, the editor reads that
+  as a paywalled article and reports the blog as paywalled, which is false.
+  Worth knowing: there's no reliable way to detect this automatically — Dan
+  Luu's full articles arrive in the field usually used for summaries, and
+  Simon Willison's short posts are short on purpose. So it's a guess and
+  should be written as one.
 
-**Done when** a backtest through `EditionRegeneration` over a window
-containing posts produces an edition that cites every source, attributes
-posts to their blog by name, and puts the essays on the reading list. A
-judgement call read by a person, the way the PRD's own Milestone 0 was —
-`lib/edition_transcript.rb` is the tool.
+**Not doing:** limiting posts per blog, or relaxing the rule that every
+source gets written about. At 3 posts a day neither is needed.
 
-## Milestone 3 — the sources page
+**Done when:** an edition regenerated over a window containing posts cites
+every source, names blogs correctly, and puts essays on the reading list.
+That's a human judgement call, read using the existing
+`lib/edition_transcript.rb`.
 
-The first write UI in the app outside the waitlist and password reset.
+---
 
-- `resources :blogs, only: [:index, :create, :destroy]`, rendering into the
-  Sources section the silencing branch builds rather than adding a fourth
-  section beside it. One roster, one section — which is most of the
-  argument for having a shared roster at all. If that branch has not landed,
-  this milestone waits rather than building a section to be merged later.
-- **The aggregator refusal lives on the add path.** Sample the feed on
-  submission and decline one whose bodies are stubs, saying why: "this
-  looks like a link aggregator; siftbox reads blogs". Refusing where the
-  reader is standing is honest in a way silent exclusion at composition
-  never is. What it says, and whether it can be overridden, are open.
-- Feed autodiscovery from a pasted site URL (`<link rel="alternate">`) is
-  the obvious nicety, and costs a second fetch through the same guard.
-- Failed form renders return `422`, per `.claude/rules/controllers.md`, or
-  Turbo ignores them.
+## Milestone 3 — a page to add and remove blogs
 
-Could swap with Milestone 2 — it is lower risk and makes Milestone 1
-usable by someone other than whoever can open a console. It is second here
-only because the editor is the app, and posts reaching it is the point of
-the feature.
+Until this exists, blogs are added by hand in a console. Fine for one
+reader, but not the finished thing.
 
-## Parked
+- A form to add a feed and a way to remove one, on the Subscriptions page.
+- **Refuse aggregator feeds here**, when the feed is added. Sample it, and
+  if its posts have no text, decline with a reason: "this looks like a link
+  aggregator; siftbox reads blogs". Refusing while the reader is standing
+  there is much better than silently ignoring the feed later.
+- Optionally: let someone paste a blog's homepage and find the feed URL
+  from it.
 
-Not scheduled. Each needs evidence first:
+This could swap places with Milestone 2 — it's lower risk and makes
+Milestone 1 usable by someone without console access.
 
-- **Full-text fetching** for truncated feeds, if the marker proves
-  insufficient. A readability implementation and a new class of failure.
-- **Silencing** — not parked so much as elsewhere: it is being built on
-  `claude/mute-newsletters-reports-kh0rro`. Listed so this plan does not
-  read as having forgotten it.
-- **A per-blog cap**, if a subscription turns out busier than it looked.
-- **Relaxing completeness for posts**, if volume ever makes it necessary.
-- **A shared item table.** Option C, deferred rather than rejected: a third
-  source type would multiply Option B's two id spaces rather than add to
-  them, and that is the moment to extract one — with three concrete cases
-  to design against instead of none.
+---
 
-## Deploy steps, collected
+## Working alongside the silencing branch
 
-The things that do not install themselves:
+Someone else is building "mute a source so it stops reaching editions", on
+`claude/mute-newsletters-reports-kh0rro`. Agreed between us:
+
+- **One shared `sources` table**, listing sources the reader has made a
+  decision about. It stores an email address for a newsletter sender, or a
+  reference to the blog row for a blog.
+- **They ship it first, with the email half only.** The blog reference gets
+  added here in Milestone 1. That way they aren't waiting on this work.
+- **They own the Subscriptions page.** The add-a-feed form from Milestone 3
+  goes inside the section they build, rather than next to it.
+- **A rename lands on their branch first:** `Newsletter::Source` becomes
+  `Newsletter::Markup`, because the new `Source` model would otherwise
+  clash with it. Nothing here should refer to `Newsletter::Source` in the
+  meantime.
+- **Both branches edit the same query** — the one that picks what an
+  edition covers. They narrow it, this widens it. They've agreed to take
+  the rebase if they land second.
+
+---
+
+## Deploy steps
+
+Things that don't happen automatically:
 
 | Milestone | Step |
 |---|---|
-| 1 | `gem "rss"` — and `rexml` joins the production bundle, where it is test-only today via `crack` under webmock. Note both in the commit message, per `.claude/rules/review.md` on dependency bumps. |
-| 1 | Confirm the poll task registered: `SolidQueue::RecurringTask.all`, per `docs/deploying.md` §9. |
-| 1 | Seed the reader's feeds by hand until Milestone 3 exists. |
-| 2 | One additive migration on `edition_citations`. No backup needed — nothing is moved or dropped. |
+| 1 | Add `gem "rss"` to the Gemfile. It also pulls in `rexml`, which is currently test-only. Mention both in the commit message. |
+| 1 | After deploying, confirm the poll task actually registered — `docs/deploying.md` section 9 has the command. |
+| 1 | Add your feeds by hand until Milestone 3 exists. |
+| 2 | One migration, additive. No backup needed; nothing is moved or deleted. |
 
-## The risks worth naming
+## The three things most likely to go wrong
 
-- **The merged ordering.** The likeliest bug in the whole plan, and a
-  quiet one: a partial order over a merged set reorders rows between page
-  loads and breaks the archive's continuous numbering. Every ordering in
-  this app has a comment explaining its tie-break; the merged ones need
-  theirs.
-- **The first poll.** Get the recency guard wrong and a new subscription
-  puts months of back catalogue into one edition window. It fails loudly —
-  `Truncated`, or a request past the context window — but it fails on the
-  morning the reader adds a blog.
-- **SSRF through the shared fetcher.** `Destination` is the whole of what
-  stands between a feed URL and the private network, and it is about to
-  acquire a second caller. Its specs move with it, and the redirect path is
-  the one to keep covered.
-- **`VERSION` bumps in Milestone 2.** Editions are immutable and the
-  version travels with the row, so this is the mechanism working. Listed
-  because a version bump can look like a mistake in a changelog.
+1. **The archive sort order.** Combining two tables breaks the existing
+   tie-breaking trick. If it's wrong, rows shuffle between page loads and
+   the archive's numbering goes with them. Nothing fails loudly.
+2. **The first poll of a new blog.** Get the "only recent posts count as
+   new" guard wrong and adding a blog dumps its entire back catalogue into
+   the next morning's edition. It fails loudly, but it fails on the morning
+   after you add a blog.
+3. **The HTTP fetcher.** It's the only thing stopping a feed URL reaching
+   the internal network, and it's about to get a second caller. Its tests
+   move with it, and the redirect path is the one to keep covered.
