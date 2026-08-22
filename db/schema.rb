@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_134702) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_22_142354) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "message_checksum", null: false
@@ -46,6 +46,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_134702) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "blogs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "etag", default: "", null: false
+    t.datetime "failing_since"
+    t.string "feed_url", null: false
+    t.string "last_modified_header", default: "", null: false
+    t.datetime "polled_at"
+    t.string "site_url", default: "", null: false
+    t.string "title", default: "", null: false
+    t.datetime "updated_at", null: false
+    t.index ["feed_url"], name: "index_blogs_on_unique_feed_url", unique: true
   end
 
   create_table "edition_citations", force: :cascade do |t|

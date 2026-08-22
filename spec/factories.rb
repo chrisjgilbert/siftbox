@@ -11,6 +11,11 @@ FactoryBot.define do
     window_ended_at { Time.current }
   end
 
+  factory :blog do
+    title { "Query Plan Weekly" }
+    sequence(:feed_url) { |n| "https://queryplanweekly#{n}.dev/feed" }
+  end
+
   factory :edition_citation, class: "Edition::Citation" do
     newsletter
     story factory: :edition_story
