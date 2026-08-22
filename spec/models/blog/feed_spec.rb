@@ -18,6 +18,31 @@ RSpec.describe Blog::Feed do
     XML
   end
 
+  # The same blog, published as Atom. Every field the parser wants is spelled
+  # differently here — entry for item, link as an attribute, content and
+  # published as elements with their own .content — which is the whole of what
+  # the adapter below is for.
+  def atom_document
+    <<~XML
+      <?xml version="1.0" encoding="utf-8"?>
+      <feed xmlns="http://www.w3.org/2005/Atom">
+        <title>Query Plan Weekly</title>
+        <id>https://queryplanweekly.dev/</id>
+        <updated>2026-08-21T06:30:00Z</updated>
+        <author><name>Query Plan Weekly</name></author>
+        <link href="https://queryplanweekly.dev/"/>
+        <entry>
+          <title>Why your index is not being used</title>
+          <id>https://queryplanweekly.dev/unused-index</id>
+          <link href="https://queryplanweekly.dev/unused-index"/>
+          <published>2026-08-21T06:30:00Z</published>
+          <updated>2026-08-21T06:30:00Z</updated>
+          <content type="html">&lt;p&gt;The planner has its reasons.&lt;/p&gt;</content>
+        </entry>
+      </feed>
+    XML
+  end
+
   it "reads one post per item in an RSS document" do
     document = rss_document(<<~ITEMS)
       <item><title>Why your index is not being used</title></item>
@@ -86,5 +111,18 @@ RSpec.describe Blog::Feed do
     feed = Blog::Feed.new(document)
 
     expect(feed.posts.first.published_at).to eq(Time.utc(2026, 8, 21, 6, 30))
+  end
+
+  it "reads the same fields out of an Atom document" do
+    feed = Blog::Feed.new(atom_document)
+
+    expect(feed.posts.first).to eq(
+      Blog::Feed::Item.new(
+        title: "Why your index is not being used",
+        url: "https://queryplanweekly.dev/unused-index",
+        body_html: "<p>The planner has its reasons.</p>",
+        published_at: Time.utc(2026, 8, 21, 6, 30)
+      )
+    )
   end
 end
