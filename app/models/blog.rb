@@ -15,7 +15,12 @@ class Blog < ApplicationRecord
   #
   # It is also what lets Blog::Post::Presenter end its fallback chain here:
   # the last link a row can be pointed at is one a browser can follow.
-  FETCHABLE = %r{\Ahttps?://}i
+  # Anchored at both ends, and \S so the end anchor cannot be reached across a
+  # newline: without that a value could carry a valid first line and anything
+  # at all behind it. There is no attack through it today — Download would
+  # refuse the address and link_to escapes what it renders — but a validation
+  # that can be walked past is not one.
+  FETCHABLE = %r{\Ahttps?://\S+\z}i
 
   # Cascaded in the database as well, so a delete that goes round Rails still
   # takes the posts with it; declared here for the destroy callbacks on the
@@ -27,6 +32,11 @@ class Blog < ApplicationRecord
   # the index. This is here so the ordinary case reads as a validation failure
   # rather than as a RecordNotUnique out of the database, the way
   # Edition::Citation's does.
+  # Stripped before it is validated or compared, so an address pasted with
+  # whatever whitespace came with it is the address the reader meant — and so
+  # two rows differing only in a trailing newline cannot both exist.
+  normalizes :feed_url, with: ->(value) { value.strip }
+
   validates :feed_url, presence: true, uniqueness: true, format: { with: FETCHABLE }
 
   # This poll did not come home with a feed. Here rather than in Blog::Poll

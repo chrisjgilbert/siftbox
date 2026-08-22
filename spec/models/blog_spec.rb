@@ -58,4 +58,23 @@ RSpec.describe Blog do
   it "accepts a plain http feed address, which plenty of blogs still serve" do
     expect(build(:blog, feed_url: "http://queryplanweekly.dev/feed")).to be_valid
   end
+
+  # Anchored at both ends. Without the end anchor a value could carry a
+  # newline and anything after it and still pass, which is what Brakeman's
+  # ValidationRegex check is about.
+  it "refuses an address carrying a second line behind a valid first one" do
+    expect(build(:blog, feed_url: "https://ok.example/feed\njavascript:alert(1)")).not_to be_valid
+  end
+
+  it "refuses a scheme with nothing after it" do
+    expect(build(:blog, feed_url: "https://")).not_to be_valid
+  end
+
+  # A pasted address arrives with whatever whitespace came with it, and the
+  # reader typed the useful part.
+  it "accepts an address pasted with whitespace around it" do
+    blog = create(:blog, feed_url: "  https://queryplanweekly.dev/feed\n")
+
+    expect(blog.feed_url).to eq("https://queryplanweekly.dev/feed")
+  end
 end
