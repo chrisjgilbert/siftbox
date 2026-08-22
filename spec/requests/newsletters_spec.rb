@@ -278,4 +278,17 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("No image in post")
     expect(response.body).not_to include("No image in email")
   end
+
+  # The newest item having an image is what makes it the lead, and a post with
+  # an image is an ordinary case — so the one row drawn at full frame width
+  # was the one row that lost its marker.
+  it "marks a post that leads the feed as a post" do
+    sign_in
+    create(:blog_post, lead_image_url: "https://queryplanweekly.dev/hero.png",
+      received_at: 1.hour.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include("lead__kind")
+  end
 end

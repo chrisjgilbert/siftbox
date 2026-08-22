@@ -258,9 +258,11 @@ class Edition::Prompt
   # Through Newsletter::Body rather than the HTML so the scrubbing and the
   # single Loofah pass are the ones the rest of the app already pays for. It
   # takes an HTML string and knows nothing about mail, which is why a post
-  # reads through it too.
+  # reads through it too — and it is the same reading Blog::Post measures its
+  # floor against, so a post cannot be judged long enough by one rule and
+  # quoted under another.
   def prose(html)
-    Newsletter::Prose.new(Newsletter::Body.new(html)).text
+    Newsletter::Body.prose(html)
   end
 
   # Until it stops changing, and one pass is not enough — this was a real hole

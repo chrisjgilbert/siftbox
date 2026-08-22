@@ -5,7 +5,9 @@
   <img class="lead__image" src="<%= row.lead_image_url %>" alt="" loading="lazy">
 
   <span class="lead__number"><%= row.number %></span>
-  <span class="lead__sender"><%= row.sender %></span>
+  <span class="lead__sender">
+    <%= row.sender %><% if row.kind %><span class="lead__kind"><%= row.kind %></span><% end %>
+  </span>
   <span class="lead__subject"><%= row.subject %></span>
   <span class="lead__snippet"><%= row.snippet %></span>
   <span class="lead__timestamp"><%= row.timestamp %></span>

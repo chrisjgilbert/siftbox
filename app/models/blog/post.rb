@@ -108,6 +108,6 @@ class Blog::Post < ApplicationRecord
   private
 
   def prose
-    Newsletter::Prose.new(Newsletter::Body.new(body_html)).text
+    Newsletter::Body.prose(body_html)
   end
 end

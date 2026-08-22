@@ -796,6 +796,19 @@ a {
   grid-area: sender;
 }
 
+/* The same marker a standard row carries, drawn the same way: the separator
+   belongs to the layout rather than to the copy. Only posts wear it — they
+   are the rarer thing, so marking them keeps the line quieter than marking
+   twenty newsletters a day would. */
+.lead__kind {
+  color: var(--blue);
+}
+
+.lead__kind::before {
+  content: "\00a0/\00a0";
+  color: var(--mute);
+}
+
 .lead__subject {
   grid-area: subject;
   margin-top: 8px;

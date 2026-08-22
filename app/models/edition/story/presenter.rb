@@ -62,7 +62,7 @@ class Edition::Story::Presenter
     story.newsletters.map do |newsletter|
       presenter = Newsletter::Presenter.new(newsletter)
 
-      Source.new(presenter.sender, presenter.path, {})
+      Source.new(presenter.sender, presenter.path, presenter.link_attributes)
     end
   end
 
