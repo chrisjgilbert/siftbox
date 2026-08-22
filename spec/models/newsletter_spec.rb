@@ -311,6 +311,17 @@ RSpec.describe Newsletter do
     expect(Newsletter.uncited).to eq([ uncited ])
   end
 
+  # The trap under NOT IN. A citation naming a blog post leaves newsletter_id
+  # NULL, and `id NOT IN (NULL, ...)` is NULL rather than true for every row
+  # — so one post citation anywhere in the table would answer "no mail is
+  # uncited" and read as an ordinary quiet day.
+  it "still finds uncited mail once an edition has cited a blog post" do
+    uncited = create(:newsletter)
+    create(:edition_citation, newsletter: nil, blog_post: create(:blog_post))
+
+    expect(Newsletter.uncited).to eq([ uncited ])
+  end
+
   it "counts a newsletter cited twice as cited" do
     newsletter = create(:newsletter)
     create(:edition_citation, newsletter: newsletter)

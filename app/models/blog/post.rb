@@ -31,6 +31,13 @@ class Blog::Post < ApplicationRecord
   # the same column.
   validates :received_at, presence: true
 
+  # Tie-broken on id for the reason Newsletter's orderings are: a feed read
+  # in one poll stamps every post it found with the same received_at, so
+  # without the tie-break a batch reorders between one query and the next.
+  def self.oldest_first
+    order(received_at: :asc, id: :asc)
+  end
+
   def self.for_citation
     select(CITATION_COLUMNS)
   end

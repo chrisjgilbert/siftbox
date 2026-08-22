@@ -127,8 +127,14 @@ class Newsletter < ApplicationRecord
   # it from the archive the citation links to, and releasing it later would
   # carry it into a second edition — so the backfill leaves the window an
   # edition covered exactly as it found it.
+  #
+  # Through .citing_mail rather than the whole table, and it is not a
+  # narrowing for tidiness. A citation naming a blog post leaves newsletter_id
+  # NULL, and SQL reads `id NOT IN (NULL, 4)` as NULL rather than as true — so
+  # one post citation anywhere in the table would answer that no mail is
+  # uncited at all, which reads as an ordinary quiet day rather than as a bug.
   def self.uncited
-    where.not(id: Edition::Citation.select(:newsletter_id))
+    where.not(id: Edition::Citation.citing_mail.select(:newsletter_id))
   end
 
   def lead_image?

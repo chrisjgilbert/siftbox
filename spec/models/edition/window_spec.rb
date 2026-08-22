@@ -222,4 +222,72 @@ RSpec.describe Edition::Window do
   it "leaves the edition unsaved for the editor to fill in" do
     expect(window.edition).not_to be_persisted
   end
+
+  it "covers a post this app first saw after the last edition's cutoff" do
+    published_through(yesterday_morning)
+    post = create(:blog_post, received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts).to eq([ post ])
+  end
+
+  it "leaves out a post the last edition already covered" do
+    published_through(yesterday_morning)
+    create(:blog_post, received_at: yesterday_morning - 2.hours)
+
+    expect(window.posts).to be_empty
+  end
+
+  # received_at rather than published_at, and the difference is the whole
+  # reason blog_posts carries both. A feed hands over a back catalogue, so a
+  # post can be published years before this app ever reads it — dating the
+  # window on the publisher's claim would put an archive into one edition.
+  it "covers a post published long ago but first seen inside the window" do
+    published_through(yesterday_morning)
+    post = create(:blog_post, published_at: 3.years.before(morning),
+      received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts).to eq([ post ])
+  end
+
+  it "leaves out a post that arrived after composition started" do
+    published_through(yesterday_morning)
+    create(:blog_post, received_at: morning + 1.minute)
+
+    expect(window.posts).to be_empty
+  end
+
+  it "reads posts oldest first" do
+    published_through(yesterday_morning)
+    second = create(:blog_post, received_at: yesterday_morning + 3.hours)
+    first = create(:blog_post, received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts).to eq([ first, second ])
+  end
+
+  # Whole rows for the same reason the newsletters are: Edition::Prompt reads
+  # body_html, and the feed's column list leaves it out.
+  it "reads a post's whole row" do
+    published_through(yesterday_morning)
+    create(:blog_post, body_html: "<p>Hi</p>", received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts.sole.body_html).to eq("<p>Hi</p>")
+  end
+
+  it "is not empty when only a post arrived" do
+    published_through(yesterday_morning)
+    create(:blog_post, received_at: yesterday_morning + 2.hours)
+
+    expect(window).not_to be_empty
+  end
+
+  it "hands the editor both kinds of source" do
+    published_through(yesterday_morning)
+    newsletter = create(:newsletter, received_at: yesterday_morning + 1.hour)
+    post = create(:blog_post, received_at: yesterday_morning + 2.hours)
+
+    sources = window.sources
+
+    expect(sources.newsletters).to eq([ newsletter ])
+    expect(sources.posts).to eq([ post ])
+  end
 end

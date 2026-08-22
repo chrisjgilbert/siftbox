@@ -1,5 +1,6 @@
-# What the next edition covers: every newsletter that became the reader's to
-# read since the last edition closed, up to the moment composition starts.
+# What the next edition covers: everything that became the reader's to read
+# since the last edition closed, up to the moment composition starts — the
+# mail that arrived, and the blog posts this app first saw.
 #
 # A high-water mark rather than a fixed 07:00→07:00 range, per the PRD. Under
 # fixed ranges a failed run, or mail landing at 07:02, falls into a gap and is
@@ -36,11 +37,25 @@ class Edition::Window
     @_newsletters ||= arrived.or(released).oldest_first.to_a
   end
 
-  # Asked before an edition is built, because the PRD skips an empty window
-  # silently and Edition::Editor cannot: its completeness check passes
-  # vacuously over no newsletters and it would publish an empty edition.
+  # Whole rows again, and for the same reason: the prompt reads body_html and
+  # Blog::Post::FEED_COLUMNS omits it.
+  #
+  # One clause where the mail has two. A post has no confirmation pen to be
+  # released out of, so the moment it became the reader's to read and the
+  # moment it arrived are the same moment.
+  def posts
+    @_posts ||= Blog::Post
+      .where("received_at > :after AND received_at <= :through",
+        after: started_at, through: ended_at)
+      .oldest_first.to_a
+  end
+
+  def sources
+    Edition::Sources.new(newsletters: newsletters, posts: posts)
+  end
+
   def empty?
-    newsletters.empty?
+    sources.empty?
   end
 
   # window_started_at and window_ended_at describe the received_at axis only.

@@ -57,6 +57,14 @@ class Edition::Citation < ApplicationRecord
 
   validate :names_one_source
 
+  # The citations that name mail, which is not all of them any more. Anything
+  # asking "which newsletters has an edition quoted" has to say this, because
+  # a post's citation leaves newsletter_id NULL and a NULL inside a NOT IN
+  # makes the whole comparison NULL — see Newsletter.uncited.
+  def self.citing_mail
+    where.not(newsletter_id: nil)
+  end
+
   private
 
   # What the check constraint says, said early enough to name the field. The

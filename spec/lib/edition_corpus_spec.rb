@@ -101,7 +101,8 @@ RSpec.describe EditionCorpus do
       stories = EditionCorpus.stories.map do |story|
         {
           headline: story.headline, body: story.body, section: story.section,
-          newsletter_ids: EditionCorpus.sources(story).map { |item| ingested.fetch(item.key).id }
+          newsletter_ids: EditionCorpus.sources(story).map { |item| ingested.fetch(item.key).id },
+          post_ids: []
         }
       end
 
@@ -111,11 +112,18 @@ RSpec.describe EditionCorpus do
     # Newsletter.content, which is the window's own rule rather than a list of
     # what was just created — so the confirmation is left out by the same query
     # that will leave it out in production.
+    # The corpus is seven newsletters and no blog posts: what it exists to pin
+    # is the clustering across senders who disagree, and a post is another
+    # source of prose rather than another kind of disagreement.
     def compose(ingested)
       Edition::Editor.new(
-        build(:edition), Newsletter.content.oldest_first.to_a,
+        build(:edition), mail_only,
         client: FakeAnthropic.new(text: answer(ingested))
       ).compose.reload
+    end
+
+    def mail_only
+      Edition::Sources.new(newsletters: Newsletter.content.oldest_first.to_a, posts: [])
     end
 
     def stories_citing(edition, newsletter)
@@ -209,7 +217,7 @@ RSpec.describe EditionCorpus do
     it "never shows the editor the confirmation" do
       ingested = EditionCorpus.ingest
 
-      quoted = Edition::Prompt.new(Newsletter.content.oldest_first.to_a).sources
+      quoted = Edition::Prompt.new(mail_only).message
 
       expect(quoted).not_to include(ingested.fetch(:whiteboard_confirmation).subject)
     end

@@ -86,7 +86,7 @@ class Edition::CompositionJob < ApplicationJob
     window = Edition::Window.new(Time.current)
     return skipped if window.empty?
 
-    Edition::Editor.new(window.edition, window.newsletters).compose
+    Edition::Editor.new(window.edition, window.sources).compose
   end
 
   private
