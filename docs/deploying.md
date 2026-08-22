@@ -316,15 +316,28 @@ under Blogs: paste the feed address, or the blog's home page and siftbox will
 find the feed from it. The feed is read on the spot, so a blog appears with
 its posts already in the archive rather than waiting for the top of the hour.
 
-Two things get refused there, with a reason on the page:
+Four things get refused there, each with a reason on the page:
 
 - **A link aggregator.** Hacker News, lobste.rs and Reddit publish items whose
   whole body is a link back to their own thread — a median of eight
   characters. `docs/blogs-rss.md` sets out why an edition composed from those
-  is unreadable. A feed fewer than half of whose items carry enough prose to
-  write from is turned away.
+  is unreadable. A feed fewer than half of whose items carry a hundred
+  characters of prose is turned away. That threshold sits between an
+  aggregator's eight and the three hundred or so a blog publishing excerpts
+  carries, so a summary-only blog is still in scope.
 - **An address that is not a feed and announces none.** Usually a typo, or a
-  page whose feed link has gone.
+  page whose feed link has gone. A page that does announce one is followed to
+  it, so pasting a home page works.
+- **An address that could not be read at all** — wrong host, refused
+  connection, or anything `Download` will not reach, which includes every
+  private address.
+- **A feed with no items in it yet.** A blog set up the day before its first
+  post: come back once it has published.
+
+Note what is *not* refused: a Planet-style rollup that syndicates whole posts
+reads exactly like a blog to this test, because as far as the test is
+concerned it is one. It is out of scope in `docs/blogs-rss.md` and unenforced
+here.
 
 The first poll of a new blog stores its whole back catalogue in the archive
 but keeps everything older than a week out of the edition window, so adding a

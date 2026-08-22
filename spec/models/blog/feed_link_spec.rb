@@ -120,4 +120,12 @@ RSpec.describe Blog::FeedLink do
 
     expect(found_in(head)).to eq("https://queryplanweekly.dev/feed")
   end
+
+  it "ignores a feed link that points back at the page itself" do
+    expect(found_in(%(<link rel="alternate" type="application/rss+xml" href="#">))).to be_nil
+  end
+
+  it "ignores an empty feed link, which resolves to the page too" do
+    expect(found_in(%(<link rel="alternate" type="application/rss+xml" href="">))).to be_nil
+  end
 end

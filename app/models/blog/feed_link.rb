@@ -27,7 +27,7 @@ class Blog::FeedLink
   # WordPress writes the post feed and then the comments feed, in that order,
   # and the reader meant the first one.
   def url
-    announced.filter_map { |link| fetchable(link["href"]) }.first
+    announced.filter_map { |link| elsewhere(link["href"]) }.first
   end
 
   private
@@ -62,13 +62,22 @@ class Blog::FeedLink
   # Download refuses anything that is not http or https at every hop, so this
   # is not the guard — it is so a page announcing `javascript:` puts nothing
   # on the roster rather than a row that can never be polled.
-  def fetchable(href)
+  def elsewhere(href)
     address = URI.join(page_url, href.to_s).to_s
     return unless address.match?(Blog::FETCHABLE)
+    return if same_page?(address)
 
     address
   rescue URI::Error
     nil
+  end
+
+  # A page whose feed link is `href="#"` or `href=""` announces itself, which
+  # plenty of templates do by accident. Following it fetches the same document
+  # a second time to be told the same thing — and under a URL one character
+  # different from the one that was pasted.
+  def same_page?(address)
+    address.split("#").first == page_url.to_s.split("#").first
   end
 
   def parsed

@@ -250,4 +250,19 @@ RSpec.describe Blog::Subscription do
     expect(followed).to be(false)
     expect(blog.errors[:feed_url]).to include(/not a feed/)
   end
+
+  # A page whose feed link points back at itself — href="#" or href="" — was
+  # fetched a second time to be told the same thing. One request, and the
+  # answer is the one already in hand.
+  it "does not fetch a page that announces itself" do
+    asked = []
+    fetch = lambda do |blog|
+      asked << blog.feed_url
+      Blog::Fetch::Fetched.new(document: home_page("#"), etag: "", last_modified: "")
+    end
+
+    follow("https://queryplanweekly.dev/", fetch)
+
+    expect(asked).to eq([ "https://queryplanweekly.dev/" ])
+  end
 end
