@@ -171,7 +171,7 @@ module Regeneration
   # be destroyed, and nothing here writes them anywhere else first.
   def self.opening(edition, sources)
     "Rewriting no. #{edition.number} of #{edition.published_on} over " \
-      "#{sources.newsletters.length} newsletters and #{sources.posts.length} posts. " \
+      "#{reading(sources)}. " \
       "It was written by #{edition.editor_model} on prompt " \
       "#{edition.prompt_version}, and that row goes with it. Expect a minute or two."
   end

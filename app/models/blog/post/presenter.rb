@@ -62,15 +62,24 @@ class Blog::Post::Presenter
     I18n.t("blogs.no_image")
   end
 
+  def no_image_compact
+    I18n.t("blogs.no_image_compact")
+  end
+
   private
 
   attr_reader :post
 
   # The feed_url this chain ends at is the reader's own and is validated for
   # scheme on Blog, so the chain always ends somewhere a browser can go.
+  #
+  # Case-folded to match, the way Newsletter::LeadImage folds it against the
+  # same list: a scheme is case-insensitive, and a feed writing one in
+  # capitals was having its link dropped as though it were a javascript: URL.
+  # The address is returned as it was written — only the comparison folds.
   def followable(url)
     return if url.blank?
-    return unless url.start_with?(*FOLLOWABLE_SCHEMES)
+    return unless url.downcase.start_with?(*FOLLOWABLE_SCHEMES)
 
     url
   end

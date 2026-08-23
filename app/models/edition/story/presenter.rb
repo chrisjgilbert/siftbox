@@ -59,18 +59,16 @@ class Edition::Story::Presenter
   # says "Unknown sender" here too, and a post with no address falls back to
   # its blog rather than citing an empty href.
   def cited_mail
-    story.newsletters.map do |newsletter|
-      presenter = Newsletter::Presenter.new(newsletter)
-
-      Source.new(presenter.sender, presenter.path, presenter.link_attributes)
-    end
+    story.newsletters.map { |newsletter| cited(Newsletter::Presenter.new(newsletter)) }
   end
 
   def cited_posts
-    story.blog_posts.map do |post|
-      presenter = Blog::Post::Presenter.new(post)
+    story.blog_posts.map { |post| cited(Blog::Post::Presenter.new(post)) }
+  end
 
-      Source.new(presenter.sender, presenter.path, presenter.link_attributes)
-    end
+  # The two feed presenters answer the same three questions, which is what
+  # lets a citation be drawn without the template asking which kind it has.
+  def cited(presenter)
+    Source.new(presenter.sender, presenter.path, presenter.link_attributes)
   end
 end

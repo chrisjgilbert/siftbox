@@ -56,6 +56,14 @@ class Newsletter::Presenter
     I18n.t("newsletters.index.no_image")
   end
 
+  # What the same row says at 390px, where the sentence above does not fit.
+  # Asked for rather than named in the template for the reason above, even
+  # though the two kinds happen to say the same two words here: the template
+  # draws both, so a "newsletters." key in it is one a post reads too.
+  def no_image_compact
+    I18n.t("newsletters.index.no_image_compact")
+  end
+
   # Where an original's top bar goes back to. The archive for content, and the
   # pen for anything the archive would refuse to list: Newsletter.content
   # excludes dismissed mail, which is still reachable because the

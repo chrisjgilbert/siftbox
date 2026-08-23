@@ -66,8 +66,8 @@ class Edition::Editor
   # window holding newsletter 7 and post 7 is ordinary, and a check run over
   # the ids merged would read a story citing one of them as having cited both.
   def faults_in(stories)
-    faults_for("newsletter", mail, cited(stories, :newsletter_ids)) +
-      faults_for("post", posts, cited(stories, :post_ids)) +
+    faults_for("newsletter", mail.keys, cited(stories, :newsletter_ids)) +
+      faults_for("post", posts.keys, cited(stories, :post_ids)) +
       [ unattributed(stories) ].compact
   end
 
@@ -97,7 +97,7 @@ class Edition::Editor
   end
 
   def uncited(kind, known, cited)
-    missed = known.keys - cited
+    missed = known - cited
     return if missed.empty?
 
     "no story cited #{kind} #{missed.join(", ")}"
@@ -109,7 +109,7 @@ class Edition::Editor
   # attribution it was written under taken away, which is the worse half of
   # the same failure — the answer goes back instead.
   def invented(kind, known, cited)
-    unknown = cited - known.keys
+    unknown = cited - known
     return if unknown.empty?
 
     "a story cited #{kind} #{unknown.join(", ")}, which was not in the window"

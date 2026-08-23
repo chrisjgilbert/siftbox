@@ -44,6 +44,7 @@ en:
       other: "%{count} posts"
     kind: Blog
     no_image: No image in post
+    no_image_compact: No image
     row:
       confirm: Remove %{name}? Its posts go too, and so do the citations in
         published editions that name them.

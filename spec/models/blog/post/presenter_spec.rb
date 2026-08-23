@@ -50,6 +50,18 @@ RSpec.describe Blog::Post::Presenter do
   # links in this chain. The CSP stops a javascript: URL running today, and
   # the CSP calls itself the second line — on this path it would be the only
   # one.
+  # Schemes are case-insensitive, and a feed writing one in capitals is odd
+  # rather than hostile. Matched without folding the case, the link was
+  # dropped and the row quietly pointed at the blog instead — the same
+  # treatment a javascript: URL gets, for a post that had a perfectly good
+  # address. Newsletter::LeadImage folds the case on the same list.
+  it "follows an address whose scheme the feed wrote in capitals" do
+    blog = build_stubbed(:blog)
+    post = build_stubbed(:blog_post, blog: blog, url: "HTTPS://queryplanweekly.dev/planner")
+
+    expect(Blog::Post::Presenter.new(post).path).to eq("HTTPS://queryplanweekly.dev/planner")
+  end
+
   it "refuses to point a row at a javascript URL the feed published" do
     blog = build_stubbed(:blog, site_url: "https://queryplanweekly.dev")
     post = build_stubbed(:blog_post, blog: blog, url: "javascript:alert(1)")
