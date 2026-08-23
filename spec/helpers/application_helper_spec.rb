@@ -20,10 +20,24 @@ RSpec.describe ApplicationHelper do
   end
 
   # Dragged to a bookmarks bar and fired from somebody else's blog, where
-  # nothing knows where siftbox lives. So it carries this app's own address
-  # rather than a host written down anywhere.
+  # nothing knows where siftbox lives.
   it "points the bookmarklet at this app's own follow form" do
-    expect(helper.follow_bookmarklet).to include(subscriptions_url)
+    expect(helper.follow_bookmarklet).to include("http://example.com/subscriptions")
+  end
+
+  # Kept in a bookmarks bar for good, so the host it records has to be the
+  # one this app answers on rather than the one the reader happened to be
+  # looking at. Taken from the request, a bookmarklet dragged once from
+  # localhost during setup would open localhost every time after.
+  it "carries the host this app answers on, not the request's" do
+    expect(helper.follow_bookmarklet).not_to include("test.host")
+  end
+
+  # The opened tab keeps a live reference back to the blog otherwise, and a
+  # third-party script on that page can steer it — at a sign-in form on what
+  # the reader believes is a tab they opened themselves.
+  it "severs the opener on the tab it opens" do
+    expect(helper.follow_bookmarklet).to include("noopener")
   end
 
   # Blogs publish addresses with query strings in them often enough. Handed

@@ -81,6 +81,17 @@ RSpec.describe "Subscriptions" do
     expect(response.body).to include("https://queryplanweekly.dev/")
   end
 
+  # Whatever came around it goes, before it is judged — a reader who copied
+  # an address with its whitespace meant the address. Blog does the same on
+  # its way into the column.
+  it "fills the form with an address that arrived padded" do
+    sign_in
+
+    get subscriptions_path(feed_url: " https://queryplanweekly.dev/feed ")
+
+    expect(response.body).to include("https://queryplanweekly.dev/feed")
+  end
+
   # Reflected into a field the reader is looking at, so what arrives is held
   # to the format the column is held to rather than printed as it came.
   it "drops a query parameter that is not an address" do

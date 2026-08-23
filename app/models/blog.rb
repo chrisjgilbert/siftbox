@@ -39,6 +39,24 @@ class Blog < ApplicationRecord
   # Edition::Citation's does.
   validates :feed_url, presence: true, uniqueness: true, format: { with: FETCHABLE }
 
+  # A blog built from an address somebody offered — a bookmarklet, or a query
+  # parameter typed by hand — for the follow form to be drawn from. Blank
+  # when what arrived was not an address at all, so a form filled from the
+  # outside can only ever be filled with something this app would fetch.
+  #
+  # Here rather than at the controller so the rule is stated once, and in the
+  # order a row being saved gets it: normalizes runs on assignment, so the
+  # format is checked against what the column would hold. Checked before the
+  # strip, an address carrying the whitespace it was copied with was dropped
+  # and the reader was shown an empty field with nothing said about why.
+  def self.offered(address)
+    blog = new(feed_url: address.to_s)
+
+    return new unless blog.feed_url.match?(FETCHABLE)
+
+    blog
+  end
+
   # What to call this blog. A fact about the blog rather than about any page
   # showing one, which is where it kept ending up — the archive row, the
   # sources row and the edition prompt all spelled it out, and the last of

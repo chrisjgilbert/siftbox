@@ -16,11 +16,18 @@ module ApplicationHelper
   # signed in and follows with an ordinary first-party form. Nothing about
   # them is stored in the bookmark.
   #
-  # subscriptions_url rather than a host written down: fired from a blog,
-  # nothing in the reader's browser knows where siftbox lives.
+  # noopener because the tab it opens would otherwise keep a live reference
+  # back to the blog, and a third-party script on that page can steer a tab
+  # it holds — at a sign-in form on what the reader believes is a tab they
+  # opened themselves.
+  #
+  # The anchor rather than focusing the field on arrival: the section is the
+  # last thing on a long page and needs the scroll, but a filled field with
+  # the cursor already in it is a follow one keystroke from any page that can
+  # link a signed-in reader here.
   def follow_bookmarklet
-    "javascript:window.open('#{subscriptions_url}?feed_url='" \
-      "+encodeURIComponent(location.href)+'#blogs')"
+    "javascript:window.open('#{canonical_url(subscriptions_path)}?feed_url='" \
+      "+encodeURIComponent(location.href)+'#blogs','_blank','noopener')"
   end
 
   # The mark's stroke weight compensates for size: it thickens as the mark
@@ -32,5 +39,20 @@ module ApplicationHelper
     return 5 if size <= 30
 
     4
+  end
+
+  private
+
+  # Where this app answers, rather than where this request came in.
+  #
+  # For the things that outlive the request that made them — a link in an
+  # email, a bookmarklet kept in a bookmarks bar. Both are wrong if they
+  # record whichever Host header happened to arrive, and config.hosts is not
+  # set, so that is any of them. This is the one place the app already writes
+  # down where it answers, kept for exactly that reason.
+  def canonical_url(path)
+    options = Rails.configuration.action_mailer.default_url_options
+
+    root_url(**options).chomp("/") + path
   end
 end
