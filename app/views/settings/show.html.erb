@@ -6,4 +6,18 @@
     <p class="settings__address"><%= inbound_address %></p>
     <p class="settings__note"><%= t(".inbound_address.note") %></p>
   </section>
+
+  <%# Dragged to the bookmarks bar rather than clicked. Clicking it here does
+      nothing at all, which is the right failure: the CSP is script_src :self,
+      so the one place this cannot run is the page offering it.
+
+      A raw anchor rather than link_to, which is for GET destinations — see
+      .claude/rules/views.md. This href is not a destination; it is a line of
+      script the reader's own browser runs, from a bookmark, on somebody
+      else's page. Its text becomes the bookmark's name, so it reads as one. %>
+  <section class="settings__section">
+    <h2 class="settings__heading"><%= t(".bookmarklet.heading") %></h2>
+    <a class="settings__bookmarklet" href="<%= @bookmarklet.href %>"><%= t(".bookmarklet.label") %></a>
+    <p class="settings__note"><%= t(".bookmarklet.note") %></p>
+  </section>
 </main>

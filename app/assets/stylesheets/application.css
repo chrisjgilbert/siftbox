@@ -921,6 +921,27 @@ a {
   text-wrap: pretty;
 }
 
+/* Dragged rather than clicked, so it says grab rather than pointer. Set like
+   the Follow button it ends up driving, because that is what it is: the same
+   control, moved into the reader's own browser. */
+.settings__bookmarklet {
+  display: inline-block;
+  margin-top: 24px;
+  padding: 14px 22px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: grab;
+}
+
+.settings__bookmarklet:hover {
+  background: var(--blue);
+}
+
 @media (min-width: 720px) {
   .settings {
     padding: 0 var(--gutter) 72px;
@@ -937,6 +958,14 @@ a {
 
   .settings__address {
     font-size: 19px;
+  }
+
+  /* Lifted with the heading above it and with the Follow button it stands in
+     for. Left at its mobile size it read a notch smaller than both, which is
+     the drift the note over the sources group warns about: the spacing is
+     untokenised on purpose, the type scale is not. */
+  .settings__bookmarklet {
+    font-size: 11px;
   }
 }
 

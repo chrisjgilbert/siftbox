@@ -135,6 +135,12 @@ en:
       title: Sign in
   settings:
     show:
+      bookmarklet:
+        heading: Follow while reading
+        label: Follow in siftbox
+        note: Drag this to your bookmarks bar. On a blog you want, click it and
+          siftbox opens with the address already filled in — the blog's own page
+          will do, it finds the feed from there.
       inbound_address:
         heading: Inbound address
         note: Point every subscription here. Nothing else lands in this feed.

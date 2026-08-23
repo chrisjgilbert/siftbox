@@ -91,4 +91,29 @@ RSpec.describe Blog do
 
     expect(blog.name).to eq("https://danluu.com/atom.xml")
   end
+
+  # What the Subscriptions page fills its follow form from: whatever a
+  # bookmarklet sent over, which is a page address as often as a feed one.
+  it "takes an address it could be asked to fetch" do
+    expect(Blog.offered("https://queryplanweekly.dev/feed").feed_url)
+      .to eq("https://queryplanweekly.dev/feed")
+  end
+
+  # Normalised before it is judged, which is the order a row being saved
+  # gets: the strip runs on assignment, so the format is checked against what
+  # the column would hold rather than against what arrived. Checked in the
+  # controller instead, an address pasted with its whitespace was dropped and
+  # the reader was shown an empty field with nothing said about why.
+  it "takes an address that arrived with whitespace around it" do
+    expect(Blog.offered("  https://queryplanweekly.dev/feed  ").feed_url)
+      .to eq("https://queryplanweekly.dev/feed")
+  end
+
+  it "gives back a blank blog when what arrived is not an address" do
+    expect(Blog.offered("javascript:alert(1)").feed_url).to be_nil
+  end
+
+  it "gives back a blank blog when nothing arrived" do
+    expect(Blog.offered(nil).feed_url).to be_nil
+  end
 end
