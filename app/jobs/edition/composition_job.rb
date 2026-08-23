@@ -86,7 +86,7 @@ class Edition::CompositionJob < ApplicationJob
     window = Edition::Window.new(Time.current)
     return skipped if window.empty?
 
-    Edition::Editor.new(window.edition, window.newsletters).compose
+    Edition::Editor.new(window.edition, window.sources).compose
   end
 
   private
@@ -97,6 +97,6 @@ class Edition::CompositionJob < ApplicationJob
   # morning where the scheduler never fired look identical in the log without
   # this line, and they want different fixing.
   def skipped
-    Rails.logger.info("no newsletters since the last edition closed; nothing to compose")
+    Rails.logger.info("nothing has arrived since the last edition closed; nothing to compose")
   end
 end

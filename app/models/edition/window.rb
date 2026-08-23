@@ -1,5 +1,6 @@
-# What the next edition covers: every newsletter that became the reader's to
-# read since the last edition closed, up to the moment composition starts.
+# What the next edition covers: everything that became the reader's to read
+# since the last edition closed, up to the moment composition starts — the
+# mail that arrived, and the blog posts this app first saw.
 #
 # A high-water mark rather than a fixed 07:00→07:00 range, per the PRD. Under
 # fixed ranges a failed run, or mail landing at 07:02, falls into a gap and is
@@ -36,11 +37,22 @@ class Edition::Window
     @_newsletters ||= arrived.or(released).oldest_first.to_a
   end
 
-  # Asked before an edition is built, because the PRD skips an empty window
-  # silently and Edition::Editor cannot: its completeness check passes
-  # vacuously over no newsletters and it would publish an empty edition.
+  # Whole rows again, and for the same reason: the prompt reads body_html and
+  # Blog::Post::FEED_COLUMNS omits it.
+  #
+  # One clause where the mail has two. A post has no confirmation pen to be
+  # released out of, so the moment it became the reader's to read and the
+  # moment it arrived are the same moment.
+  def posts
+    @_posts ||= editable(arrived_posts)
+  end
+
+  def sources
+    @_sources ||= Edition::Sources.new(newsletters: newsletters, posts: posts)
+  end
+
   def empty?
-    newsletters.empty?
+    sources.empty?
   end
 
   # window_started_at and window_ended_at describe the received_at axis only.
@@ -61,6 +73,33 @@ class Edition::Window
   end
 
   private
+
+  # includes rather than a join, the way the archive does it: Edition::Prompt
+  # quotes each post under its blog's name, so without the preload a window of
+  # six posts reads six blogs one at a time.
+  def arrived_posts
+    Blog::Post
+      .where("received_at > :after AND received_at <= :through",
+        after: started_at, through: ended_at)
+      .includes(:blog).oldest_first.to_a
+  end
+
+  # A stub is stored for the archive and kept out of the edition, per
+  # Blog::Post::EDITORIAL_MINIMUM.
+  #
+  # Held back rather than dropped in silence: a post that never reached an
+  # edition and a post nobody wrote about look identical from the reader's
+  # side, and only one of them is this app's doing.
+  def editable(posts)
+    enough, thin = posts.partition(&:enough_to_write_from?)
+    thin.each { |post| Rails.logger.info(held_back(post)) }
+
+    enough
+  end
+
+  def held_back(post)
+    "post #{post.id} carries too little to write from; left out of the edition"
+  end
 
   # Half-open, and both ends matter. The previous edition's window is closed
   # at its top, so mail landing on that exact instant belongs to it rather

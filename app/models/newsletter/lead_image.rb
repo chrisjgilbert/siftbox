@@ -21,13 +21,26 @@ class Newsletter::LeadImage
   # it resolves to the sender's own host the same as https.
   HOSTED_SCHEMES = %w[http:// https:// //].freeze
 
-  # The one relative form this app writes itself: Newsletter::InlineImages
-  # rewrites every cid: reference to this path at ingest, so an inline image
-  # can still lead. A sender can forge the shape, but forging it buys nothing
-  # — Newsletters::ImagesController only ever serves an image, and answers 404
-  # for a blob attached to another newsletter. /newsletters/:id is the route
-  # that writes, and this does not match it.
-  INLINE_IMAGE_PATH = %r{\A/newsletters/\d+/images/[^/?#]+\z}
+  # The relative forms this app writes itself, and only those.
+  # Newsletter::InlineImages rewrites every cid: reference to the first at
+  # ingest, and RemoteImages rewrites a hotlinked source to one or the other
+  # once it has fetched it — so a stored image can still lead.
+  #
+  # A publisher can forge either shape, and forging it buys nothing: both
+  # images controllers only ever serve an image, and both answer 404 for a
+  # blob attached to another record. Neither pattern matches a route that
+  # writes.
+  HOSTED_PATHS = %w[blog_posts newsletters].freeze
+
+  INLINE_IMAGE_PATH = %r{\A/(#{Regexp.union(HOSTED_PATHS)})/\d+/images/[^/?#]+\z}
+
+  # The lead in one HTML string, for a caller that holds no Body and wants
+  # none. Both records capture their lead with the identical expression, and
+  # nothing held the two in step — the same shape Newsletter::Body.prose was
+  # hoisted for.
+  def self.url_in(html)
+    new(Newsletter::Body.new(html)).url
+  end
 
   # Takes a Newsletter::Body rather than a string, so the caller decides what
   # that body knows — the reader hands one built with the stored image sizes,

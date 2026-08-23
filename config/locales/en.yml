@@ -1,14 +1,36 @@
 en:
   activerecord:
+    attributes:
+      blog:
+        # So a refusal reads "Feed address is not a feed" rather than "Feed
+        # url ...", which is what Rails humanises the column to. The messages
+        # below are written to follow this, and it is the form's own label.
+        feed_url: Feed address
     errors:
       models:
+        blog:
+          attributes:
+            feed_url:
+              aggregator: looks like a link aggregator. Siftbox reads blogs — feeds
+                whose items carry the writing itself rather than a link to it.
+              empty: has nothing in it yet. A feed with no items is one siftbox cannot
+                tell apart from a page that is not a feed at all.
+              unreachable: could not be read. The address may be wrong, or the server
+                may be refusing us.
+              unreadable: is not a feed. Check the address points at the feed rather
+                than at the page it belongs to.
         edition:
           attributes:
             stories:
               duplicate_position: claim the same position twice.
+        edition/citation:
+          attributes:
+            base:
+              one_source: must name either a newsletter or a blog post, not both.
         edition/story:
           attributes:
             citations:
+              duplicate_blog_post: name the same blog post twice.
               duplicate_newsletter: name the same newsletter twice.
   application:
     masthead:
@@ -16,6 +38,32 @@ en:
       originals: Originals
       settings: Settings
       subscriptions: Subscriptions
+  blogs:
+    count:
+      one: 1 post
+      other: "%{count} posts"
+    kind: Blog
+    no_image: No image in post
+    no_image_compact: No image
+    row:
+      confirm: Remove %{name}? Its posts go too, and so do the citations in
+        published editions that name them.
+      remove: Remove
+      remove_blog: Remove %{name}
+    section:
+      empty: No blogs yet. Paste a feed address above and siftbox will read it
+        every hour.
+      heading: Blogs
+      label: Feed address
+      note: The feed address, or the blog's home page — siftbox will find the feed
+        from it. Read hourly; new posts go in the archive and the next edition.
+      placeholder: https://example.dev
+      submit: Follow
+    state:
+      failing: Not answering for %{duration}
+      polled: Checked %{duration} ago
+      unpolled: Not checked yet
+    too_many: That is a lot of feeds at once. Try again in a minute.
   date:
     formats:
       edition_masthead: "%A %-d %B"
@@ -54,8 +102,8 @@ en:
     index:
       empty: Nothing yet. Point a subscription at %{address} and it will show up here.
       end_of_feed:
-        one: End of feed — 1 issue
-        other: End of feed — %{count} issues
+        one: End of feed — 1 item
+        other: End of feed — %{count} items
       line: Originals
       no_image: No image in email
       no_image_compact: No image

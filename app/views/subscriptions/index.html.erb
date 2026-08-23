@@ -4,4 +4,6 @@
   <% @subscriptions.sections.each do |section| %>
     <%= render "subscriptions/section", section: section %>
   <% end %>
+
+  <%= render "blogs/section", blog: @subscriptions.blog, roster: @subscriptions.blogs %>
 </main>

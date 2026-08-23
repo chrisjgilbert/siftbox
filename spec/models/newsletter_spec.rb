@@ -71,7 +71,7 @@ RSpec.describe Newsletter do
 
   # SQLite stops reading a string literal at a NUL, so one stray byte fails
   # the INSERT. Held on the record rather than in the mail reader, because
-  # Newsletter::InlineImages and Newsletter::RemoteImages both rewrite
+  # Newsletter::InlineImages and RemoteImages both rewrite
   # body_html later without going near it.
   it "strips a null byte from a body rewritten after ingest" do
     newsletter = create(:newsletter)
@@ -307,6 +307,17 @@ RSpec.describe Newsletter do
   it "finds the mail no edition has cited" do
     uncited = create(:newsletter)
     create(:edition_citation, newsletter: create(:newsletter))
+
+    expect(Newsletter.uncited).to eq([ uncited ])
+  end
+
+  # The trap under NOT IN. A citation naming a blog post leaves newsletter_id
+  # NULL, and `id NOT IN (NULL, ...)` is NULL rather than true for every row
+  # — so one post citation anywhere in the table would answer "no mail is
+  # uncited" and read as an ordinary quiet day.
+  it "still finds uncited mail once an edition has cited a blog post" do
+    uncited = create(:newsletter)
+    create(:edition_citation, newsletter: nil, blog_post: create(:blog_post))
 
     expect(Newsletter.uncited).to eq([ uncited ])
   end

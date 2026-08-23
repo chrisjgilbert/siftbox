@@ -64,4 +64,38 @@ RSpec.describe Subscriptions do
 
     expect(section("bounced")).not_to be_any
   end
+
+  it "lists the roster newest first, so a blog just added is at the top" do
+    create(:blog, feed_url: "https://first.dev/feed", title: "First")
+    create(:blog, feed_url: "https://second.dev/feed", title: "Second")
+
+    expect(Subscriptions.new.blogs.map(&:name)).to eq([ "Second", "First" ])
+  end
+
+  # The grouped count answers nothing for a blog with no posts, and the row
+  # has to read that as none rather than as one.
+  it "counts a blog with nothing stored yet as none" do
+    create(:blog, title: "Query Plan Weekly")
+
+    expect(Subscriptions.new.blogs.map(&:count)).to eq([ "0 posts" ])
+  end
+
+  it "counts the posts each blog has stored" do
+    blog = create(:blog, title: "Query Plan Weekly")
+    create_list(:blog_post, 2, blog: blog)
+
+    expect(Subscriptions.new.blogs.map(&:count)).to eq([ "2 posts" ])
+  end
+
+  # A fresh one on an ordinary visit; the refused one when BlogsController
+  # re-renders this page, so the reader sees what they typed and why.
+  it "hands the form a blog to fill in" do
+    expect(Subscriptions.new.blog).to be_a_new(Blog)
+  end
+
+  it "hands the form the blog it was given" do
+    refused = Blog.new(feed_url: "https://news.ycombinator.com/rss")
+
+    expect(Subscriptions.new(blog: refused).blog).to eq(refused)
+  end
 end

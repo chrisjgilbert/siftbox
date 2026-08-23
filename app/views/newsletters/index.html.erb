@@ -8,7 +8,7 @@
         <span class="feed__group-sublabel"><%= group.sublabel %></span>
       </div>
 
-      <% group.newsletters.each do |row| %>
+      <% group.items.each do |row| %>
         <%= render row.to_partial_path, row: row %>
       <% end %>
     </section>
@@ -17,7 +17,7 @@
   <% if @feed.groups.any? %>
     <div class="feed__end">
       <p class="feed__end-line">
-        <%= t("newsletters.index.end_of_feed", count: @feed.issue_count) %>
+        <%= t("newsletters.index.end_of_feed", count: @feed.item_count) %>
       </p>
       <p class="feed__end-line">
         <%= t("newsletters.index.subscribe", address: inbound_address) %>

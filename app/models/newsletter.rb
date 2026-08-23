@@ -42,7 +42,7 @@ class Newsletter < ApplicationRecord
   # SQLite stops reading a string literal at a NUL, so one stray byte fails
   # the INSERT and loses the newsletter. Held here rather than where the mail
   # is read, because it is a fact about storing a string and not about
-  # reading MIME — Newsletter::InlineImages and Newsletter::RemoteImages both
+  # reading MIME — Newsletter::InlineImages and RemoteImages both
   # rewrite body_html later without going near the mail reader.
   normalizes :body_html, :sender_email, :sender_name, :snippet, :subject,
     with: ->(value) { value.delete("\0") }
@@ -127,8 +127,14 @@ class Newsletter < ApplicationRecord
   # it from the archive the citation links to, and releasing it later would
   # carry it into a second edition — so the backfill leaves the window an
   # edition covered exactly as it found it.
+  #
+  # Through .citing_mail rather than the whole table, and it is not a
+  # narrowing for tidiness. A citation naming a blog post leaves newsletter_id
+  # NULL, and SQL reads `id NOT IN (NULL, 4)` as NULL rather than as true — so
+  # one post citation anywhere in the table would answer that no mail is
+  # uncited at all, which reads as an ordinary quiet day rather than as a bug.
   def self.uncited
-    where.not(id: Edition::Citation.select(:newsletter_id))
+    where.not(id: Edition::Citation.citing_mail.select(:newsletter_id))
   end
 
   def lead_image?
@@ -162,7 +168,7 @@ class Newsletter < ApplicationRecord
   # at ingest and for newsletters stored before the column existed. Safe to
   # run again: the same body gives the same answer.
   def capture_lead_image
-    update!(lead_image_url: Newsletter::LeadImage.new(Newsletter::Body.new(body_html)).url)
+    update!(lead_image_url: Newsletter::LeadImage.url_in(body_html))
   end
 
   # Idempotent because the heuristic gets pointed at stored rows again: the
@@ -213,7 +219,7 @@ class Newsletter < ApplicationRecord
   end
 
   # Where the rewritten image references in body_html point. Written by
-  # Newsletter::InlineImages at ingest and Newsletter::RemoteImages just
+  # Newsletter::InlineImages at ingest and RemoteImages just
   # after, then read back by Newsletter::Source — so it has to be built in
   # one place, not three.
   def inline_image_path(blob)

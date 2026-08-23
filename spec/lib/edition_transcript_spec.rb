@@ -15,8 +15,14 @@ RSpec.describe EditionTranscript do
     create(:edition_citation, story: story, newsletter: newsletter)
   end
 
-  def transcript(edition, newsletters)
-    EditionTranscript.new(edition.reload, newsletters).text
+  def cite_post(story, post)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: post)
+  end
+
+  def transcript(edition, newsletters, posts: [])
+    sources = Edition::Sources.new(newsletters: newsletters, posts: posts)
+
+    EditionTranscript.new(edition.reload, sources).text
   end
 
   it "heads the edition with its number and the day it covers" do
@@ -94,7 +100,7 @@ RSpec.describe EditionTranscript do
 
     printed = transcript(edition, [ levine ])
 
-    expect(printed).to include("[#{levine.id}] Money Stuff — The Figma S-1")
+    expect(printed).to include("[N#{levine.id}] Money Stuff — The Figma S-1")
   end
 
   # The same rule the edition page follows: a window with no evergreen items
@@ -138,7 +144,7 @@ RSpec.describe EditionTranscript do
 
     printed = transcript(edition, [ levine ])
 
-    expect(printed).to match(/\[#{levine.id}\] Money Stuff\D+2 stories/)
+    expect(printed).to match(/\[N#{levine.id}\] Money Stuff\D+2 stories/)
   end
 
   it "says when a newsletter in the window was cited by nothing" do
@@ -147,7 +153,7 @@ RSpec.describe EditionTranscript do
 
     printed = transcript(edition, [ orphan ])
 
-    expect(printed).to match(/\[#{orphan.id}\] Offscreen\D+no story/)
+    expect(printed).to match(/\[N#{orphan.id}\] Offscreen\D+no story/)
   end
 
   it "counts the window it was given" do
@@ -157,5 +163,80 @@ RSpec.describe EditionTranscript do
     printed = transcript(edition, newsletters)
 
     expect(printed).to include("3 NEWSLETTERS")
+  end
+
+  # Milestone 2's own acceptance is read here: an edition regenerated over a
+  # window containing posts has to show that it cited every source and named
+  # the blogs correctly. A transcript blind to posts reads an edition that
+  # dropped one as clean.
+  it "names the blog and the title of a post a story cites" do
+    edition = create(:edition)
+    blog = create(:blog, title: "Query Plan Weekly")
+    post = create(:blog_post, blog: blog, title: "Rewriting the planner")
+    cite_post(story_in(edition, Edition::Story::LEAD), post)
+
+    printed = transcript(edition, [], posts: [ post ])
+
+    expect(printed).to include("[P#{post.id}] Query Plan Weekly — Rewriting the planner")
+  end
+
+  # A newsletter and a post can both be id 7, and the raw response carries
+  # them in two separate lists. The letter is what says which one a line
+  # means, and what to grep for.
+  it "tells a post apart from a newsletter that shares its id" do
+    edition = create(:edition)
+    newsletter = create(:newsletter, sender_name: "Money Stuff")
+    post = create(:blog_post, id: newsletter.id, blog: create(:blog, title: "Query Plan Weekly"))
+    story = story_in(edition, Edition::Story::LEAD)
+    cite(story, newsletter)
+    cite_post(story, post)
+
+    printed = transcript(edition, [ newsletter ], posts: [ post ])
+
+    expect(printed).to include("[N#{newsletter.id}] Money Stuff")
+    expect(printed).to include("[P#{post.id}] Query Plan Weekly")
+  end
+
+  it "lists every post in the window against the stories citing it" do
+    edition = create(:edition)
+    post = create(:blog_post, blog: create(:blog, title: "Query Plan Weekly"))
+    cite_post(story_in(edition, Edition::Story::LEAD), post)
+    cite_post(story_in(edition, Edition::Story::BRIEFLY), post)
+
+    printed = transcript(edition, [], posts: [ post ])
+
+    expect(printed).to match(/\[P#{post.id}\] Query Plan Weekly\D+2 stories/)
+  end
+
+  it "says when a post in the window was cited by nothing" do
+    edition = create(:edition)
+    orphan = create(:blog_post, blog: create(:blog, title: "Offscreen"))
+
+    printed = transcript(edition, [], posts: [ orphan ])
+
+    expect(printed).to match(/\[P#{orphan.id}\] Offscreen\D+no story/)
+  end
+
+  it "counts the posts in the window it was given" do
+    edition = create(:edition)
+    posts = create_list(:blog_post, 2)
+
+    printed = transcript(edition, [], posts: posts)
+
+    expect(printed).to include("2 POSTS")
+  end
+
+  # Every other example gives its blog a title, so the fallback was never
+  # reached here — and blogs.title defaults to "" with a real feed publishing
+  # an empty one, which printed a citation with nothing before the dash.
+  it "names a post's blog by its feed address when it published no title" do
+    edition = create(:edition)
+    blog = create(:blog, title: "", feed_url: "https://danluu.com/atom.xml")
+    post = create(:blog_post, blog: blog, title: "The cost of a cache miss")
+    cite_post(story_in(edition, Edition::Story::LEAD), post)
+
+    printed = transcript(edition, [], posts: [ post ])
+
+    expect(printed).to include("[P#{post.id}] https://danluu.com/atom.xml")
   end
 end

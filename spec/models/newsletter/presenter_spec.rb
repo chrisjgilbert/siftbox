@@ -82,4 +82,10 @@ RSpec.describe Newsletter::Presenter do
       expect(Newsletter::Presenter.new(newsletter).timestamp).to eq("1 Jun")
     end
   end
+
+  it "says imageless mail carried no image" do
+    presenter = Newsletter::Presenter.new(build_stubbed(:newsletter))
+
+    expect(presenter.no_image).to eq("No image in email")
+  end
 end

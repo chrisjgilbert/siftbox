@@ -220,7 +220,7 @@ blob libvips cannot read is reported and left as it is.
 
 Ingest fetches the images newsletters link to, so URLs written by anyone who
 can email the inbound address decide where this app makes outbound requests.
-`Newsletter::ImageDownload::Destination` refuses anything resolving off the
+`Download::Destination` refuses anything resolving off the
 public internet, but the durable control is at the network layer. See
 "Outbound network" in `README.md` for why it is worth having both.
 
@@ -305,6 +305,54 @@ Two entries, one of them `Edition::CompositionJob.perform_later() [ 0 7 * * *
 Europe/London ]`. Nothing there means the scheduler did not start; the app
 logs say why.
 
+**A second recurring task joined it.** `poll_blogs` runs `Blog::PollJob`
+every hour at minute 20, asking each blog on the roster whether its feed has
+anything new. It installs itself the same way and needs confirming the same
+way — the command above should list three entries once it has been deployed,
+not two.
+
+Nothing polls until a blog exists. Blogs are added on the Subscriptions page,
+under Blogs: paste the feed address, or the blog's home page and siftbox will
+find the feed from it.
+
+The feed is sampled while you wait — about a second, and five for the largest
+real feed measured — which is what makes a refusal something you are told
+rather than something you work out later. The reading itself happens behind
+you: the row appears at once saying "Not checked yet" and fills in within
+seconds. It does not wait for the top of the hour.
+
+Four things get refused there, each with a reason on the page:
+
+- **A link aggregator.** Hacker News, lobste.rs and Reddit publish items whose
+  whole body is a link back to their own thread — a median of eight
+  characters. `docs/blogs-rss.md` sets out why an edition composed from those
+  is unreadable. A feed fewer than half of whose items carry a hundred
+  characters of prose is turned away. That threshold sits between an
+  aggregator's eight and the three hundred or so a blog publishing excerpts
+  carries, so a summary-only blog is still in scope.
+- **An address that is not a feed and announces none.** Usually a typo, or a
+  page whose feed link has gone. A page that does announce one is followed to
+  it, so pasting a home page works.
+- **An address that could not be read at all** — wrong host, refused
+  connection, or anything `Download` will not reach, which includes every
+  private address.
+- **A feed with no items in it yet.** A blog set up the day before its first
+  post: come back once it has published.
+
+Note what is *not* refused: a Planet-style rollup that syndicates whole posts
+reads exactly like a blog to this test, because as far as the test is
+concerned it is one. It is out of scope in `docs/blogs-rss.md` and unenforced
+here.
+
+The first poll of a new blog stores its whole back catalogue in the archive
+but keeps everything older than a week out of the edition window, so adding a
+long-running blog does not put years of writing into the next morning's
+edition.
+
+Removing a blog on the same page destroys its posts, and the citations in
+published editions that name them. That is the trade of removing a source
+rather than muting one.
+
 The first firing has three possible outcomes and they read differently in
 the log:
 
@@ -356,7 +404,7 @@ the whole app, and nothing outside it needs backing up at all.
 
 Worth knowing that it now grows: self-hosting images means a heavily
 illustrated newsletter costs real disk, bounded per newsletter by
-`Newsletter::RemoteImages::MAX_IMAGES` and
+`RemoteImages::MAX_IMAGES` and
 `Newsletter::ImageDownload::MAX_BYTES`.
 
 ### Take one before the read-state migration

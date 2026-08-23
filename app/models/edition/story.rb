@@ -23,12 +23,23 @@ class Edition::Story < ApplicationRecord
   # Scoped to the columns a citation is drawn from, the way the feed and the
   # pen are. Unscoped this selects newsletters.*, and an edition's
   # citations then read every cited body in full to print a list of senders.
-  has_many :newsletters, -> { for_citation }, through: :citations
+  #
+  # Ordered, and it has to be said rather than assumed. Without it the order
+  # is whichever index SQLite reaches for, which differs between a preloaded
+  # edition and a lazily-loaded one — so the page and the transcript could
+  # list one story's sources two different ways, and making the mail index
+  # partial to match the post one would silently re-order every edition
+  # already published. Oldest first is the order the prompt quoted them in.
+  has_many :newsletters, -> { for_citation.oldest_first }, through: :citations
+  # The second source type, reached the same way and scoped the same way. A
+  # story cites mail, posts, or both, and the page draws them as one list.
+  has_many :blog_posts, -> { for_citation.oldest_first }, through: :citations
 
   validates :body, presence: true
   validates :position, presence: true, uniqueness: { scope: :edition }
   validates :section, presence: true, inclusion: { in: SECTIONS }
 
+  validate :citations_point_at_distinct_blog_posts
   validate :citations_point_at_distinct_newsletters
 
   # Position is unique within an edition, so this is already a total order and
@@ -51,19 +62,36 @@ class Edition::Story < ApplicationRecord
 
   private
 
-  # Citation's own uniqueness validation and the unique index behind it both
+  # Citation's own uniqueness validation and the unique indexes behind it both
   # answer from what is already in the table, so neither sees a story citing
-  # one newsletter twice in a graph that has not been saved yet — which is
-  # the exact shape composition builds, out of model output that is perfectly
-  # capable of naming the same source twice in one story. Without this the
+  # one source twice in a graph that has not been saved yet — which is the
+  # exact shape composition builds, out of model output that is perfectly
+  # capable of naming the same source twice in one story. Without these the
   # insert fails on the index and Rails reports "Stories is invalid", naming
-  # neither the story nor the newsletter.
-  # In-memory target rather than #citations, which would load the association
-  # and leave a validated story answering out of a stale cache.
+  # neither the story nor the source.
+  def citations_point_at_distinct_blog_posts
+    return if cites_distinct?(:blog_post_id)
+
+    errors.add(:citations, :duplicate_blog_post)
+  end
+
   def citations_point_at_distinct_newsletters
-    cited = association(:citations).target.map(&:newsletter_id)
-    return if cited.length == cited.uniq.length
+    return if cites_distinct?(:newsletter_id)
 
     errors.add(:citations, :duplicate_newsletter)
+  end
+
+  # Compacted, and that is the whole reason this is one column at a time
+  # rather than a check that the citations are distinct rows. Every post
+  # citation leaves newsletter_id nil and every mail citation leaves
+  # blog_post_id nil, so a story citing one newsletter and two posts carries
+  # two nil newsletter_ids — which is not a newsletter named twice.
+  #
+  # In-memory target rather than #citations, which would load the association
+  # and leave a validated story answering out of a stale cache.
+  def cites_distinct?(key)
+    cited = association(:citations).target.map(&key).compact
+
+    cited.length == cited.uniq.length
   end
 end

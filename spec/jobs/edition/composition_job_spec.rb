@@ -3,11 +3,11 @@ require "rails_helper"
 RSpec.describe Edition::CompositionJob do
   # The answer a model would send for these newsletters: one story citing
   # every one of them, which is what the editor's completeness check demands.
-  def answer(newsletters)
+  def answer(newsletters, posts: [])
     {
       stories: [ {
         headline: "Figma filed", body: "The S-1 landed.", section: "lead",
-        newsletter_ids: newsletters.map(&:id)
+        newsletter_ids: newsletters.map(&:id), post_ids: posts.map(&:id)
       } ]
     }.to_json
   end
@@ -47,18 +47,24 @@ RSpec.describe Edition::CompositionJob do
   # back because Edition::Draft reads it on the way to building the client it
   # is about to be given instead, and it fetches rather than reads: absent, as
   # it is here, the example fails on a KeyError about the variable.
-  it "publishes an edition covering the newsletters that have arrived" do
-    newsletter = create(:newsletter, received_at: 1.hour.ago)
+  def through(client)
     key = ENV["ANTHROPIC_API_KEY"]
     ENV["ANTHROPIC_API_KEY"] = "not-a-key"
-    allow(Anthropic::Client)
-      .to receive(:new).and_return(FakeAnthropic.new(text: answer([ newsletter ])))
+    allow(Anthropic::Client).to receive(:new).and_return(client)
 
-    Edition::CompositionJob.perform_now
+    yield
+  ensure
+    ENV["ANTHROPIC_API_KEY"] = key
+  end
+
+  it "publishes an edition covering the newsletters that have arrived" do
+    newsletter = create(:newsletter, received_at: 1.hour.ago)
+
+    through(FakeAnthropic.new(text: answer([ newsletter ]))) do
+      Edition::CompositionJob.perform_now
+    end
 
     expect(Edition.last.stories.flat_map(&:newsletters)).to eq([ newsletter ])
-
-    ENV["ANTHROPIC_API_KEY"] = key
   end
 
   # Whole rows, because Edition::Prompt reads body_html — the window is what
@@ -71,7 +77,7 @@ RSpec.describe Edition::CompositionJob do
     Edition::CompositionJob.perform_now
 
     expect(Edition::Editor)
-      .to have_received(:new).with(kind_of(Edition), [ newsletter ])
+      .to have_received(:new).with(kind_of(Edition), having_attributes(newsletters: [ newsletter ]))
   end
 
   it "publishes nothing when no newsletters have arrived since the last edition" do
@@ -94,14 +100,14 @@ RSpec.describe Edition::CompositionJob do
     expect(Edition::Editor).not_to have_received(:new)
   end
 
-  # A morning with no mail and a morning the job never ran look identical
-  # otherwise, and the difference is the one thing worth knowing.
+  # A morning with nothing in the window and a morning the job never ran look
+  # identical otherwise, and the difference is the one thing worth knowing.
   it "says in the log that the window was empty" do
     allow(Rails.logger).to receive(:info)
 
     Edition::CompositionJob.perform_now
 
-    expect(Rails.logger).to have_received(:info).with(/no newsletters/)
+    expect(Rails.logger).to have_received(:info).with(/nothing has arrived/)
   end
 
   # Three full-price requests have already been spent on this window. A retry
@@ -182,5 +188,27 @@ RSpec.describe Edition::CompositionJob do
 
     expect { Edition::CompositionJob.perform_now }
       .not_to have_enqueued_job(Edition::CompositionJob)
+  end
+
+  it "publishes an edition covering the posts that have arrived" do
+    post = create(:blog_post, received_at: 1.hour.ago)
+
+    through(FakeAnthropic.new(text: answer([], posts: [ post ]))) do
+      Edition::CompositionJob.perform_now
+    end
+
+    expect(Edition.sole.stories.sole.blog_posts).to eq([ post ])
+  end
+
+  # A morning with a post and no mail is not an empty window. Without this the
+  # job would skip and the reader would get nothing, on a day their blogs
+  # published.
+  it "composes an edition on a day only a post arrived" do
+    create(:blog_post, received_at: 1.hour.ago)
+    editor = editor_answering
+
+    Edition::CompositionJob.perform_now
+
+    expect(editor).to have_received(:compose)
   end
 end

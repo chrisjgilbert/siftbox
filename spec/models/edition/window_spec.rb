@@ -222,4 +222,125 @@ RSpec.describe Edition::Window do
   it "leaves the edition unsaved for the editor to fill in" do
     expect(window.edition).not_to be_persisted
   end
+
+  it "covers a post this app first saw after the last edition's cutoff" do
+    published_through(yesterday_morning)
+    post = create(:blog_post, received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts).to eq([ post ])
+  end
+
+  it "leaves out a post the last edition already covered" do
+    published_through(yesterday_morning)
+    create(:blog_post, received_at: yesterday_morning - 2.hours)
+
+    expect(window.posts).to be_empty
+  end
+
+  # received_at rather than published_at, and the difference is the whole
+  # reason blog_posts carries both. A feed hands over a back catalogue, so a
+  # post can be published years before this app ever reads it — dating the
+  # window on the publisher's claim would put an archive into one edition.
+  it "covers a post published long ago but first seen inside the window" do
+    published_through(yesterday_morning)
+    post = create(:blog_post, published_at: 3.years.before(morning),
+      received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts).to eq([ post ])
+  end
+
+  it "leaves out a post that arrived after composition started" do
+    published_through(yesterday_morning)
+    create(:blog_post, received_at: morning + 1.minute)
+
+    expect(window.posts).to be_empty
+  end
+
+  it "reads posts oldest first" do
+    published_through(yesterday_morning)
+    second = create(:blog_post, received_at: yesterday_morning + 3.hours)
+    first = create(:blog_post, received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts).to eq([ first, second ])
+  end
+
+  # Whole rows for the same reason the newsletters are: Edition::Prompt reads
+  # body_html, and the feed's column list leaves it out.
+  it "reads a post's whole row" do
+    published_through(yesterday_morning)
+    post = create(:blog_post, received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts.sole.body_html).to eq(post.body_html)
+  end
+
+  it "is not empty when only a post arrived" do
+    published_through(yesterday_morning)
+    create(:blog_post, received_at: yesterday_morning + 2.hours)
+
+    expect(window).not_to be_empty
+  end
+
+  it "hands the editor both kinds of source" do
+    published_through(yesterday_morning)
+    newsletter = create(:newsletter, received_at: yesterday_morning + 1.hour)
+    post = create(:blog_post, received_at: yesterday_morning + 2.hours)
+
+    sources = window.sources
+
+    expect(sources.newsletters).to eq([ newsletter ])
+    expect(sources.posts).to eq([ post ])
+  end
+
+  # A stub is stored for the archive and kept out of the edition. A blog that
+  # publishes an essay as a run of linked fragments would otherwise have the
+  # editor write a lead story from a title and two lines, which means writing
+  # the rest of it.
+  def stub_post(received_at:)
+    create(:blog_post, received_at: received_at, body_html: "<p>More soon.</p>")
+  end
+
+  it "leaves a post the editor could not write from out of the sources" do
+    published_through(yesterday_morning)
+    stub_post(received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts).to be_empty
+  end
+
+  it "is empty when the only post that arrived was a stub" do
+    published_through(yesterday_morning)
+    stub_post(received_at: yesterday_morning + 2.hours)
+
+    expect(window).to be_empty
+  end
+
+  # Held back, not dropped in silence. A post that never reached an edition
+  # and a post nobody wrote about look identical from the reader's side, and
+  # only one of them is this app's doing.
+  it "says which post it held back" do
+    published_through(yesterday_morning)
+    post = stub_post(received_at: yesterday_morning + 2.hours)
+    allow(Rails.logger).to receive(:info)
+
+    window.posts
+
+    expect(Rails.logger).to have_received(:info).with(/post #{post.id} /)
+  end
+
+  # Both ends, for the reason the mail side has both: inclusive at the bottom
+  # puts one post into two editions, exclusive at the top drops a post that
+  # arrived while the model was writing out of every edition there will ever
+  # be. Separate SQL from the mail clauses, so it needs its own examples.
+  it "leaves out a post first seen at the instant the last window closed" do
+    published_through(yesterday_morning)
+    create(:blog_post, received_at: yesterday_morning)
+
+    expect(window.posts).to be_empty
+  end
+
+  it "covers a post first seen at the instant composition started" do
+    published_through(yesterday_morning)
+    post = create(:blog_post, received_at: morning)
+
+    expect(window.posts).to eq([ post ])
+  end
 end

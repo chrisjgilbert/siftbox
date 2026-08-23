@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Newsletter::RemoteImages do
+RSpec.describe RemoteImages do
   # Stands in for Newsletter::ImageDownload, which owns the wire protocol.
   # These specs cover everything around it: which srcs get fetched, what is
   # stored, and how the body is rewritten.
@@ -12,8 +12,9 @@ RSpec.describe Newsletter::RemoteImages do
   end
 
   def stored_image
-    Newsletter::ImageDownload::Image
-      .new(bytes: "png-bytes", content_type: "image/png")
+    Download::Body.new(
+      bytes: "png-bytes", content_type: "image/png", etag: "", last_modified: ""
+    )
   end
 
   def newsletter_with(body_html)
@@ -26,7 +27,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/a.png" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.inline_images).to be_attached
   end
@@ -37,7 +38,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/a.png" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.reload.body_html)
       .to include("/newsletters/#{newsletter.id}/images/")
@@ -49,7 +50,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/a.png" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.reload.body_html).not_to include("cdn.example.com")
   end
@@ -63,7 +64,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/a.png" => stored_image }, seen: seen
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(seen).to eq([ "https://cdn.example.com/a.png" ])
   end
@@ -76,7 +77,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/a.png" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     served = newsletter.reload.body_html
       .scan("/newsletters/#{newsletter.id}/images/")
@@ -94,7 +95,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/a.png?w=1&h=2" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.reload.body_html).not_to include("cdn.example.com")
   end
@@ -112,7 +113,7 @@ RSpec.describe Newsletter::RemoteImages do
         "https://cdn.example.com/a.png?size=2" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.reload.body_html).not_to include("?size=2")
   end
@@ -123,7 +124,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/hero.png" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.inline_images.blobs.first.filename.to_s).to eq("hero.png")
   end
@@ -136,7 +137,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/render/9f2" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.inline_images.blobs.first.filename.to_s).to eq("image.png")
   end
@@ -145,7 +146,7 @@ RSpec.describe Newsletter::RemoteImages do
     newsletter = newsletter_with(%(<img src="https://cdn.example.com/a.png">))
     download = download_answering({})
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.reload.body_html)
       .to include("https://cdn.example.com/a.png")
@@ -155,7 +156,7 @@ RSpec.describe Newsletter::RemoteImages do
     newsletter = newsletter_with(%(<img src="https://cdn.example.com/a.png">))
     download = download_answering({})
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.inline_images).not_to be_attached
   end
@@ -170,7 +171,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/a.png" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.reload.body_html)
       .to include("/newsletters/#{newsletter.id}/images/")
@@ -186,7 +187,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/a.png" => stored_image }, seen: seen
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(seen).to eq([ "https://cdn.example.com/a.png" ])
   end
@@ -197,7 +198,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/a.png" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.reload.body_html).not_to include("cdn.example.com")
   end
@@ -214,7 +215,7 @@ RSpec.describe Newsletter::RemoteImages do
       { "https://cdn.example.com/a.png" => stored_image }
     )
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.reload.body_html)
       .to include(%(href="https://cdn.example.com/a.png"))
@@ -225,7 +226,7 @@ RSpec.describe Newsletter::RemoteImages do
     newsletter = newsletter_with(%(<img src="/newsletters/1/images/2">))
     download = download_answering({}, seen: seen)
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(seen).to be_empty
   end
@@ -235,7 +236,7 @@ RSpec.describe Newsletter::RemoteImages do
     newsletter = newsletter_with(%(<img src="data:image/png;base64,AAAA">))
     download = download_answering({}, seen: seen)
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(seen).to be_empty
   end
@@ -244,7 +245,7 @@ RSpec.describe Newsletter::RemoteImages do
     newsletter = newsletter_with("<p>Morning</p>")
     download = download_answering({})
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
     expect(newsletter.reload.body_html).to eq("<p>Morning</p>")
   end
@@ -256,15 +257,15 @@ RSpec.describe Newsletter::RemoteImages do
   # failed download does anyway.
   it "fetches no more sources than the cap allows" do
     seen = []
-    sources = (1..Newsletter::RemoteImages::MAX_IMAGES + 5).map do |number|
+    sources = (1..RemoteImages::MAX_IMAGES + 5).map do |number|
       %(<img src="https://cdn.example.com/#{number}.png">)
     end
     newsletter = newsletter_with(sources.join)
     download = download_answering({}, seen: seen)
 
-    Newsletter::RemoteImages.new(newsletter, download: download).attach
+    RemoteImages.new(newsletter, download: download).attach
 
-    expect(seen.length).to eq(Newsletter::RemoteImages::MAX_IMAGES)
+    expect(seen.length).to eq(RemoteImages::MAX_IMAGES)
   end
 
   # The blobs and the body are one write: a newsletter carrying images whose
@@ -277,7 +278,7 @@ RSpec.describe Newsletter::RemoteImages do
     allow(newsletter).to receive(:update!).and_raise(ActiveRecord::RecordInvalid)
 
     expect {
-      Newsletter::RemoteImages.new(newsletter, download: download).attach
+      RemoteImages.new(newsletter, download: download).attach
     }.to raise_error(ActiveRecord::RecordInvalid)
 
     expect(newsletter.reload.inline_images).not_to be_attached

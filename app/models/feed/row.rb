@@ -1,12 +1,14 @@
-# One line of the feed: a newsletter, and where it sits in the index.
-#
-# The number belongs here rather than on Newsletter::Presenter because it is a
-# property of the position, not of the newsletter. It runs continuously across
-# the whole feed rather than restarting per group, so the archive reads as an
+# One line of the feed: a newsletter or a blog post, and where it sits in the
 # index.
+#
+# The number belongs here rather than on either presenter because it is a
+# property of the position, not of the thing being listed. It runs
+# continuously across the whole feed rather than restarting per group, so the
+# archive reads as an index.
 class Feed::Row
-  delegate :lead_image?, :lead_image_url, :sender, :snippet, :subject,
-    :timestamp, :to_param, to: :presenter
+  delegate :kind, :link_attributes, :lead_image?, :lead_image_url, :no_image,
+    :no_image_compact, :path, :sender, :snippet, :subject, :timestamp,
+    to: :presenter
 
   def initialize(presenter, position)
     @presenter = presenter

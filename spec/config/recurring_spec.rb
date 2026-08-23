@@ -48,4 +48,22 @@ RSpec.describe "the recurring schedule" do
     expect(fires_after("compose_edition", Time.utc(2027, 7, 1)).strftime("%H:%M"))
       .to eq("07:00")
   end
+
+  it "polls the blogs through a job that exists" do
+    polling = task("poll_blogs").fetch("class")
+
+    expect(polling.safe_constantize).to eq(Blog::PollJob)
+  end
+
+  it "polls them on a schedule the scheduler accepts" do
+    expect(schedule("poll_blogs")).to be_a(Fugit::Cron)
+  end
+
+  # Away from the top of the hour, where the cleanup task and everything else
+  # a host runs on the hour already are. Nothing depends on the exact minute;
+  # what matters is that a dozen outbound fetches do not start in the same
+  # second as the rest of the machine's work.
+  it "polls them away from the top of the hour" do
+    expect(fires_after("poll_blogs", Time.utc(2027, 1, 1)).strftime("%M")).to eq("20")
+  end
 end

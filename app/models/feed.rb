@@ -1,12 +1,13 @@
-# The index view's collection: newsletters from the last week, grouped by the
-# day they arrived, each row already wrapped in its presenter.
+# The index view's collection: everything from the last week — mail and blog
+# posts alike — grouped by the day it arrived, each row already wrapped in its
+# presenter.
 #
 # Not scoped to a user. With one inbound address and one account, the
 # authentication gate is the scope; a user_id nothing filters on would be
 # theatre. See .claude/rules/security.md, and the note in README.md on what
 # multiple users would take.
 class Feed
-  Group = Struct.new(:label, :sublabel, :newsletters)
+  Group = Struct.new(:label, :sublabel, :items)
 
   # Memoised because the view asks twice: once to render, once to decide
   # between the end-of-list line and the empty state.
@@ -14,8 +15,8 @@ class Feed
     @_groups ||= numbered(grouped)
   end
 
-  def issue_count
-    newsletters.length
+  def item_count
+    items.length
   end
 
   private
@@ -24,7 +25,7 @@ class Feed
   # overlap: inclusive ranges that met at midnight put a newsletter into the
   # feed twice.
   def grouped
-    found = newsletters.group_by { |newsletter| bucket_for(newsletter) }
+    found = items.group_by { |item| bucket_for(item) }
 
     [ :today, :yesterday, :earlier ].filter_map { |name| [ name, found[name] ] if found[name] }
   end
@@ -32,10 +33,10 @@ class Feed
   # Everything the query returned is inside the window by definition. A row
   # can still bucket :older, because Age reads the clock again a moment after
   # the query did, and the filter_map above would then drop it from the page
-  # while #issue_count still counts it — an end-of-feed line claiming more
-  # issues than it shows, or an empty state with a newsletter behind it.
-  def bucket_for(newsletter)
-    bucket = Newsletter::Age.new(newsletter.received_at).bucket
+  # while #item_count still counts it — an end-of-feed line claiming more
+  # items than it shows, or an empty state with a row behind it.
+  def bucket_for(item)
+    bucket = Newsletter::Age.new(item.received_at).bucket
     return :earlier if bucket == :older
 
     bucket
@@ -47,8 +48,8 @@ class Feed
   def numbered(found)
     offset = 0
 
-    found.map do |name, newsletters|
-      group(name, newsletters, offset).tap { offset += newsletters.length }
+    found.map do |name, items|
+      group(name, items, offset).tap { offset += items.length }
     end
   end
 
@@ -68,14 +69,49 @@ class Feed
   end
 
   def present(found, offset)
-    found.each_with_index.map do |newsletter, index|
-      Feed::Row.new(Newsletter::Presenter.new(newsletter), offset + index + 1)
+    found.each_with_index.map do |item, index|
+      Feed::Row.new(presenter_for(item), offset + index + 1)
     end
   end
 
-  # Loaded once and partitioned in Ruby: three date groups off one query.
-  def newsletters
-    @_newsletters ||= within_window.for_feed.newest_first.to_a
+  # Each kind answers the same questions about itself, so the row and its
+  # template never learn which they are holding.
+  def presenter_for(item)
+    return Blog::Post::Presenter.new(item) if item.is_a?(Blog::Post)
+
+    Newsletter::Presenter.new(item)
+  end
+
+  # Loaded once and partitioned in Ruby: three date groups off two queries.
+  #
+  # Merged and sorted here rather than in SQL because the page already holds
+  # its whole window in memory to group it by day, and a UNION over two tables
+  # with different columns would buy nothing back.
+  #
+  # The order is over three keys, and the third is the one that is easy to
+  # miss. Every ordering in this app breaks ties on the id, because arrival
+  # times carry whole seconds and a batch send lands on one instant — but that
+  # stops being a total order across two tables, where newsletter 5 and post 5
+  # are not comparable. Without the class name between them, tied rows swap
+  # places between page loads and the continuous numbering swaps with them.
+  def items
+    @_items ||= (mail + posts).sort_by { |item| ordering(item) }.reverse
+  end
+
+  def ordering(item)
+    [ item.received_at, item.class.name, item.id ]
+  end
+
+  def mail
+    within_window.for_feed.to_a
+  end
+
+  # includes rather than a join, and blog_id is in FEED_COLUMNS for it: the
+  # row prints the blog's name, and asking per row would be an N+1 under the
+  # one query the archive is meant to cost.
+  def posts
+    Blog::Post.where(received_at: Newsletter::Age::WINDOW.ago..)
+      .for_feed.includes(:blog).to_a
   end
 
   # .content, not a bare Newsletter: a subscription confirmation sitting in

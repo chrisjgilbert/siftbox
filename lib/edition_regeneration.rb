@@ -1,4 +1,4 @@
-# A published edition composed again from the same mail, with whatever the
+# A published edition composed again from the same sources, with whatever the
 # prompt says today.
 #
 # The PRD's tool for iterating on the prompt after the schedule ships: an
@@ -47,13 +47,13 @@ class EditionRegeneration
   # may take; this window is history, and a newsletter held after the fact was
   # still what these stories were written from.
   def sources
-    @_sources ||= Newsletter.where(id: cited).oldest_first.to_a
+    @_sources ||= Edition::Sources.new(newsletters: cited_mail, posts: cited_posts)
   end
 
   # Loaded before the destroy on purpose — the citations that name them are
   # about to go with it.
   def rewrite
-    raise Empty, "no. #{edition.number} cites no newsletters" if sources.empty?
+    raise Empty, "no. #{edition.number} cites nothing" if sources.empty?
 
     replace
   end
@@ -77,13 +77,27 @@ class EditionRegeneration
     end
   end
 
-  # Read back through the association the page will use, so a walk over every
-  # story's citations is four queries rather than one per story.
+  # Read back through the associations the page will use, so a walk over every
+  # story's citations is a handful of queries rather than one per story.
   def loaded(composed)
-    Edition.includes(stories: :newsletters).find(composed.id)
+    Edition.for_reading.find(composed.id)
   end
 
-  def cited
-    Edition::Citation.where(edition_story_id: edition.story_ids).select(:newsletter_id)
+  def cited_mail
+    Newsletter.where(id: cited(:newsletter_id)).oldest_first.to_a
+  end
+
+  # Preloaded for the reason Edition::Window does it: the prompt quotes each
+  # post under its blog's name, and this set grows with the edition's
+  # citations rather than with a day.
+  def cited_posts
+    Blog::Post.where(id: cited(:blog_post_id)).includes(:blog).oldest_first.to_a
+  end
+
+  # One column at a time. A citation names one source and leaves the other
+  # column NULL, so a subquery selecting both would hand each side the other's
+  # nils — harmless inside an IN, which no NULL matches, but only by accident.
+  def cited(column)
+    Edition::Citation.where(edition_story_id: edition.story_ids).select(column)
   end
 end

@@ -10,15 +10,6 @@
 # header, and the archive needs the timestamp beside it. Deleting the class
 # outright would have copied #sender into three places.
 class Newsletter::Presenter
-  # Which timestamp format each row gets. Keyed by Newsletter::Age so the
-  # format always agrees with the group heading the row sits under.
-  TIMESTAMP_FORMATS = {
-    today: :row_time,
-    yesterday: :row_time,
-    earlier: :row_day,
-    older: :row_date
-  }.freeze
-
   delegate :held?, :lead_image?, :lead_image_url, :snippet, :subject,
     :to_param, to: :newsletter
 
@@ -33,8 +24,44 @@ class Newsletter::Presenter
       I18n.t("newsletters.unknown_sender")
   end
 
+  # Where the row goes, and whether following it leaves the app. A newsletter
+  # opens its own stored original in the sandboxed frame; a post opens the
+  # blog. The template asks rather than deciding, so it never has to know
+  # which kind of thing it is drawing.
+  def path
+    routes.newsletter_original_path(newsletter)
+  end
+
+  # Nothing, because the link stays here. The template spreads whatever it is
+  # given rather than asking which kind of row it is drawing.
+  def link_attributes
+    {}
+  end
+
+  # What the mono line says after the sender. Nothing, for mail: newsletters
+  # are twenty a day against three posts, so marking the common case would put
+  # a word on every row of the archive to say the usual thing.
+  def kind
+    nil
+  end
+
   def timestamp
-    I18n.l(newsletter.received_at, format: TIMESTAMP_FORMATS.fetch(age.bucket))
+    age.timestamp
+  end
+
+  # What a row with no image says in the space one would have taken. Asked
+  # rather than named in the template, because the sentence differs: a post
+  # was never in an email and saying so about one is simply wrong.
+  def no_image
+    I18n.t("newsletters.index.no_image")
+  end
+
+  # What the same row says at 390px, where the sentence above does not fit.
+  # Asked for rather than named in the template for the reason above, even
+  # though the two kinds happen to say the same two words here: the template
+  # draws both, so a "newsletters." key in it is one a post reads too.
+  def no_image_compact
+    I18n.t("newsletters.index.no_image_compact")
   end
 
   # Where an original's top bar goes back to. The archive for content, and the

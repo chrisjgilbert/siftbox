@@ -102,7 +102,7 @@ RSpec.describe Newsletter::InboundMessage do
 
     newsletter = message.save
 
-    expect(newsletter.snippet.length).to be <= Newsletter::InboundMessage::SNIPPET_LENGTH
+    expect(newsletter.snippet.length).to be <= Newsletter::Body::SNIPPET_LENGTH
   end
 
   it "stores the Message-ID" do
@@ -175,7 +175,7 @@ RSpec.describe Newsletter::InboundMessage do
     message = Newsletter::InboundMessage.new(mail: inbound_mail)
 
     expect { message.save }
-      .to have_enqueued_job(Newsletter::RemoteImagesJob)
+      .to have_enqueued_job(RemoteImagesJob)
   end
 
   it "queues no download again for a redelivery" do
@@ -186,7 +186,7 @@ RSpec.describe Newsletter::InboundMessage do
       Newsletter::InboundMessage.new(
         mail: inbound_mail(message_id: identifier)
       ).save
-    }.not_to have_enqueued_job(Newsletter::RemoteImagesJob)
+    }.not_to have_enqueued_job(RemoteImagesJob)
   end
 
   it "renders a plain-text newsletter as paragraphs" do

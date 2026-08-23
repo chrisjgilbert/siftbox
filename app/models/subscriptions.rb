@@ -37,13 +37,38 @@ class Subscriptions
     end
   end
 
+  # The blog the add-a-feed form is filling in. A fresh one on an ordinary
+  # visit; the one that was just refused when BlogsController re-renders this
+  # page, so the reader sees what they typed and why it was turned down.
+  attr_reader :blog
+
+  def initialize(blog: Blog.new)
+    @blog = blog
+  end
+
   # Memoised because the view asks each section twice — whether to draw rows
   # or the empty line, and then for the rows.
   def sections
     @_sections ||= [ awaiting, new_senders, bounced ]
   end
 
+  # The roster, newest first so a blog just added is at the top where the
+  # reader is looking. Ordered on the id rather than on created_at, which the
+  # table does not carry an index for and which ties on a seeded roster.
+  #
+  # The counts come from one grouped query rather than from each row asking.
+  # Not includes(:posts) either, which is the obvious fix and the wrong one:
+  # it would read every body_html — tens of kilobytes each, two hundred rows
+  # for one blog — into memory to print "200 posts".
+  def blogs
+    @_blogs ||= Blog.order(id: :desc).map { |blog| Blog::Row.new(blog, stored.fetch(blog.id, 0)) }
+  end
+
   private
+
+  def stored
+    @_stored ||= Blog::Post.group(:blog_id).count
+  end
 
   def awaiting
     section("awaiting", rows(Newsletter.held), empty("awaiting"))

@@ -515,7 +515,12 @@ Honest ones, at n=1:
   email itself" reading path.
 - **RSS/blog sources**: a second ingest path writing a sibling of
   `Newsletter`; citations gain a second source type; the edition's shape
-  doesn't change.
+  doesn't change. Investigated against the built code and against ten real
+  feeds in `docs/blogs-rss.md`, which finds the last clause true only once
+  aggregator feeds are ruled out of scope — they alone would break the
+  completeness guarantee. Planned in `docs/blogs-rss-plan.md`, on the
+  sibling table with typed foreign keys throughout rather than a shared
+  polymorphic one, so nothing that already exists has to be migrated.
 - **Email the edition** to the reader's own address.
 - **Private RSS feed of editions** for reader apps.
 - **Weekend edition**: one Saturday edition surfacing the week's long-form

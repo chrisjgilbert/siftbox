@@ -8,9 +8,7 @@ RSpec.describe "Newsletter ingest" do
   include ActiveJob::TestHelper
 
   def ingest(html)
-    # TEST-NET-3, so a miss cannot become a real connection. Stubbed because
-    # WebMock blocks HTTP but not the name lookup that precedes it.
-    allow(Resolv).to receive(:getaddresses).and_return([ "203.0.113.9" ])
+    resolve_publicly
     stub_request(:get, "https://cdn.example.com/hero.png")
       .to_return(body: "png-bytes", headers: { "Content-Type" => "image/png" })
 

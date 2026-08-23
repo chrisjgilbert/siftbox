@@ -604,6 +604,190 @@ a {
   color: var(--body);
 }
 
+/* The Sources section. One shape as the pen's sections above it — the type
+   scale hangs off the section name, so no partial asks which one it is in —
+   with a form at the top, because this is the only section of this page the
+   reader writes to rather than only reads. */
+.sources__form {
+  padding-top: 24px;
+}
+
+.sources__label {
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* Stacked below 720px for the reason the waitlist's are: "Follow" in mono
+   beside an input is wider than a 390px screen leaves room for, and squeezing
+   both onto one line pushes the button off the page. */
+.sources__controls {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+/* width, because a refused form comes back wrapped: Rails' field_error_proc
+   puts a div round the input, that div becomes the grid item, and the input
+   falls back to its intrinsic 219px — clipping the address the reader typed
+   at exactly the moment the page is explaining why it was refused. */
+.sources__input {
+  width: 100%;
+  border: 0;
+  border-bottom: 2px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 0;
+  font-family: var(--sans);
+  font-size: 17px;
+  color: var(--ink);
+}
+
+.sources__input::placeholder {
+  color: var(--read);
+}
+
+/* Something has to change on focus, and the underline is already there to
+   change. focus-visible so a click does not draw it and a Tab does. */
+.sources__input:focus {
+  outline: 0;
+}
+
+.sources__input:focus-visible {
+  border-bottom-color: var(--blue);
+}
+
+.sources__submit {
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 14px 22px;
+  margin-top: 16px;
+  justify-self: start;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sources__submit:hover {
+  background: var(--blue);
+}
+
+/* Set in ink and in sentence case: this is the app explaining itself to
+   somebody who has just been told no, and it is the one moment there is to
+   say why. */
+.sources__error {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.sources__note {
+  margin: 14px 0 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* Not a link, so the grid sits on the item itself where the pen's sits on
+   the line inside it. */
+.pen__item--source {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  row-gap: 4px;
+  column-gap: 16px;
+  padding: 16px 0;
+}
+
+.sources__name {
+  grid-column: 1;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Lower case, and the one place in this app mono is. The rule is that mono is
+   always uppercase; an uppercased URL is a wrong URL to read or to copy, and
+   this is the address the reader typed and may need to check. The reason is
+   here because .claude/rules asks for one when a rule is broken.
+
+   --mute rather than --read: #9a9a9a on paper is 2.81:1, under even the 3:1
+   floor for non-text, and this is 10px. --mute is 5.41:1 and is what the
+   count and the state beside it take. */
+.sources__feed {
+  grid-column: 1;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--mute);
+  overflow-wrap: anywhere;
+}
+
+.sources__count,
+.sources__state {
+  grid-column: 1;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* The one thing on this page the reader has to act on, so it is the one thing
+   set in ink rather than in the mute the rest of the mono furniture takes —
+   the same move the pen makes for how long a confirmation has waited. */
+.sources__state--failing {
+  color: var(--ink);
+}
+
+/* button_to generates a <button> inside a <form> under Rails 8 defaults, so
+   the grid placement goes on the form — which is the grid item — and the
+   appearance on the button. Styling ` input` matched only the hidden _method
+   field, and left the control at the browser's own Arial, outset border and
+   rounded corners: a third typeface, a rule weight the system does not have,
+   and a radius, in one control. */
+.sources__remove-form {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  align-self: center;
+  margin: 0;
+}
+
+/* Borderless mute text, which is the app's second button treatment, after
+   .topbar__action. A bordered one would be a third the system does not have
+   — and --rule on paper is 1.28:1, well under the 3:1 a control edge needs
+   to be seen at all. */
+.sources__remove {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--mute);
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sources__remove:hover {
+  color: var(--ink);
+}
+
 .pen__empty {
   margin: 0;
   padding: 24px 0 4px;
@@ -655,6 +839,40 @@ a {
 
   .pen__empty {
     padding: 32px 0 8px;
+  }
+
+  /* The Blogs section takes the same step up as the sections above it. Left
+     at its mobile sizes the whole thing read one notch smaller than identical
+     furniture six lines up the page — spacing is untokenised on purpose, the
+     type scale is not. */
+  .sources__label,
+  .sources__submit,
+  .sources__count,
+  .sources__feed,
+  .sources__state,
+  .sources__remove {
+    font-size: 11px;
+  }
+
+  .sources__name {
+    font-size: 19px;
+  }
+
+  .pen__item--source {
+    padding: 18px 0;
+  }
+
+  /* Input and button on one line, as the waitlist's are above this width and
+     for the same reason: below it, "Follow" set in mono beside a field is
+     wider than a 390px screen leaves room for. */
+  .sources__controls {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+  }
+
+  .sources__submit {
+    margin-top: 0;
+    margin-left: 20px;
   }
 }
 
@@ -860,6 +1078,19 @@ a {
   grid-area: sender;
 }
 
+/* The same marker a standard row carries, drawn the same way: the separator
+   belongs to the layout rather than to the copy. Only posts wear it — they
+   are the rarer thing, so marking them keeps the line quieter than marking
+   twenty newsletters a day would. */
+.lead__kind {
+  color: var(--blue);
+}
+
+.lead__kind::before {
+  content: "\00a0/\00a0";
+  color: var(--mute);
+}
+
 .lead__subject {
   grid-area: subject;
   margin-top: 8px;
@@ -979,6 +1210,19 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The one field that says a row is a blog post rather than a newsletter. The
+   mono line already reads as slash-separated fields, so the separator is
+   drawn here rather than written into the locale — the same way the story
+   sources list draws its own. */
+.row__kind {
+  color: var(--blue);
+}
+
+.row__kind::before {
+  content: "\00a0/\00a0";
+  color: var(--mute);
 }
 
 .row__subject {

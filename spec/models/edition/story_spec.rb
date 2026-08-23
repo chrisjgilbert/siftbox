@@ -162,4 +162,103 @@ RSpec.describe Edition::Story do
 
     expect(story).to be_valid
   end
+
+  it "cites the blog posts its citations point at" do
+    story = create(:edition_story)
+    post = create(:blog_post)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: post)
+
+    expect(story.blog_posts).to eq([ post ])
+  end
+
+  # The same reasoning as the newsletter above: a post's body_html is the
+  # whole article, and the page prints the blog's name.
+  it "leaves the post's own HTML out of a citation" do
+    story = create(:edition_story)
+    post = create(:blog_post, body_html: "<p>Hi</p>")
+    create(:edition_citation, story: story, newsletter: nil, blog_post: post)
+
+    cited = story.blog_posts.sole
+
+    expect { cited.body_html }.to raise_error(ActiveModel::MissingAttributeError)
+  end
+
+  it "leaves the posts it cited behind when destroyed" do
+    story = create(:edition_story)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: create(:blog_post))
+
+    story.destroy
+
+    expect(Blog::Post.count).to eq(1)
+  end
+
+  # The graph the editor builds is in memory and unsaved, so neither the
+  # unique index nor Citation's own uniqueness validation can see the
+  # duplicate. Same hole as the newsletter side, same floor under it.
+  it "refuses a story citing one post twice" do
+    post = create(:blog_post)
+    story = build(:edition_story)
+    story.citations.build(newsletter: nil, blog_post: post)
+    story.citations.build(newsletter: nil, blog_post: post)
+
+    expect(story).not_to be_valid
+  end
+
+  it "allows one story to cite two different posts" do
+    story = build(:edition_story)
+    story.citations.build(newsletter: nil, blog_post: create(:blog_post))
+    story.citations.build(newsletter: nil, blog_post: create(:blog_post))
+
+    expect(story).to be_valid
+  end
+
+  # Every mail citation leaves blog_post_id NULL, and every post citation
+  # leaves newsletter_id NULL. Neither is a duplicate of the other, and a
+  # check written as "the ids are distinct" would call three of either a
+  # duplicate on the nils alone.
+  it "allows one story to cite a newsletter and two posts" do
+    story = build(:edition_story)
+    story.citations.build(newsletter: create(:newsletter))
+    story.citations.build(newsletter: nil, blog_post: create(:blog_post))
+    story.citations.build(newsletter: nil, blog_post: create(:blog_post))
+
+    expect(story).to be_valid
+  end
+
+  # The presenter documents this order and until now nothing provided it: the
+  # rendered order was whichever index SQLite happened to reach for, so a
+  # preloaded edition and a lazily-loaded one listed one story's sources
+  # differently — and making the mail index partial, to match the post one,
+  # would silently re-order every published edition.
+  it "reads its cited newsletters oldest first" do
+    story = create(:edition_story)
+    newer = create(:newsletter, received_at: 1.hour.ago)
+    older = create(:newsletter, received_at: 2.hours.ago)
+    create(:edition_citation, story: story, newsletter: newer)
+    create(:edition_citation, story: story, newsletter: older)
+
+    expect(story.newsletters).to eq([ older, newer ])
+  end
+
+  it "reads its cited posts oldest first" do
+    story = create(:edition_story)
+    newer = create(:blog_post, received_at: 1.hour.ago)
+    older = create(:blog_post, received_at: 2.hours.ago)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: newer)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: older)
+
+    expect(story.blog_posts).to eq([ older, newer ])
+  end
+
+  it "reads its cited posts in the same order when they are preloaded" do
+    story = create(:edition_story)
+    newer = create(:blog_post, received_at: 1.hour.ago)
+    older = create(:blog_post, received_at: 2.hours.ago)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: newer)
+    create(:edition_citation, story: story, newsletter: nil, blog_post: older)
+
+    loaded = Edition.for_reading.find(story.edition_id).stories.sole
+
+    expect(loaded.blog_posts).to eq([ older, newer ])
+  end
 end

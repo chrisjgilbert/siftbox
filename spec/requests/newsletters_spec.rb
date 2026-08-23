@@ -79,14 +79,14 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("No image in email")
   end
 
-  it "counts the issues at the end of the feed" do
+  it "counts the items at the end of the feed" do
     sign_in
     create(:newsletter)
     create(:newsletter, received_at: 2.hours.ago)
 
     get newsletters_path
 
-    expect(response.body).to include("End of feed — 2 issues")
+    expect(response.body).to include("End of feed — 2 items")
   end
 
   # With nothing to show there is no end-of-feed note, so this is the only
@@ -233,5 +233,62 @@ RSpec.describe "Newsletters" do
     get newsletters_path
 
     expect(response.headers["Content-Security-Policy"]).to include("object-src 'none'")
+  end
+
+  it "lists blog posts in the same feed as the newsletters" do
+    sign_in
+    create(:newsletter, subject: "Ruby 3.4 lands", received_at: 2.hours.ago)
+    create(:blog_post, title: "Why your index is not used", received_at: 1.hour.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include("Why your index is not used")
+  end
+
+  # The row's own line says which it is, so the reader can tell before
+  # clicking whether it opens an email or somebody's website.
+  it "marks a blog post as one" do
+    sign_in
+    create(:blog_post, title: "Why your index is not used")
+
+    get newsletters_path
+
+    expect(response.body).to include("row__kind")
+  end
+
+  # A post's original is the blog, which is somebody else's site — so the link
+  # leaves the app, and leaves it without handing the opened page a reference
+  # back through window.opener.
+  it "sends a blog post's row to the blog, in a new tab" do
+    sign_in
+    create(:blog_post, url: "https://queryplanweekly.dev/unused-index")
+
+    get newsletters_path
+
+    expect(response.body).to include('href="https://queryplanweekly.dev/unused-index"')
+      .and include('rel="noopener noreferrer"')
+  end
+
+  it "says a post with no image carried none, rather than calling it an email" do
+    sign_in
+    create(:blog_post, lead_image_url: "", received_at: 1.hour.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include("No image in post")
+    expect(response.body).not_to include("No image in email")
+  end
+
+  # The newest item having an image is what makes it the lead, and a post with
+  # an image is an ordinary case — so the one row drawn at full frame width
+  # was the one row that lost its marker.
+  it "marks a post that leads the feed as a post" do
+    sign_in
+    create(:blog_post, lead_image_url: "https://queryplanweekly.dev/hero.png",
+      received_at: 1.hour.ago)
+
+    get newsletters_path
+
+    expect(response.body).to include("lead__kind")
   end
 end

@@ -6,22 +6,25 @@ RSpec.describe EditionRegeneration do
   # Built from whatever set the example expects to be sent, so an edition that
   # composes at all is proof the editor was handed exactly that set — a
   # missing id fails the check as loudly as an invented one.
-  def answer(newsletters)
+  def answer(newsletters, posts: [])
     {
       stories: [ {
         headline: "Figma filed", body: "The S-1 landed.", section: "lead",
-        newsletter_ids: newsletters.map(&:id)
+        newsletter_ids: newsletters.map(&:id), post_ids: posts.map(&:id)
       } ]
     }.to_json
   end
 
   # An edition the way composition leaves one: stories, citations, and the
   # provenance of the run that wrote it.
-  def published(newsletters, **attributes)
+  def published(newsletters, posts: [], **attributes)
     edition = create(:edition, **attributes)
     story = create(:edition_story, edition: edition, position: 1)
     newsletters.each do |newsletter|
       create(:edition_citation, story: story, newsletter: newsletter)
+    end
+    posts.each do |post|
+      create(:edition_citation, story: story, newsletter: nil, blog_post: post)
     end
 
     edition
@@ -97,7 +100,7 @@ RSpec.describe EditionRegeneration do
 
     sources = EditionRegeneration.new(edition).sources
 
-    expect(sources.map(&:body_html)).to eq([ "<p>The S-1 landed.</p>" ])
+    expect(sources.newsletters.map(&:body_html)).to eq([ "<p>The S-1 landed.</p>" ])
   end
 
   # In the order the first composition read them, so the second reads the
@@ -109,7 +112,7 @@ RSpec.describe EditionRegeneration do
 
     sources = EditionRegeneration.new(edition).sources
 
-    expect(sources).to eq([ older, newer ])
+    expect(sources.newsletters).to eq([ older, newer ])
   end
 
   # The provenance is of the run that wrote the words. Keeping the old row's
@@ -152,5 +155,56 @@ RSpec.describe EditionRegeneration do
       .to raise_error(EditionRegeneration::Empty)
 
     expect(Edition.find_by(id: edition.id)).to eq(edition)
+  end
+
+  it "reads the cited posts back out of the citations" do
+    post = create(:blog_post)
+    edition = published([], posts: [ post ])
+
+    sources = EditionRegeneration.new(edition).sources
+
+    expect(sources.posts).to eq([ post ])
+  end
+
+  it "reads the cited posts with the bodies the prompt is written from" do
+    post = create(:blog_post, body_html: "<p>It took four months.</p>")
+    edition = published([], posts: [ post ])
+
+    sources = EditionRegeneration.new(edition).sources
+
+    expect(sources.posts.map(&:body_html)).to eq([ "<p>It took four months.</p>" ])
+  end
+
+  it "reads the cited posts oldest first" do
+    newer = create(:blog_post, received_at: 1.hour.ago)
+    older = create(:blog_post, received_at: 2.hours.ago)
+    edition = published([], posts: [ newer, older ])
+
+    sources = EditionRegeneration.new(edition).sources
+
+    expect(sources.posts).to eq([ older, newer ])
+  end
+
+  it "rewrites an edition composed only from posts" do
+    post = create(:blog_post)
+    edition = published([], posts: [ post ])
+
+    rewritten = EditionRegeneration
+      .new(edition, client: FakeAnthropic.new(text: answer([], posts: [ post ]))).rewrite
+
+    expect(rewritten.stories.sole.blog_posts).to eq([ post ])
+  end
+
+  it "rewrites an edition composed from mail and posts together" do
+    newsletter = create(:newsletter)
+    post = create(:blog_post)
+    edition = published([ newsletter ], posts: [ post ])
+
+    rewritten = EditionRegeneration.new(
+      edition, client: FakeAnthropic.new(text: answer([ newsletter ], posts: [ post ]))
+    ).rewrite
+
+    expect(rewritten.stories.sole.newsletters).to eq([ newsletter ])
+    expect(rewritten.stories.sole.blog_posts).to eq([ post ])
   end
 end

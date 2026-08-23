@@ -329,4 +329,16 @@ RSpec.describe Newsletter::LeadImage do
 
     expect(result).to eq("https://cdn.example/hero.png")
   end
+
+  # For the two records that capture their lead from a bare HTML string and
+  # hold no Body of their own.
+  it "reads the lead out of an HTML string" do
+    html = %(<p>Words</p><img src="https://cdn.example.com/hero.png">)
+
+    expect(Newsletter::LeadImage.url_in(html)).to eq("https://cdn.example.com/hero.png")
+  end
+
+  it "reads no lead out of an HTML string carrying no image" do
+    expect(Newsletter::LeadImage.url_in("<p>Words</p>")).to eq("")
+  end
 end

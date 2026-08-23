@@ -1,0 +1,22 @@
+<%# Name, feed, state, count, and the way off the roster.
+
+    Removing is a button rather than a link, because it is a DELETE — see
+    .claude/rules/views.md — and it confirms, because it is the one
+    irreversible cascade in this app: the posts go, and so do the citations in
+    published editions naming them.
+
+    The button carries its own accessible name. Every row's says "Remove", so
+    a reader who cannot see which row they are in has nothing to tell three
+    of them apart. %>
+<li class="pen__item pen__item--source">
+  <span class="sources__name"><%= row.name %></span>
+  <% if row.feed? %>
+    <span class="sources__feed"><%= row.feed_url %></span>
+  <% end %>
+  <span class="<%= row.state_class %>"><%= row.state %></span>
+  <span class="sources__count"><%= row.count %></span>
+  <%= button_to t(".remove"), blog_path(row), method: :delete,
+        class: "sources__remove", form_class: "sources__remove-form",
+        aria: { label: t(".remove_blog", name: row.name) },
+        data: { turbo_confirm: t(".confirm", name: row.name) } %>
+</li>

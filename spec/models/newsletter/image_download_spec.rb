@@ -1,12 +1,6 @@
 require "rails_helper"
 
 RSpec.describe Newsletter::ImageDownload do
-  # 203.0.113.9 is TEST-NET-3 (RFC 5737): never routable, so nothing can
-  # accidentally connect, yet unmistakably public to the range checks here.
-  def public_resolver
-    ->(_host) { [ "203.0.113.9" ] }
-  end
-
   def stub_image(url, bytes: "png-bytes", content_type: "image/png")
     stub_request(:get, url)
       .to_return(body: bytes, headers: { "Content-Type" => content_type })
@@ -120,7 +114,7 @@ RSpec.describe Newsletter::ImageDownload do
   end
 
   it "gives up after too many redirects" do
-    (Newsletter::ImageDownload::MAX_REDIRECTS + 1).times do |hop|
+    (Download::MAX_REDIRECTS + 1).times do |hop|
       stub_redirect(
         "https://cdn.example.com/hop-#{hop}.png",
         "https://cdn.example.com/hop-#{hop + 1}.png"
@@ -210,5 +204,16 @@ RSpec.describe Newsletter::ImageDownload do
     peak = peak_open_connections { image_from("https://cdn.example.com/hero.png") }
 
     expect(peak).to eq(1)
+  end
+
+  # Nothing here sends a validator, so a 304 is a server answering a question
+  # it was not asked. It still has to come back as "no image" rather than as
+  # the not-modified marker, which the caller would try to read bytes off.
+  it "reports no image when a host answers that nothing has changed" do
+    stub_request(:get, "https://cdn.example.com/hero.png").to_return(status: 304)
+
+    image = image_from("https://cdn.example.com/hero.png")
+
+    expect(image).to be_nil
   end
 end

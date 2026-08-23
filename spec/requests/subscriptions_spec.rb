@@ -46,4 +46,28 @@ RSpec.describe "Subscriptions" do
 
     expect(count_queries { get subscriptions_path }).to eq(quiet)
   end
+
+  # The roster used to read one COUNT per blog to print "12 posts". What is
+  # held here is that the cost does not move with the number of blogs; the
+  # absolute number belongs to Rails.
+  it "reads a roster of any size in the same number of queries" do
+    sign_in
+    create(:blog)
+    get subscriptions_path
+    one_blog = count_queries { get subscriptions_path }
+
+    4.times { create(:blog) }
+
+    expect(count_queries { get subscriptions_path }).to eq(one_blog)
+  end
+
+  it "counts the posts each blog has stored" do
+    sign_in
+    blog = create(:blog, title: "Query Plan Weekly")
+    create_list(:blog_post, 2, blog: blog)
+
+    get subscriptions_path
+
+    expect(response.body).to include("2 posts")
+  end
 end

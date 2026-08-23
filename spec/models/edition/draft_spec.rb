@@ -5,7 +5,10 @@ RSpec.describe Edition::Draft do
   # prompt makes of them is Edition::Prompt's spec; what matters below is that
   # whatever it made of them is what got sent.
   def newsletters
-    [ build_stubbed(:newsletter, body_html: "<p>Figma filed on Tuesday.</p>") ]
+    Edition::Sources.new(
+      newsletters: [ build_stubbed(:newsletter, body_html: "<p>Figma filed on Tuesday.</p>") ],
+      posts: []
+    )
   end
 
   # One story, in the shape the schema asks for. Nothing here checks whether
@@ -39,13 +42,13 @@ RSpec.describe Edition::Draft do
     expect(client.request[:system_]).to eq(prompt.instructions)
   end
 
-  it "sends the newsletters as the only thing the reader said" do
+  it "sends the quoted sources as the only thing the reader said" do
     prompt = Edition::Prompt.new(newsletters)
     client = FakeAnthropic.new(text: one_story)
 
     Edition::Draft.new(prompt, client: client).write
 
-    expect(client.request[:messages]).to eq([ { role: "user", content: prompt.sources } ])
+    expect(client.request[:messages]).to eq([ { role: "user", content: prompt.message } ])
   end
 
   it "asks for the edition in the shape the prompt describes" do

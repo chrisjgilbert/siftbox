@@ -49,8 +49,11 @@ class Edition < ApplicationRecord
   # every story there is. Preloading keeps the in_position_order scope on the
   # association and costs the same handful of queries whatever the edition's
   # size.
+  # Both kinds of citation, and a post's blog with them: the page prints the
+  # blog's name under every post it cited, so without the innermost preload an
+  # edition citing six posts reads six blogs one at a time.
   def self.for_reading
-    includes(stories: :newsletters)
+    includes(stories: [ { blog_posts: :blog }, :newsletters ])
   end
 
   # The high-water mark the next window starts from, and nil before the first

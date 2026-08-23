@@ -146,7 +146,7 @@ class Edition::Draft
       model: MODEL,
       max_tokens: MAX_TOKENS,
       system_: prompt.instructions,
-      messages: [ { role: "user", content: prompt.sources } ],
+      messages: [ { role: "user", content: prompt.message } ],
       output_config: {
         effort: EFFORT,
         format: { type: "json_schema", schema: prompt.schema }
