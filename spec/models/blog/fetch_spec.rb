@@ -16,7 +16,7 @@ RSpec.describe Blog::Fetch do
 
   # The bytes arrive tagged however Net::HTTP felt about them, and the parser
   # raises outright on a string tagged as an encoding it is not. This is the
-  # same problem Newsletter::InboundMessage#utf8 solves for mail, and it is
+  # same problem Utf8 solves for mail, and it is
   # the fetch's to solve here because a feed declares its encoding twice — in
   # the XML declaration and in the HTTP charset — and the two may disagree.
   it "answers a document tagged as UTF-8" do

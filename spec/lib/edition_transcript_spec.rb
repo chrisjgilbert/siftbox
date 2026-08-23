@@ -225,4 +225,18 @@ RSpec.describe EditionTranscript do
 
     expect(printed).to include("2 POSTS")
   end
+
+  # Every other example gives its blog a title, so the fallback was never
+  # reached here — and blogs.title defaults to "" with a real feed publishing
+  # an empty one, which printed a citation with nothing before the dash.
+  it "names a post's blog by its feed address when it published no title" do
+    edition = create(:edition)
+    blog = create(:blog, title: "", feed_url: "https://danluu.com/atom.xml")
+    post = create(:blog_post, blog: blog, title: "The cost of a cache miss")
+    cite_post(story_in(edition, Edition::Story::LEAD), post)
+
+    printed = transcript(edition, [], posts: [ post ])
+
+    expect(printed).to include("[P#{post.id}] https://danluu.com/atom.xml")
+  end
 end

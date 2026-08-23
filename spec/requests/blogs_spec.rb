@@ -1,18 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Blogs" do
-  # Through the real fetch stack rather than by stubbing Blog::Subscription's
-  # constructor: resolve_publicly plus WebMock is the house pattern (see
-  # spec/jobs/blog/poll_job_spec.rb), and stubbing the constructor left
-  # Blog::Fetch and Download untouched by anything on this path.
-  def serving(feed_url, *documents)
-    resolve_publicly
-    answers = documents.map do |document|
-      { body: document, headers: { "Content-Type" => "application/rss+xml" } }
-    end
-    stub_request(:get, feed_url).to_return(answers)
-  end
-
   def add(feed_url)
     post blogs_path, params: { blog: { feed_url: feed_url } }
   end

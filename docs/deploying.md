@@ -220,7 +220,7 @@ blob libvips cannot read is reported and left as it is.
 
 Ingest fetches the images newsletters link to, so URLs written by anyone who
 can email the inbound address decide where this app makes outbound requests.
-`Newsletter::ImageDownload::Destination` refuses anything resolving off the
+`Download::Destination` refuses anything resolving off the
 public internet, but the durable control is at the network layer. See
 "Outbound network" in `README.md` for why it is worth having both.
 
@@ -404,7 +404,7 @@ the whole app, and nothing outside it needs backing up at all.
 
 Worth knowing that it now grows: self-hosting images means a heavily
 illustrated newsletter costs real disk, bounded per newsletter by
-`Newsletter::RemoteImages::MAX_IMAGES` and
+`RemoteImages::MAX_IMAGES` and
 `Newsletter::ImageDownload::MAX_BYTES`.
 
 ### Take one before the read-state migration

@@ -83,7 +83,7 @@ class Blog::Feed
   # would insert every row inside a single SQLite write transaction, which is
   # the one write lock the whole app shares.
   #
-  # The same reasoning as Newsletter::RemoteImages::MAX_IMAGES, and a ceiling
+  # The same reasoning as RemoteImages::MAX_IMAGES, and a ceiling
   # on the outliers rather than a setting real feeds meet: the largest
   # measured for docs/blogs-rss.md is Dan Luu's at 128 items.
   #

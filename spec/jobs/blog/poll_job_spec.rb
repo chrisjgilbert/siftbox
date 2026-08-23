@@ -1,11 +1,6 @@
 require "rails_helper"
 
 RSpec.describe Blog::PollJob do
-  def stub_feed(blog, body)
-    stub_request(:get, blog.feed_url)
-      .to_return(body: body, headers: { "Content-Type" => "application/rss+xml" })
-  end
-
   it "polls every blog on the roster" do
     resolve_publicly
     first = create(:blog)

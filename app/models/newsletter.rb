@@ -168,7 +168,7 @@ class Newsletter < ApplicationRecord
   # at ingest and for newsletters stored before the column existed. Safe to
   # run again: the same body gives the same answer.
   def capture_lead_image
-    update!(lead_image_url: Newsletter::LeadImage.new(Newsletter::Body.new(body_html)).url)
+    update!(lead_image_url: Newsletter::LeadImage.url_in(body_html))
   end
 
   # Idempotent because the heuristic gets pointed at stored rows again: the

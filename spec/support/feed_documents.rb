@@ -49,6 +49,20 @@ module FeedDocuments
     HTML
   end
 
+  # What an aggregator publishes, measured rather than imagined: the body of a
+  # Hacker News item is the word "Comments" and nothing else, because its
+  # description is a link back to its own thread.
+  def aggregated(title)
+    <<~XML
+      <item>
+        <title>#{title}</title>
+        <link>https://news.ycombinator.com/item?id=1</link>
+        <guid>hn-#{title.parameterize}</guid>
+        <description>Comments</description>
+      </item>
+    XML
+  end
+
   # One item with a guid derived from its title, which is what a poll dedupes
   # on. Enough for any example whose subject is the polling rather than the
   # parsing.

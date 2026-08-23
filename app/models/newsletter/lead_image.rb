@@ -34,6 +34,14 @@ class Newsletter::LeadImage
 
   INLINE_IMAGE_PATH = %r{\A/(#{Regexp.union(HOSTED_PATHS)})/\d+/images/[^/?#]+\z}
 
+  # The lead in one HTML string, for a caller that holds no Body and wants
+  # none. Both records capture their lead with the identical expression, and
+  # nothing held the two in step — the same shape Newsletter::Body.prose was
+  # hoisted for.
+  def self.url_in(html)
+    new(Newsletter::Body.new(html)).url
+  end
+
   # Takes a Newsletter::Body rather than a string, so the caller decides what
   # that body knows — the reader hands one built with the stored image sizes,
   # and the ingest-time capture hands a bare one, because a size cannot change

@@ -6,33 +6,6 @@ require "rails_helper"
 RSpec.describe "The blogs on the Subscriptions page" do
   include ActiveJob::TestHelper
 
-  # The one thing a system spec cannot let out of the process. Stopped at the
-  # seam Blog::Subscription takes for its sample, so everything on this side
-  # of it — the form, the refusal, the roster — is the real thing.
-  # Through the real fetch stack rather than by stubbing Blog::Subscription's
-  # constructor, which left Blog::Fetch and Download untouched by every
-  # example on this page.
-  def serving(feed_url, *documents)
-    resolve_publicly
-    stub_request(:get, feed_url).to_return(
-      documents.map { |document| { body: document } }
-    )
-  end
-
-  # What an aggregator publishes, measured rather than imagined: the body of a
-  # Hacker News item is the word "Comments" and nothing else, because its
-  # description is a link back to its own thread.
-  def aggregated(title)
-    <<~ITEM
-      <item>
-        <title>#{title}</title>
-        <link>https://news.ycombinator.com/item?id=1</link>
-        <guid>hn-#{title.parameterize}</guid>
-        <description>Comments</description>
-      </item>
-    ITEM
-  end
-
   # The reading happens off the request, so the reader is told yes or no at
   # once and the row fills in behind them. Both halves are what they see, so
   # both happen here.

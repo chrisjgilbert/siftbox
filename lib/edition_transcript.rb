@@ -148,7 +148,7 @@ class EditionTranscript
   end
 
   def post_lines(posts)
-    posts.map { |post| line("P#{post.id}", post.blog.title, yield(post)) }
+    posts.map { |post| line("P#{post.id}", post.blog.name, yield(post)) }
   end
 
   def line(tag, name, tail)

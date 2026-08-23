@@ -98,7 +98,7 @@ class Blog::Post < ApplicationRecord
   # would hotlink a thumbnail per row on every load — the one request storing
   # the images exists to stop making.
   def capture_lead_image
-    update!(lead_image_url: Newsletter::LeadImage.new(Newsletter::Body.new(body_html)).url)
+    update!(lead_image_url: Newsletter::LeadImage.url_in(body_html))
   end
 
   # This app's own path for a stored image, not Active Storage's: see
