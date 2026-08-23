@@ -71,7 +71,7 @@ class Blog::Subscription
 
   private
 
-  attr_reader :blog, :fetch
+  attr_reader :blog, :fetch, :fetched, :posts, :refusal
 
   # The row is written and the reading is asked for, not done. The sample
   # above is what the reader is waiting on and it is bounded; storing a back
@@ -89,14 +89,12 @@ class Blog::Subscription
   end
 
   def readable?
+    reread
     announced if posts.nil?
 
-    return refuse(:unreachable) if fetched.nil?
-    return refuse(:unreadable) if posts.nil?
-    return refuse(:empty) if posts.empty?
-    return refuse(:aggregator) if stubs?
+    return true if refusal.nil?
 
-    true
+    refuse(refusal)
   end
 
   # What the reader pasted was a home page rather than a feed, which is how
@@ -118,22 +116,42 @@ class Blog::Subscription
 
     blog.feed_url = address
     reread
-    blog.feed_url = pasted unless readable_now?
+    blog.feed_url = pasted if refusal
   end
 
-  # Asked before the refusals are recorded, so the address goes back without
-  # this having decided anything: #readable? is what decides, and it runs
-  # again the moment #announced returns.
-  def readable_now?
-    posts.present? && !stubs?
-  end
-
-  # Assigned rather than re-memoised, so there is one place either of these is
-  # read from and no window where the two disagree about which fetch they came
-  # from.
+  # Everything this decides about a feed comes out of one fetch and is
+  # assigned together, so a discovery hop cannot leave the document, the items
+  # read out of it and the verdict on them describing different fetches.
+  #
+  # The verdict is assigned rather than asked for twice: reaching it reads
+  # twenty bodies through Newsletter::Prose, and the home-page path asks once
+  # to decide whether the announced feed was worth swapping to and again to
+  # decide whether to take it.
+  #
+  # Blog::Fetch::UNCHANGED cannot arrive here: a blog being added has no
+  # validators to send, so nothing asks the server a question it could answer
+  # 304 to. #read would have no document to take from one if it did.
   def reread
-    @_fetched = fetch.call(blog)
-    @_posts = read
+    @fetched = fetch.call(blog)
+    @posts = read
+    @refusal = fault
+  end
+
+  # The one statement of what this app will not take, so what turns away a
+  # pasted feed and what decides an announced one was not worth swapping to
+  # cannot drift apart.
+  #
+  # Ordered so the reader is told the first thing that is wrong. A parked
+  # domain, a page that is not a feed, a blog between posts and an aggregator
+  # are four different sentences — nothing rather than an empty list when the
+  # document is not a feed is what keeps the middle two apart.
+  def fault
+    return :unreachable if fetched.nil?
+    return :unreadable if posts.nil?
+    return :empty if posts.empty?
+    return :aggregator if stubs?
+
+    nil
   end
 
   def refuse(reason)
@@ -150,28 +168,11 @@ class Blog::Subscription
     writing < sample.length * READABLE_SHARE
   end
 
-  # Nothing rather than an empty list when the document is not a feed, so the
-  # two refusals stay different sentences: a parked domain and a blog between
-  # posts are not the same thing to tell the reader.
-  def posts
-    @_posts = read unless defined?(@_posts)
-
-    @_posts
-  end
-
   def read
     return if fetched.nil?
 
     Blog::Feed.new(fetched.document).posts
   rescue Blog::Feed::Malformed
     nil
-  end
-
-  # UNCHANGED cannot arrive: a blog being added has no validators to send, so
-  # nothing asks the server a question it could answer 304 to.
-  def fetched
-    return @_fetched if defined?(@_fetched)
-
-    @_fetched = fetch.call(blog)
   end
 end

@@ -61,6 +61,15 @@ RSpec.describe Blog::Post do
     expect(second).to be_persisted
   end
 
+  # The one reading of a body this app makes. Both the floor below and
+  # Edition::Prompt's quoting go through it, so a post cannot be judged long
+  # enough by one reading and quoted under another.
+  it "reads its body as the prose the editor will be shown" do
+    post = build_stubbed(:blog_post, body_html: "<p>A note on the planner.</p>")
+
+    expect(post.prose).to eq("A note on the planner.")
+  end
+
   # 9 of the 273 posts measured for docs/blogs-rss.md fell under this, mostly
   # Martin Fowler publishing one essay as a run of linked fragments.
   it "is enough to write from when the feed carried the article" do
@@ -149,16 +158,5 @@ RSpec.describe Blog::Post do
     post = create(:blog_post, url: "https://queryplanweekly.dev/a#{0.chr}b")
 
     expect(post.reload.url).to eq("https://queryplanweekly.dev/ab")
-  end
-
-  # Asked of a bare body as well as of a row, because Blog::Subscription
-  # judges a feed's items before any of them is a record — and the two must
-  # not be able to disagree about what a body is worth.
-  it "answers the floor for a body it does not hold" do
-    expect(Blog::Post.enough_to_write_from?("<p>#{"word " * 200}</p>")).to be(true)
-  end
-
-  it "answers the floor for a short body it does not hold" do
-    expect(Blog::Post.enough_to_write_from?("<p>Two lines.</p>")).to be(false)
   end
 end

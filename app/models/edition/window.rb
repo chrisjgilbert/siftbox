@@ -48,7 +48,7 @@ class Edition::Window
   end
 
   def sources
-    Edition::Sources.new(newsletters: newsletters, posts: posts)
+    @_sources ||= Edition::Sources.new(newsletters: newsletters, posts: posts)
   end
 
   def empty?

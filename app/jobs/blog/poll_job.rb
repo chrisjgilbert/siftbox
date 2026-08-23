@@ -13,6 +13,18 @@
 # and it is polite: the etag and last-modified this sends back mean an
 # unchanged feed answers 304 with no body at all.
 class Blog::PollJob < ApplicationJob
+  # One blog when the reader has just added it and is waiting to see it fill
+  # in, the whole roster on the hour. An optional argument against the usual
+  # rule, because the alternative is a second job repeating this one's rescue,
+  # which does the same thing for both.
+  def perform(blog = nil)
+    return poll(blog) if blog
+
+    Blog.find_each { |followed| poll(followed) }
+  end
+
+  private
+
   # Every blog is polled even when an earlier one raised. A feed answering
   # badly is ordinary — a certificate that expired overnight, a host that has
   # gone away, a body that is not a feed — and letting one of those end the
@@ -23,20 +35,6 @@ class Blog::PollJob < ApplicationJob
   # what reaches here is the unforeseen kind. It is recorded the same way,
   # because from the reader's side the difference between a blog that answered
   # badly and a blog that answered in a way nobody predicted is nothing.
-  # One blog when the reader has just added it and is waiting to see it fill
-  # in, the whole roster on the hour. An optional argument against the usual
-  # rule, because the alternative is a second job repeating this one's rescue
-  # — and what that rescue does is the same for both: from the reader's side
-  # a blog that answered badly and a blog that answered unpredictably are the
-  # same thing.
-  def perform(blog = nil)
-    return poll(blog) if blog
-
-    Blog.find_each { |followed| poll(followed) }
-  end
-
-  private
-
   def poll(blog)
     Blog::Poll.new(blog).save
   rescue StandardError => error

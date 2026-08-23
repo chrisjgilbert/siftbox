@@ -4,13 +4,15 @@
 # The name is the blog's own, so a blog with no title reads here the way its
 # posts read in the archive rather than as a blank line.
 class Blog::Row
+  include ActionView::Helpers::DateHelper
+
   delegate :feed_url, :name, :to_param, to: :blog
 
   # The count is handed over rather than asked for: the page draws the whole
   # roster, and a row that counted its own posts would be one query each.
-  def initialize(blog, posts)
+  def initialize(blog, stored)
     @blog = blog
-    @posts = posts
+    @stored = stored
   end
 
   # The one thing the reader cannot find out any other way. A blog that has
@@ -29,7 +31,7 @@ class Blog::Row
   end
 
   def count
-    I18n.t("blogs.count", count: posts)
+    I18n.t("blogs.count", count: stored)
   end
 
   # The class the whole state line takes, rather than a conditional the
@@ -55,12 +57,16 @@ class Blog::Row
 
   private
 
-  attr_reader :blog, :posts
+  attr_reader :blog, :stored
 
   # The distance rather than the clock time the archive prints, for the reason
   # the pen's rows use it: what the reader needs from this line is how long it
   # has been like that, not the hour it last happened.
+  #
+  # Through the helper module the way Newsletter::Age reads its own distance,
+  # rather than through ActionController::Base.helpers: a row on a page is not
+  # a reason to build a view context, and the two lines print the same thing.
   def since(time)
-    ActionController::Base.helpers.time_ago_in_words(time)
+    time_ago_in_words(time)
   end
 end

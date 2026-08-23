@@ -233,7 +233,7 @@ class Edition::Prompt
       Title: #{scrubbed(post.title)}
       Published: #{published_at(post).iso8601}
 
-      #{scrubbed(prose(post.body_html))}
+      #{scrubbed(post.prose)}
       </post>
     SOURCE
   end
@@ -246,11 +246,12 @@ class Edition::Prompt
   end
 
   # Through Newsletter::Body rather than the HTML so the scrubbing and the
-  # single Loofah pass are the ones the rest of the app already pays for. It
-  # takes an HTML string and knows nothing about mail, which is why a post
-  # reads through it too — and it is the same reading Blog::Post measures its
-  # floor against, so a post cannot be judged long enough by one rule and
-  # quoted under another.
+  # single Loofah pass are the ones the rest of the app already pays for.
+  #
+  # Mail only. A post is asked for its own prose, because Edition::Window has
+  # already read it once to measure it against Blog::Post::EDITORIAL_MINIMUM —
+  # so asking is both the cheaper walk and the thing that stops a post being
+  # judged long enough by one reading and quoted under another.
   def prose(html)
     Newsletter::Body.prose(html)
   end

@@ -39,9 +39,6 @@ RSpec.describe Blog::Subscription do
     end
   end
 
-  # What a feed set to publish excerpts carries: WordPress's default is 55
-  # words, which reads through Newsletter::Prose at a little over three
-  # hundred characters.
   # What an aggregator publishes once its template has wrapped the word in an
   # anchor: markup enough to clear any floor measured on the body.
   def wrapped_link(title)
@@ -70,6 +67,9 @@ RSpec.describe Blog::Subscription do
     ITEM
   end
 
+  # What a feed set to publish excerpts carries: WordPress's default is 55
+  # words, which reads through Newsletter::Prose at a little over three
+  # hundred characters.
   def excerpt(title)
     <<~ITEM
       <item>

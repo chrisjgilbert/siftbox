@@ -27,16 +27,16 @@ class Blog < ApplicationRecord
   # way out.
   has_many :posts, class_name: "Blog::Post", dependent: :destroy, inverse_of: :blog
 
-  # The unique index behind this is what actually holds — two polls adding the
-  # same blog at once both pass the validation and the second insert fails on
-  # the index. This is here so the ordinary case reads as a validation failure
-  # rather than as a RecordNotUnique out of the database, the way
-  # Edition::Citation's does.
   # Stripped before it is validated or compared, so an address pasted with
   # whatever whitespace came with it is the address the reader meant — and so
   # two rows differing only in a trailing newline cannot both exist.
   normalizes :feed_url, with: ->(value) { value.strip }
 
+  # The unique index behind this is what actually holds — two polls adding the
+  # same blog at once both pass the validation and the second insert fails on
+  # the index. This is here so the ordinary case reads as a validation failure
+  # rather than as a RecordNotUnique out of the database, the way
+  # Edition::Citation's does.
   validates :feed_url, presence: true, uniqueness: true, format: { with: FETCHABLE }
 
   # What to call this blog. A fact about the blog rather than about any page
