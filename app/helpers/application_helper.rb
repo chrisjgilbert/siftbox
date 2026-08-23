@@ -20,7 +20,7 @@ module ApplicationHelper
   # nothing in the reader's browser knows where siftbox lives.
   def follow_bookmarklet
     "javascript:window.open('#{subscriptions_url}?feed_url='" \
-      "+encodeURIComponent(location.href))"
+      "+encodeURIComponent(location.href)+'#blogs')"
   end
 
   # The mark's stroke weight compensates for size: it thickens as the mark

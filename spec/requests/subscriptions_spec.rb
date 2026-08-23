@@ -105,26 +105,4 @@ RSpec.describe "Subscriptions" do
 
     expect(Blog.count).to eq(0)
   end
-
-  # The field is the reason the page loaded, so the cursor starts there and
-  # Enter follows without touching the mouse. It is also at the bottom of a
-  # long page, and focusing scrolls it into view.
-  it "puts the cursor in the field when an address came with the reader" do
-    sign_in
-
-    get subscriptions_path(feed_url: "https://queryplanweekly.dev/")
-
-    expect(response.body).to include("autofocus")
-  end
-
-  # An ordinary visit is here to read the pen. Moving focus unasked is worse
-  # than useless for a reader on a screen reader, so it only happens when the
-  # field already holds the thing they came to act on.
-  it "leaves the cursor alone on an ordinary visit" do
-    sign_in
-
-    get subscriptions_path
-
-    expect(response.body).not_to include("autofocus")
-  end
 end

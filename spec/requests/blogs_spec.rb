@@ -46,18 +46,6 @@ RSpec.describe "Blogs" do
     expect(response.body).to include("Feed address has nothing in it yet")
   end
 
-  # The other half of the rule the field is focused by: it holds something,
-  # so the cursor belongs in it. A refused reader has one thing to do next
-  # and it is here, at the bottom of a long page.
-  it "puts the cursor in the field after a refusal" do
-    sign_in
-    serving("https://queryplanweekly.dev/feed", rss_document)
-
-    add("https://queryplanweekly.dev/feed")
-
-    expect(response.body).to include("autofocus")
-  end
-
   it "keeps the address the reader typed in the form after a refusal" do
     sign_in
     serving("https://queryplanweekly.dev/feed", rss_document)

@@ -103,6 +103,56 @@ RSpec.describe "The blogs on the Subscriptions page" do
     expect(page).to have_text("https://queryplanweekly.dev/feed").and have_text("1 post")
   end
 
+  # Filled but deliberately not focused, even though this is the one thing the
+  # reader came here to do.
+  #
+  # A filled field one keystroke from following is a link any page can hand a
+  # signed-in reader: "press Enter to continue" on a page linking here with
+  # feed_url set, and the follow goes through as an ordinary first-party POST
+  # carrying the reader's own cookie and token. What gets followed then
+  # fetches from inside the network and puts a stranger's writing in front of
+  # the editor every morning after.
+  it "does not put the cursor in a field filled from the query" do
+    sign_in_through_the_form
+
+    visit subscriptions_path(feed_url: "https://queryplanweekly.dev/")
+
+    expect(find_field("Feed address")["autofocus"]).to be_nil
+  end
+
+  # What the field actually needed was the scroll, and an anchor moves the
+  # viewport without moving the cursor. The section is the last thing on a
+  # long page, so a reader arriving from a bookmarklet would otherwise land
+  # nowhere near the address they just sent over.
+  it "names the section a bookmarklet scrolls to" do
+    sign_in_through_the_form
+
+    visit subscriptions_path
+
+    expect(page).to have_css("section#blogs")
+  end
+
+  # The one case where the cursor does belong in it: the reader submitted an
+  # address themselves and it came back refused, so the one thing to do next
+  # is here.
+  it "puts the cursor in the field after a refusal" do
+    serving("https://news.ycombinator.com/rss", rss_document(aggregated("One")))
+    sign_in_through_the_form
+
+    visit subscriptions_path
+    follow("https://news.ycombinator.com/rss")
+
+    expect(find_field("Feed address")["autofocus"]).to eq("autofocus")
+  end
+
+  it "leaves the cursor alone on an ordinary visit" do
+    sign_in_through_the_form
+
+    visit subscriptions_path
+
+    expect(find_field("Feed address")["autofocus"]).to be_nil
+  end
+
   # rack_test runs no JavaScript, so the dialog cannot be driven — but the
   # attribute can be held. Without it the button was deleted-and-still-green,
   # on the one irreversible cascade in this app.
