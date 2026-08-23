@@ -12,10 +12,18 @@
   <%= form_with model: blog, url: blogs_path, class: "sources__form" do |form| %>
     <%= form.label :feed_url, t(".label"), class: "sources__label" %>
 
+    <%# Focused only when the field already holds something: a bookmarklet
+        handed an address over, or a follow was just refused. Both are cases
+        where this field is the reason the page loaded, and it sits at the
+        bottom of a long page — so focusing scrolls it into view and Enter
+        follows without reaching for the mouse. On an ordinary visit the
+        reader came to read the pen, and moving focus unasked is worse than
+        useless for anyone on a screen reader. %>
     <div class="sources__controls">
       <%= form.url_field :feed_url,
             required: true,
             autocomplete: "off",
+            autofocus: blog.feed_url?,
             placeholder: t(".placeholder"),
             class: "sources__input" %>
       <%= form.submit t(".submit"), class: "sources__submit" %>
