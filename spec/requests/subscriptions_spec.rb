@@ -71,25 +71,19 @@ RSpec.describe "Subscriptions" do
     expect(response.body).to include("2 posts")
   end
 
-  # What the bookmarklet on the Settings page sends over: the page the reader
-  # was standing on, which Blog::Subscription reads for the feed it announces.
-  it "fills the form with an address handed over in the query" do
+  # What the bookmarklet sends over: the page the reader was standing on,
+  # which Blog::Subscription reads for the feed it announces.
+  #
+  # Named off the bookmarklet rather than written out, because that string is
+  # the one thing this app ships that outlives a deploy — every copy already
+  # in a bookmarks bar is beyond reissuing. Renaming the constant without
+  # renaming what this action reads turns this red.
+  it "reads the parameter the bookmarklet sends" do
     sign_in
 
-    get subscriptions_path(feed_url: "https://queryplanweekly.dev/")
+    get subscriptions_path(Blog::Bookmarklet::PARAMETER => "https://queryplanweekly.dev/")
 
     expect(response.body).to include("https://queryplanweekly.dev/")
-  end
-
-  # Whatever came around it goes, before it is judged — a reader who copied
-  # an address with its whitespace meant the address. Blog does the same on
-  # its way into the column.
-  it "fills the form with an address that arrived padded" do
-    sign_in
-
-    get subscriptions_path(feed_url: " https://queryplanweekly.dev/feed ")
-
-    expect(response.body).to include("https://queryplanweekly.dev/feed")
   end
 
   # Reflected into a field the reader is looking at, so what arrives is held

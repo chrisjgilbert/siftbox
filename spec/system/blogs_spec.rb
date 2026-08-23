@@ -129,7 +129,7 @@ RSpec.describe "The blogs on the Subscriptions page" do
 
     visit subscriptions_path
 
-    expect(page).to have_css("section#blogs")
+    expect(page).to have_css("section##{Blog::Bookmarklet::ANCHOR}")
   end
 
   # The one case where the cursor does belong in it: the reader submitted an
@@ -145,10 +145,16 @@ RSpec.describe "The blogs on the Subscriptions page" do
     expect(find_field("Feed address")["autofocus"]).to eq("autofocus")
   end
 
-  it "leaves the cursor alone on an ordinary visit" do
+  # The same rule where it is hardest to hold. The field escapes the cursor
+  # today because Blog.offered never validates, and an address already on the
+  # roster is exactly the one that would give it an error if it ever did — so
+  # this is the case where "filled from outside" and "has something wrong
+  # with it" would first be confused for each other.
+  it "does not put the cursor in a filled field for a blog already followed" do
+    create(:blog, feed_url: "https://queryplanweekly.dev/feed")
     sign_in_through_the_form
 
-    visit subscriptions_path
+    visit subscriptions_path(feed_url: "https://queryplanweekly.dev/feed")
 
     expect(find_field("Feed address")["autofocus"]).to be_nil
   end

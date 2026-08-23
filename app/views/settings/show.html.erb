@@ -17,7 +17,7 @@
       else's page. Its text becomes the bookmark's name, so it reads as one. %>
   <section class="settings__section">
     <h2 class="settings__heading"><%= t(".bookmarklet.heading") %></h2>
-    <a class="settings__bookmarklet" href="<%= follow_bookmarklet %>"><%= t(".bookmarklet.label") %></a>
+    <a class="settings__bookmarklet" href="<%= @bookmarklet.href %>"><%= t(".bookmarklet.label") %></a>
     <p class="settings__note"><%= t(".bookmarklet.note") %></p>
   </section>
 </main>

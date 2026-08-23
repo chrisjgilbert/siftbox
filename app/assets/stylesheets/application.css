@@ -959,6 +959,14 @@ a {
   .settings__address {
     font-size: 19px;
   }
+
+  /* Lifted with the heading above it and with the Follow button it stands in
+     for. Left at its mobile size it read a notch smaller than both, which is
+     the drift the note over the sources group warns about: the spacing is
+     untokenised on purpose, the type scale is not. */
+  .settings__bookmarklet {
+    font-size: 11px;
+  }
 }
 
 /* Feed -------------------------------------------------------------------- */
