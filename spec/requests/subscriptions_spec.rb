@@ -70,4 +70,39 @@ RSpec.describe "Subscriptions" do
 
     expect(response.body).to include("2 posts")
   end
+
+  # What the bookmarklet on the Settings page sends over: the page the reader
+  # was standing on, which Blog::Subscription reads for the feed it announces.
+  it "fills the form with an address handed over in the query" do
+    sign_in
+
+    get subscriptions_path(feed_url: "https://queryplanweekly.dev/")
+
+    expect(response.body).to include("https://queryplanweekly.dev/")
+  end
+
+  # Reflected into a field the reader is looking at, so what arrives is held
+  # to the format the column is held to rather than printed as it came.
+  it "drops a query parameter that is not an address" do
+    sign_in
+
+    get subscriptions_path(feed_url: "javascript:alert(1)")
+
+    expect(response.body).not_to include("javascript:alert(1)")
+  end
+
+  # The address is filled in, never followed. Following on a GET would put a
+  # blog on the roster for any page that embedded the URL, and would be a
+  # create outside the resourceful route that owns it.
+  # Served so the feed would be taken if anything asked for it — without that
+  # the example passes on WebMock refusing the fetch, and would go on passing
+  # with a follow wired into this action.
+  it "does not follow a blog handed over in the query" do
+    sign_in
+    serving("https://queryplanweekly.dev/feed", rss_document(rss_article("One")))
+
+    get subscriptions_path(feed_url: "https://queryplanweekly.dev/feed")
+
+    expect(Blog.count).to eq(0)
+  end
 end
