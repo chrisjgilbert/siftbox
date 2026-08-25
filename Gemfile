@@ -68,7 +68,7 @@ group :test do
   # browser and no driver gem.
   gem "capybara", "~> 3.40"
   gem "shoulda-matchers", "~> 6.4"
-  gem "webmock", "~> 3.24"
+  gem "webmock", "~> 3.26"
 end
 
 group :development do
