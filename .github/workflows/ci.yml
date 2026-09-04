@@ -98,3 +98,42 @@ jobs:
           bin/rails db:test:prepare
           bin/rspec
 
+  deploy:
+    needs: [scan_ruby, scan_js, lint, audit, test]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Install the deploy key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.KAMAL_SSH_PRIVATE_KEY }}
+
+      # Generate with `ssh-keyscan 46.224.179.132` from a network where SSH
+      # to the box isn't blocked, then store the output as this secret.
+      - name: Pin the Hetzner host key
+        run: echo "${{ secrets.KAMAL_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+
+      # .kamal/secrets reads RAILS_MASTER_KEY from this path, so writing it
+      # here is enough — no change needed to that file.
+      - name: Write the master key
+        run: echo "${{ secrets.RAILS_MASTER_KEY }}" > config/master.key
+
+      - name: Deploy
+        env:
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+          POSTMARK_SMTP_TOKEN: ${{ secrets.POSTMARK_SMTP_TOKEN }}
+        run: bin/kamal deploy
+
