@@ -79,7 +79,7 @@ end
 gem "honeybadger", "~> 6.9"
 
 # The model that writes the edition [https://github.com/anthropics/anthropic-sdk-ruby]
-gem "anthropic", "~> 1.62"
+gem "anthropic", "~> 1.69"
 
 # Reads the blogs' RSS and Atom feeds [https://github.com/ruby/rss]. A bundled
 # gem rather than a default one, so it has to be declared here or `require
