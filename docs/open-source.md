@@ -1,7 +1,8 @@
 # Making siftbox open source
 
 An exploration, written against `d85d84b` (the head of `main` on 18 September
-2026) before any of it is done. Nothing here has been carried out.
+2026) before any of it is done. Nothing here has been carried out. The work
+it proposes is cut into packages in `docs/open-source-plan.md`.
 
 ## Summary
 
