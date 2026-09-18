@@ -142,9 +142,10 @@ it. Put the new one in `.kamal/secrets-common` on the deploy machine as
 of `README.md`.
 
 **Files you own.** `config/honeybadger.yml`, `config/deploy.yml` (only the
-`env.secret` list), `.kamal/secrets` (comments only), `docs/deploying.md`
-(step 4's list of secrets), `README.md` (the paragraph naming
-`.kamal/secrets-common`).
+`env.secret` list), `.kamal/secrets` (comments only). Not `README.md` or
+`docs/deploying.md`: package A follows this one and rewrites both secrets
+sections, so it documents this variable with the rest. Say so in the pull
+request.
 
 **Build.**
 
@@ -156,9 +157,9 @@ of `README.md`.
   the behaviour a self-hoster gets, and it is the right one.
 - Add `HONEYBADGER_API_KEY` to `env.secret` in `config/deploy.yml`, with a
   comment in the register of the ones already there: what reads it, what
-  happens without it.
-- Add the variable to the list in `docs/deploying.md` step 4 and the README
-  paragraph that names what goes in `.kamal/secrets-common`.
+  happens without it. Kamal refuses to deploy when a name listed in
+  `env.secret` is absent from the secrets files (`kamal/lib/kamal/secrets.rb`
+  `fetch`), so the owner step above has to happen before this deploys.
 
 **Tests first.** None. This is configuration, and a spec that reads the YAML
 to assert a key is absent would be a spec of the file rather than of
@@ -206,8 +207,9 @@ the "Outbound network" section of `README.md`.
   Style-only changes in their own commit. Expect the pull request
   description to say what the change costs.
 - `.github/dependabot.yml`: weekly rather than daily, and group minor and
-  patch updates for the bundler ecosystem into one pull request. Keep the
-  ten-request limit.
+  patch updates for the bundler ecosystem into one pull request, with a
+  `groups` entry under that ecosystem whose `update-types` are `minor` and
+  `patch`. Keep the ten-request limit.
 
 **Tests first.** None; documents and a YAML file.
 
@@ -255,7 +257,11 @@ quietly), `docs/deploying.md` (step 4, one line).
 - `WaitlistSignupsController#create`: with the switch off, answer 404
   (`head :not_found`) before the rate limiter and before anything is read
   from `params`. A `before_action` is the shape; it is HTTP, which is what
-  a controller is for. With it on, unchanged.
+  a controller is for. It has to be declared **above** the `rate_limit`
+  line: `rate_limit` is itself a `before_action`
+  (`actionpack/lib/action_controller/metal/rate_limiting.rb:67`) and
+  callbacks run in declaration order, so declared below it the 404 would
+  come after a 429. With the switch on, unchanged.
 - The routes do not change. `root "waitlist_signups#new"` stays, because
   that action is where the signed-in redirect lives.
 - A private predicate on the controller reads
@@ -275,7 +281,7 @@ quietly), `docs/deploying.md` (step 4, one line).
   helper from their system specs.
 - In `spec/requests/waitlist_signups_spec.rb`, every existing example that
   reaches the landing page or posts a signup calls `open_the_waitlist` in
-  its setup phase. The three signed-in redirect examples do not need it.
+  its setup phase. The two signed-in redirect examples do not need it.
 - New examples, each one path, each calling `close_the_waitlist` in setup
   rather than relying on the default (the test environment sets no
   `SIFTBOX_WAITLIST`, so the default is off today, and a later CI variable
@@ -283,6 +289,10 @@ quietly), `docs/deploying.md` (step 4, one line).
   - "sends a signed-out visitor to sign in while the waitlist is closed"
   - "answers 404 to a signup while the waitlist is closed"
   - "records nothing for a signup while the waitlist is closed"
+  - "answers 404 rather than 429 to a sixth signup while the waitlist is
+    closed" — six posts, expect `:not_found` on the last. This is the
+    example that catches the callback declared in the wrong order; one
+    post passes either way.
   - "keeps sending a signed-in reader to the edition while the waitlist is
     closed"
 
@@ -330,11 +340,19 @@ before it reads credentials.
 
 **Files you own.** `db/seeds.rb`, `spec/db/seeds_spec.rb`,
 `config/environments/production.rb`,
-`spec/requests/action_mailbox_ingress_spec.rb`, `config/credentials.yml.enc`
-(deleted), `config/deploy.yml` (`env.secret` only), `.kamal/secrets`,
-`.gitignore`, `.claude/hooks/session-start.sh` (the comment),
-`docs/deploying.md` (steps 3 and 6), `README.md` (the two sections named
-above, minimally: package D rewrites it).
+`spec/requests/action_mailbox_ingress_spec.rb`,
+`spec/requests/passwords_spec.rb` (its last example),
+`config/credentials.yml.enc` (deleted), `config/deploy.yml` (`env.secret`
+only), `.kamal/secrets`, `.gitignore`, `Dockerfile` (the comment on line 6
+only), `.claude/hooks/session-start.sh` (the comment), `docs/deploying.md`
+(steps 3, 4 and 6, including the `HONEYBADGER_API_KEY` line A0 left to this
+package), `README.md` (the two sections named above, minimally: package D
+rewrites it).
+
+Also read before starting: `spec/requests/passwords_spec.rb` lines 97 to
+108. Its last example asserts that `production.rb` reads the token from
+credentials and does **not** name `POSTMARK_SMTP_TOKEN`. That is the
+opposite of this package, and `bin/ci` is red until it is rewritten.
 
 **Build.**
 
@@ -358,8 +376,19 @@ Then:
   line. Rewrite the comments so the file says what it now is: a list of the
   variable names a deployment needs, whose values go in
   `.kamal/secrets-common`.
-- `.gitignore`: remove the four-line credentials block and its comment.
-  They ignore files that no longer have a reason to exist.
+- `.gitignore`: remove the three per-environment credentials lines and the
+  comment above them. They ignore files that no longer have a reason to
+  exist. The `/config/master.key` line stays: an older clone may still hold
+  one, and it must never be committed.
+- `Dockerfile` line 6: the `docker run` example passes `RAILS_MASTER_KEY`.
+  Change it to `SECRET_KEY_BASE` and say the rest come from `env.secret`.
+  Comment only; the build stages do not change.
+- `spec/requests/passwords_spec.rb`, last example: rewrite it to assert the
+  new line, `ENV.fetch("POSTMARK_SMTP_TOKEN", nil)`, and rewrite its comment.
+  The failure worth catching becomes someone dropping the default, which
+  breaks the image build, or putting the token back into credentials, which
+  no longer exist. Keep the example's shape: it reads the file, as the
+  ingress spec's last example does.
 - `.claude/hooks/session-start.sh`: the closing comment says seeds read
   encrypted credentials. They read the environment now; two variables the
   container does not set, so the behaviour (test database only) is the same
@@ -381,12 +410,16 @@ Then:
 **Tests first.**
 
 - `spec/db/seeds_spec.rb`: the six examples keep their names and their
-  assertions; `stub_reader` sets the two environment variables instead of
-  stubbing credentials. `stub_const("ENV", ENV.to_h.merge(...))` is the
-  house-compatible way; it is a stub, and the seeds file reads through
-  `ENV.fetch` with a default or `ENV[]`, both of which a Hash answers.
+  assertions; `stub_reader` becomes a helper that sets the two environment
+  variables, yields, and restores them in `ensure`. That is the suite's
+  precedent for `ENV`: `through` in `spec/jobs/edition/composition_job_spec.rb`
+  and the same shape in `spec/models/edition/draft_spec.rb`. Not
+  `stub_const("ENV", ...)`, which has no precedent here.
 - `spec/requests/action_mailbox_ingress_spec.rb`: the four examples keep
-  their names; only the helper changes.
+  their names; only `stub_ingress_password` changes, to the same
+  set-yield-restore shape for `RAILS_INBOUND_EMAIL_PASSWORD`. Action Mailbox
+  reads the variable per request, so a value set for the example's duration
+  is what the controller sees.
 
 **Done when.** `bin/ci` is green. `git grep credentials` finds nothing in
 `app/`, `config/`, `db/`, `spec/` or `bin/` except in prose and in the
@@ -427,9 +460,9 @@ address in is defensible. The owner decides; if the decision is to leave
 it, skip this package and have D describe `config/deploy.yml` as the one
 file to edit.
 
-**Why.** `config/deploy.yml` names the production host at lines 22 and
-146, the Docker Hub username at lines 9 and 59, `siftbox.co` as the proxy
-host, and the four `SIFTBOX_*` values. `docs/deploying.md` repeats the
+**Why.** `config/deploy.yml` names the production host at lines 22, 25
+(the commented-out job role) and 146, the Docker Hub username at lines 9
+and 59, `siftbox.co` as the proxy host, and the four `SIFTBOX_*` values. `docs/deploying.md` repeats the
 address. The host is shared with the owner's other apps, so the address
 identifies more than siftbox, and history is permanent. Kamal has a native
 mechanism for this: a destination file merged over the base config.
@@ -477,12 +510,16 @@ service are named `siftbox-web-production` rather than `siftbox-web`.
 
 **The cutover, which is an owner step and the risk in this package.** The
 first `-d production` deploy names its containers and its proxy service
-differently from the ones running. Whether kamal-proxy accepts a second
-service claiming `siftbox.co` while the first still holds it was not
-verified. The safe sequence is: `bin/kamal app remove` for the old,
-destination-less deployment (the named volume `siftbox_storage` survives;
-`app remove` removes containers, not volumes, but confirm in Kamal's source
-before running it), then `bin/kamal deploy -d production`. Expect a minute
+differently from the ones running. The sequence is: `bin/kamal app remove`
+for the old, destination-less deployment, then
+`bin/kamal deploy -d production`. Two things make that order safe, both
+read in Kamal 2.12's source: stopping a role that runs behind the proxy
+calls `kamal-proxy remove` for it (`kamal/lib/kamal/cli/app.rb` around line
+69, `lib/kamal/commands/app/proxy.rb`), so `siftbox.co` is released before
+the new service claims it; and `app remove` removes containers and the app
+directory, never volumes (`lib/kamal/commands/app/containers.rb`), so
+`siftbox_storage` survives. Whether kamal-proxy would refuse a second claim
+on a held host was not verified and the order makes it moot. Expect a minute
 or two of downtime. Postmark retries inbound mail for hours, so nothing is
 lost; a reader mid-page sees an error. Do it at a quiet hour and check the
 volume is attached afterwards (`bin/kamal app exec -d production --reuse
@@ -577,8 +614,10 @@ with it.
 the right, one grid row. After: two rows in the same grid. Row one is the
 waitlist as today, with the body rewritten. Row two is the second path: a
 title, a body, and a link in place of a form. Between the rows, a 1px rule
-in paper at reduced opacity is the only new visual element, and it is the
-system's thin rule on the system's dark surface.
+in `--read`, the token the band already sets its body text in, is the only
+new visual element: the system's thin rule on the system's dark surface, in
+a colour the surface already uses. No opacity; the only translucent colour
+in the system is the landing lattice, and this is not a place for a second.
 
 | Key | Draft |
 |---|---|
@@ -611,11 +650,17 @@ repository is accurate.
   CSS selectors:
   - "offers the source to a visitor" — `have_link("Read the source",
     href: "https://github.com/chrisjgilbert/siftbox")`
-  - "offers the source from the nav" — `have_link("Source", href: ...)`
+  - "offers the source from the nav" — `have_link("Source", exact: true,
+    href: ...)`. Without `exact: true` the matcher is a substring match and
+    "Read the source" would satisfy it.
   - "names both ways in" — has text "Want an address?" and "Or run your
     own"
-  - "still takes a signup" — fill in the email field by its label, click
-    "Join the waitlist", expect "On the list"
+  - "still takes a signup" — the page renders the form twice (hero and
+    closing band), so a bare `fill_in "Email"` is ambiguous under Capybara.
+    Scope to the hero by its heading, `within(:section, "Your morning
+    edition")`, which is a landmark and a name rather than a selector; then
+    fill in the email field by its label, click "Join the waitlist", expect
+    "On the list".
   Each calls `open_the_waitlist`, the helper C1 put in `spec/support/`, in
   its setup phase.
 
@@ -665,41 +710,56 @@ hierarchy at the shot's reduced scale:
 - Three section groups, each headed the way `shot__group` heads the day
   today (mono, uppercase in CSS, 2px rule): "Lead stories", "Briefly", "The
   reading list".
-- Under each, stories at the shot's scale. A lead story: headline (Archivo
-  600, 17px on mobile and 20px at the breakpoint, the current
-  `shot__subject` scale), two lines of body (Archivo 400, 14px, `--body`),
-  a sources line (mono, 10px, uppercase in CSS, `--mute`: "Sources / Ruby
-  Weekly / This Week in Rails", slashes as the feed's mono lines draw
-  them). A Briefly line: body only, then sources. A reading list entry:
-  headline and sources.
-- Fixed content, in the locale file, as the rows are today. Draft:
+- Under each, stories at the shot's scale, in the hierarchy the real page
+  has. Every story has a body: `Edition::Story` requires one and
+  `_story.html.erb` always draws it. A headline is drawn only when present,
+  which on the real page means leads and reading list entries have one and
+  Briefly lines do not. So: a lead story is headline (Archivo 600, 17px on
+  mobile and 20px at the breakpoint, the current `shot__subject` scale),
+  two lines of body (Archivo 400, 14px, `--body`), then a sources line
+  (mono, 10px, uppercase in CSS, `--mute`, "Sources / Ruby Weekly / This
+  Week in Rails", slashes as the feed's mono lines draw them). A Briefly
+  line is body then sources. A reading list entry is headline, a one-line
+  body (the editor writes a review there, per `Edition::Prompt`), then
+  sources. The label pluralises by count through a locale key of its own,
+  as `editions.story.sources` does.
+- Fixed content, in the locale file, as the rows are today. Keys sorted
+  alphabetically, as the ground rules require, and any scalar containing a
+  colon-space written as a folded block (`>-`), or YAML reads it as a
+  mapping. This draft parses:
 
 ```yaml
 shot:
   caption: No. 31 · Thursday 18 September
-  subcaption: Written at 07:00 from everything that arrived
   sections:
     - heading: Lead stories
       stories:
-        - headline: Ruby 3.5 preview ships with the new parser on by default
-          body: Two newsletters carry the release and disagree on one point:
+        - body: >-
+            Two newsletters carry the release and disagree on one point:
             whether the rewritten parser is faster in ordinary code or only
             on the benchmark the core team published. Both link the same
             changelog.
+          headline: Ruby 3.5 preview ships with the new parser on by default
           sources: [ Ruby Weekly, This Week in Rails ]
     - heading: Briefly
       stories:
-        - body: Postgres 18 beta 2 adds skip scan to multi-column indexes,
-            which makes a query that skips the leading column use the index
-            at all.
+        - body: >-
+            Postgres 18 beta 2 adds skip scan to multi-column indexes, which
+            makes a query that skips the leading column use the index at all.
           sources: [ Postgres Weekly ]
-        - body: A short argument for media that has no idea whether you
-            finished it.
+        - body: A short argument for media that has no idea whether you finished it.
           sources: [ Offscreen ]
     - heading: The reading list
       stories:
-        - headline: Consistent hashing, drawn out properly
+        - body: >-
+            A long, careful walk through consistent hashing, with the diagrams
+            drawn properly for once. Worth an evening.
+          headline: Consistent hashing, drawn out properly
           sources: [ The Whiteboard ]
+  sources:
+    one: Source
+    other: Sources
+  subcaption: Written at 07:00 from everything that arrived
 ```
 
   The senders are the ones `lib/tasks/sample_data.rake` and the current
@@ -708,9 +768,9 @@ shot:
   page must not report news.
 - Delete the row markup and the `shot__row`, `shot__row--read`,
   `shot__number`, `shot__time`, `shot__text`, `shot__sender`,
-  `shot__subject` rules, and the `rows`, `day`, `date` locale keys. Leftover
-  CSS for a removed feature is what `.claude/rules/review.md` says to look
-  for.
+  `shot__subject` and `shot__date` rules, and the `rows`, `day`, `date`
+  locale keys. Leftover CSS for a removed feature is what
+  `.claude/rules/review.md` says to look for.
 - Rewrite the comment at the top of `_shot.html.erb` and the one above
   `.shot`: they say the feed's row spec, and it is the edition's now. Keep
   the sentence about why it is static.
@@ -758,14 +818,21 @@ composed edition is written as one graph and one `save!`),
 **Build.**
 
 - `SampleEdition`, a PORO in `lib/`, beside `EditionCorpus` in shape: given
-  the newsletters the sample task created, it builds one edition with one
-  lead story citing two of them, two Briefly lines citing one each, and one
-  reading list entry, and saves the graph the way `Edition::Editor#record`
+  the newsletters the sample task created (five today, in the order the
+  task lists them), it builds one edition citing every one of them: a lead
+  story citing the first two, two Briefly lines citing the third and the
+  fourth, and a reading list entry citing the fifth. Every story has a
+  body, because `Edition::Story` validates one; the lead and the reading
+  list entry have headlines, the Briefly lines do not, which is the shape
+  the real page draws. It saves the graph the way `Edition::Editor#record`
   does: attributes assigned, stories and citations built in memory, one
   `save!`. `editor_model` and `prompt_version` say "sample" so the row is
-  never mistaken for a composed one. Number from `Edition.next_number`,
-  `published_on` today, the window from the oldest newsletter's
-  `received_at` to now.
+  never mistaken for a composed one. The identity attributes are the ones
+  `Edition::Window#edition` sets (`app/models/edition/window.rb:67-73`),
+  and `Edition` validates all of them: `number` from `Edition.next_number`,
+  `published_at` now, `published_on` today in the app's zone,
+  `window_started_at` the oldest newsletter's `received_at`,
+  `window_ended_at` now.
 - `sample_data:load` calls it after the newsletters, and the task's closing
   line reports the edition as well as the count. The task already destroys
   editions before newsletters, so it stays idempotent.
@@ -778,7 +845,7 @@ composed edition is written as one graph and one `save!`),
 
 **Tests first.** `spec/lib/sample_edition_spec.rb`:
 
-- "writes one edition citing every sample newsletter" — create four
+- "writes one edition citing every sample newsletter" — create five
   newsletters, build, expect `Edition.count` 1 and every newsletter cited
 - "files a story in each section" — lead, briefly and reading list all
   present
@@ -820,10 +887,12 @@ line 19, `docs/siftbox-redesign.md` line 3, `docs/blogs-rss-reply.md` lines
 - `docs/operating.md` is today's README with its stale lines fixed: "Three
   screens" becomes a paragraph naming the edition, the originals archive,
   subscriptions, settings and blogs; the variables table reflects A, B and
-  C1; the credentials paragraphs are gone (A did most of this). Keep every
-  decision paragraph: sanitising at render, self-hosted images, the egress
-  rule, the feed bound, the landing page's four guards, `noindex`. Keep
-  "Deferred".
+  C1; the credentials paragraphs are gone (A did most of this); the class
+  the README calls `Newsletter::ImageDownload::Destination` (line 134) is
+  `Download::Destination` now, as `docs/deploying.md` already says. Keep
+  every decision paragraph: sanitising at render, self-hosted images, the
+  egress rule, the feed bound, the landing page's four guards, `noindex`.
+  Keep "Deferred".
 - `README.md`, new, about a hundred lines, in this order:
   1. One paragraph: what siftbox is. One address for your newsletters, blog
      feeds beside them, a daily edition written from everything that
@@ -912,10 +981,12 @@ In order. Each is named in the package it belongs to.
 ## The things most likely to go wrong
 
 1. **Package A's release.** Every value has to be in `secrets-common`
-   before the deploy, under the exact new name. A typo in
-   `RAILS_INBOUND_EMAIL_PASSWORD` is a 401 on every webhook with nothing in
-   the log to say why, which is the failure the README used to spend three
-   paragraphs on. The smoke test is not optional.
+   before the deploy, under the exact new name. A name that is missing
+   fails loudly: Kamal refuses to deploy. A value that is wrong fails
+   quietly: a mistyped `RAILS_INBOUND_EMAIL_PASSWORD` is a 401 on every
+   webhook with nothing in the log to say why, which is the failure the
+   README used to spend three paragraphs on. The smoke test is not
+   optional.
 2. **The `fetch` default in `production.rb`.** An agent following
    `.claude/rules/ruby.md` will write `ENV.fetch("POSTMARK_SMTP_TOKEN")` and
    break the image build at `assets:precompile`, in CI or on the deploy
