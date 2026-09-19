@@ -12,7 +12,7 @@ RSpec.describe "Waitlist signups" do
 
     get root_path
 
-    expect(response.body).to include("Your news feed")
+    expect(response.body).to include("Your morning edition")
   end
 
   # Opening the app should land on the day's briefing, not on a page selling

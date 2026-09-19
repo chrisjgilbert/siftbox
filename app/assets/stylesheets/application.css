@@ -1613,6 +1613,12 @@ a {
   padding-bottom: 22px;
 }
 
+.landing__nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
 .landing__nav-link {
   font-family: var(--mono);
   font-size: 10px;
@@ -1692,6 +1698,13 @@ a {
   align-items: center;
   gap: 10px;
   color: var(--ink);
+}
+
+/* The separator between the source link and the rest belongs to the layout
+   rather than to the copy, so it is drawn here — the same reason the feed's
+   mono lines draw their slashes. The non-breaking space keeps "· MIT" whole. */
+.landing__footer-built::before {
+  content: "·\00a0";
 }
 
 @media (min-width: 720px) {
@@ -1987,6 +2000,26 @@ a {
   line-height: 1.6;
   color: var(--read);
   text-wrap: pretty;
+}
+
+/* The break between the two ways in, spanning both columns. --read is the grey
+   the band already sets its own paragraphs in, and the thin rule's --rule is
+   for light surfaces: on ink it is all but invisible. No opacity — the landing
+   lattice is the only translucent colour in the system and stays the only one. */
+.closing__rule {
+  grid-column: 1 / -1;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--read);
+}
+
+/* The nav link's treatment on the dark band, where --blue is 1.6:1 on ink. */
+.closing__action {
+  margin: 0;
+}
+
+.closing .landing__nav-link {
+  color: var(--paper);
 }
 
 @media (min-width: 720px) {

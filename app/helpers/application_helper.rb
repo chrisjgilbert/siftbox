@@ -5,6 +5,11 @@ module ApplicationHelper
     Rails.configuration.x.inbound_address
   end
 
+  # Where the source lives. A helper for the same reason inbound_address is one.
+  def source_url
+    Rails.configuration.x.source_url
+  end
+
   # The mark's stroke weight compensates for size: it thickens as the mark
   # shrinks, so the brackets still read at favicon scale. Set on the <svg>
   # rather than per path, which is what `application/mark` does with this.
