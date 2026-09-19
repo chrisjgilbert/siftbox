@@ -19,6 +19,24 @@ Honeybadger key and the licence, are all that has to land before the
 repository is made public; the rest can follow in public at the cost of
 early visitors seeing a runbook where a README should be.
 
+## Where the work has got to
+
+This section is the only part of the document that goes stale. Everything
+below it is the plan as written before any of it ran.
+
+| Package | State |
+|---|---|
+| E, licence and repository files | Merged, #41. Its two `SECURITY.md` placeholders are filled separately in #45: reports go through GitHub's private vulnerability reporting, which the owner has to switch on before the repository is public. |
+| C1, the waitlist switch | Merged, #42. `spec/support/waitlist_helper.rb` is on `main` for C2 and C3 to use. |
+| F, the sample edition and screenshot | Merged, #43. `docs/images/edition.png` is there for package D. |
+| A0, C2, C3 | In progress. |
+| A, B, D | Not started. A follows A0, B follows A, D follows all of them. |
+
+Two decisions the plan left to the owner have been taken. Package B goes
+ahead: the host address and registry username move to a gitignored
+destination file, and the cutover is accepted. Security reports go through
+GitHub rather than a published address, so `SECURITY.md` names no email.
+
 ## What's already decided
 
 From `docs/open-source.md`, and not reopened here:
@@ -161,7 +179,7 @@ is one, in A0), do it first and say so in the brief.
 | E | Licence, `SECURITY.md`, `CONTRIBUTING.md`, Dependabot cadence | nothing | **Yes** (the licence) |
 | C1 | The landing page becomes a switch | nothing | No |
 | A | Secrets from the environment; credentials file removed | A0 | No |
-| B | Deploy config becomes a template; values move to a destination file | A, C1 | No. Optional; owner decides |
+| B | Deploy config becomes a template; values move to a destination file | A, C1 | No. Decided: go ahead |
 | C2 | Landing page: the copy and the second path | C1 | No. Deploy at or after the visibility change |
 | C3 | Landing page: the product shot becomes an edition | C1 | No |
 | F | A sample edition, and a screenshot | nothing | No |
@@ -500,10 +518,11 @@ credentials, which is some of its best writing, is replaced by a table.
 
 ## Package B — Deploy config becomes a template
 
-**Optional.** `docs/open-source.md` recommends this and says leaving the
-address in is defensible. The owner decides; if the decision is to leave
-it, skip this package and have D describe `config/deploy.yml` as the one
-file to edit.
+**Decided: go ahead.** `docs/open-source.md` recommended this and noted that
+leaving the address in would also have been defensible. The owner chose to
+move it, cutover and all, because the host is shared with their other apps.
+Package D describes the destination file rather than `config/deploy.yml` as
+the file a deployment edits.
 
 **Why.** `config/deploy.yml` names the production host at lines 22, 25
 (the commented-out job role) and 146, the Docker Hub username at lines 9
@@ -996,8 +1015,11 @@ In order. Each is named in the package it belongs to.
 
 1. **A0, before the code.** New Honeybadger key; into
    `.kamal/secrets-common`. After A0 deploys and reports: revoke the old.
-2. **E, in the pull request.** The security contact address and the reply
-   window for `SECURITY.md`.
+2. **E, decided and done in #45.** Reports go through GitHub's private
+   vulnerability reporting rather than a published address. What remains is
+   switching that setting on, which is in step 7 below because the button
+   only appears once the repository is public. Until then `SECURITY.md`
+   points at something that is not there.
 3. **C1, at deploy.** `SIFTBOX_WAITLIST: "true"` in `env.clear`.
 4. **A, at deploy.** Copy five values out of credentials into
    `.kamal/secrets-common` under their new names; deploy; smoke test; delete
@@ -1008,8 +1030,9 @@ In order. Each is named in the package it belongs to.
 7. **Going public**, once A0 has deployed and E has merged. In GitHub, in
    this order: description, website, topics; change the visibility; then
    the settings that appear only for a public repository: secret scanning
-   and push protection, branch protection on `main` requiring the CI
-   workflow.
+   and push protection, private vulnerability reporting (which `SECURITY.md`
+   sends every report through, so this one is not optional), and branch
+   protection on `main` requiring the CI workflow.
 8. **D, in the pull request.** The support sentence.
 
 ## Deploy steps
