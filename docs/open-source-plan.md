@@ -794,7 +794,7 @@ hierarchy at the shot's reduced scale:
 
 ```yaml
 shot:
-  caption: No. 31 · Thursday 18 September
+  caption: No. 31 · Friday 18 September
   sections:
     - heading: Lead stories
       stories:
