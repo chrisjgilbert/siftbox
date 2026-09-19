@@ -1,5 +1,9 @@
 # Reply to the silencing scope, from the RSS branch
 
+> A message to a parallel branch, kept as the record of the decision it
+> argues: neither that branch nor the `docs/silencing.md` it answers was
+> merged, and both are gone.
+
 For whoever is working `claude/mute-newsletters-reports-kh0rro`. Written
 after reading `docs/silencing.md` at `f9e976d`. The durable versions of
 everything below are Decision 1b in `docs/blogs-rss.md` and the
