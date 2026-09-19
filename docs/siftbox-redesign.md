@@ -1,5 +1,8 @@
 # siftbox — redesign spec
 
+> `design_handoff_siftbox/README.md` was a design handoff kept outside this
+> repository and never committed to it.
+
 Implementation spec for the Claude Design handoff (`design_handoff_siftbox/README.md`).
 Written before the work, to be read alongside the diff.
 
@@ -109,9 +112,10 @@ committed, the PNG is.
 
 **Deploy step.** The environment variables have to be renamed on the host in the same
 release, or the app boots with placeholder values — a feed that tells the reader to
-subscribe to `example.com`, reset links pointing at localhost. Nothing is deployed yet
-(`config/deploy.yml` still has no host), so today this costs nothing; it will not stay
-free.
+subscribe to `example.com`, reset links pointing at localhost. Nothing was deployed when
+this was written, so it cost nothing at the time; the rename has since shipped, and the
+host now lives in the gitignored `config/deploy.production.yml` rather than in
+`config/deploy.yml`, which is a committed template.
 
 Renaming the Kamal volume orphans the old one. Again free while nothing is deployed.
 

@@ -1,264 +1,103 @@
 # siftbox
 
-Receives newsletter emails at one dedicated address via Action Mailbox and
-Postmark, and presents them as a clean reading feed for a single reader.
+siftbox gives your subscriptions one dedicated address, follows blogs by RSS
+beside them, and reads everything that arrived into a single edition each
+morning: what the stories were, who covered them, and where they disagree.
+Every line links to the original, and the originals stay whole in an archive
+behind it. It serves one reader — you — and it runs as one Rails app in one
+container on one SQLite volume.
 
-Three screens. A public landing page with a waitlist, which is what `/` serves
-a signed-out visitor. A feed grouped by the day mail arrived, numbered
-continuously so it reads as an index, with a thumbnail pulled from each email.
-And a reader that strips the sender's styling and re-renders the newsletter in
-the app's own typography. There is an escape hatch — "View original" — that
-shows the sender's HTML in a sandboxed iframe.
+![An edition under the siftbox masthead: a dated issue line, then Lead stories, Briefly and The reading list, each story followed by the newsletters it was written from](docs/images/edition.png)
 
-## Getting started
+[![CI](https://github.com/chrisjgilbert/siftbox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/chrisjgilbert/siftbox/actions/workflows/ci.yml)
+
+## How it works
+
+Mail arrives at one address on an inbound domain you point at Postmark, which
+posts it to Action Mailbox, which stores it. Blogs are polled hourly over RSS
+and their posts land beside the mail. At 07:00 a job sends everything that
+arrived since the last edition to Claude, which writes the stories. Each
+story is stored with the newsletters and posts it was written from, and the
+page prints those sources under it as links into the archive, so a claim can
+always be taken back to the thing that made it.
+
+Nothing an outsider wrote is ever rendered as markup on an app page: the
+edition is the editor's words through ordinary escaping, and a newsletter is
+shown as it arrived only inside a sandboxed frame that can reach nothing of
+this app's. The images a newsletter hotlinks are fetched once at ingest and
+re-hosted, so opening one makes no request to the sender — and because those
+URLs come from whoever sent the mail, `Download::Destination` resolves each
+one, refuses any address off the public internet, and asks again at every
+redirect. `docs/operating.md` has the mechanism behind each of those.
+
+## Run it locally
+
+From a fresh clone, with Ruby installed:
 
 ```bash
 export SIFTBOX_READER_EMAIL=you@example.com
 export SIFTBOX_READER_PASSWORD=a-long-enough-password
-bin/setup                    # its db:prepare seeds the account from those two
-bin/rails sample_data:load   # development only, gives the feed something to show
-bin/dev
+bin/setup --skip-server     # gems, database, and the only account from those two
+bin/rails sample_data:load  # development only: five newsletters and an edition
+bin/dev                     # the server and the job worker
 ```
 
-The authentication generator deliberately ships no sign-up flow, so the seeds
-create the only account, from `SIFTBOX_READER_EMAIL` and
-`SIFTBOX_READER_PASSWORD`. Nothing here is encrypted and no key is needed:
-`db:prepare` loads the seeds whenever it creates the database, so a rebuilt
-volume gets the account back from the same two variables. Seeds create the
-account and never update it, so changing the password here does nothing to an
-account that already exists; that is deliberate, since the reader may have
-changed it through the reset flow. On a clone whose development database is
-already there, `db:prepare` migrates rather than creates and so runs no seeds —
-export the two variables and run `bin/rails db:seed` once by hand.
+`--skip-server` matters: without it `bin/setup` ends by starting the server
+and the two commands after it never run.
 
-See `CLAUDE.md` and `.claude/rules` for the conventions this codebase
-follows, and `bin/ci` for what has to pass.
+Then sign in at <http://localhost:3000> with the address and password you
+exported, and `/` is the sample edition. Add `SIFTBOX_WAITLIST=true` to the
+environment if you want the public landing page at `/` instead of a redirect
+to the sign-in form.
 
-## Receiving mail
+## What it needs from outside
 
-`SIFTBOX_INBOUND_ADDRESS` is the address subscriptions get pointed at. It is
-shown in the end-of-feed note and the empty state, and defaults to a
-placeholder until the inbound domain is settled.
-
-### Postmark
-
-1. Create a Server in Postmark. Its Default Inbound Stream has a hash-based
-   address you can use immediately.
-2. For a real address, set an Inbound Domain on the stream and add an MX
-   record pointing at `inbound.postmarkapp.com`, priority `10`. A dedicated
-   subdomain is preferable to the root, so ordinary mail is unaffected.
-3. Set the inbound webhook to:
-
-   ```
-   https://actionmailbox:PASSWORD@your-host/rails/action_mailbox/postmark/inbound_emails
-   ```
-
-4. **Tick "Include raw email content in JSON payload."** Action Mailbox needs
-   the raw message, and without this the ingress fails with no obvious cause.
-
-`PASSWORD` is `RAILS_INBOUND_EMAIL_PASSWORD`, which Action Mailbox
-authenticates every delivery against. Generate a long random one; Action
-Mailbox compares it in constant time, and changing it means changing the
-Postmark webhook URL in the same sitting.
-
-Postmark retries a failed inbound webhook 10 times over intervals growing
-from 1 minute to 6 hours, so ingestion has to be idempotent — a partial
-unique index on `newsletters.message_id` handles that. A `403` stops retries
-permanently, which is the way to reject mail you never want.
-
-### Locally
-
-The ingress is armed in production only, so the webhook endpoint answers 404
-everywhere else.
-
-Use the conductor at `/rails/conductor/action_mailbox/inbound_emails` rather
-than a tunnel — it creates inbound emails directly and routes them through
-the real mailbox, so it needs no ingress. The highest-fidelity test is to
-forward a real newsletter from your mail client *as an attachment* to get the
-`.eml`, then paste its raw source into the conductor — that exercises the
-mailbox against real newsletter MIME, which is where the surprises are.
+- **Postmark**, for a deployment — required. It receives mail at the inbound
+  address and it sends the password-reset mail, which is the only way back
+  into an app with no sign-up flow. Both ends of it are two settings in
+  `config/environments/production.rb` — the Action Mailbox ingress and the
+  SMTP host — and nothing else in the app knows which provider it is talking
+  to, so another Action Mailbox ingress is a small change. Locally you need
+  none of it: the Action Mailbox conductor takes a raw message straight in.
+- **An Anthropic API key**, for editions — optional. Without it the morning
+  job raises once in the worker log and nothing else changes: the archive,
+  subscriptions and blogs all work, and the editions page goes on saying the
+  first one is written at 07:00. Budget roughly $0.45 a day at the assumed
+  volume — arithmetic over an assumed input size rather than a measurement,
+  as `docs/briefing-followups.md` says.
+- **Honeybadger**, for error reporting — optional. Without a key the gem logs
+  that it is missing and errors reach the container log only.
 
 ## Deploying
 
-`docs/deploying.md` is the runbook — the steps in the order they depend on
-each other, worked through against a Hetzner host. What follows here is the
-part worth understanding before running any of it.
+One container and one volume, with Kamal. The volume holds the four SQLite
+databases and the Active Storage blobs together, so that single path is the
+whole of this app's state and backing it up backs up everything. There is no
+database server to run. `docs/deploying.md` is the runbook, in the order the
+steps depend on each other; `docs/operating.md` is what to read alongside it —
+every environment variable and what a missing one costs, the host egress rule
+this app cannot install for itself, and the reasoning behind the decisions a
+change is most likely to undo.
 
-The Kamal files declare what the app needs. They no longer declare where it
-runs: `config/deploy.yml` is a committed template whose host, registry
-account, proxy hostname and `SIFTBOX_*` addresses are placeholders —
-`SIFTBOX_TIME_ZONE` is the exception, and is a real zone because an unknown one
-raises at boot. A deployment puts its own values in a gitignored
-`config/deploy.production.yml` that Kamal merges over the top when a command is
-given `-d production`. Every one of these variables fails quietly rather than
-loudly, except the first, which stops the app dead:
+## How it is built
 
-| Variable | Missing means |
-|---|---|
-| `SECRET_KEY_BASE` | Rails has nothing to sign session cookies or reset tokens with and raises rather than serving. Changed rather than missing, the reader is signed out and any reset link in flight is void |
-| `RAILS_INBOUND_EMAIL_PASSWORD` | Action Mailbox has nothing to authenticate against, so every Postmark webhook 500s. Wrong rather than missing, every one is a 401 with nothing in the log to say why |
-| `SIFTBOX_READER_EMAIL`, `SIFTBOX_READER_PASSWORD` | No account is created on a fresh volume, so there is no way to sign in. The boot log says `No reader account created` |
-| `SIFTBOX_INBOUND_ADDRESS` | The feed tells the reader to subscribe to `example.com` |
-| `POSTMARK_SMTP_TOKEN` | Password reset silently fails — the only way back in |
-| `SIFTBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
-| `SIFTBOX_HOST` | Reset links point at localhost |
-| `SIFTBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
-| `SIFTBOX_WAITLIST` | Defaults to off: `/` sends a signed-out visitor to sign in and a signup answers 404. siftbox.co sets it to `true`; so does a development environment that wants the landing page (`SIFTBOX_WAITLIST=true bin/dev`) |
+siftbox was built with Claude Code, and `CLAUDE.md` and the short files in
+`.claude/rules/` are how it is directed — style, where domain logic lives, and
+a testing rule that says write the test first. `docs/` holds the design and
+planning documents the features were built from, which are the honest record
+of what was decided and what it cost. `CONTRIBUTING.md` says what a pull
+request has to clear; `SECURITY.md` says where a vulnerability report goes.
 
-Every secret goes in `.kamal/secrets-common`, which is gitignored and which
-Kamal reads whether or not the command names a destination, so nothing has to
-be exported into the shell first. What it reads after that does depend on the
-destination: `.kamal/secrets.production` with `-d production`, and the
-committed `.kamal/secrets` without one. Either way the second file is merged
-over the first, so naming a variable in both takes the value from the second,
-not the real one — which is why `.kamal/secrets` names them in comments and
-assigns nothing.
+## Support
 
-Kamal refuses to deploy when a name in `env.secret` is in none of the files it
-read, so a name left out is loud. A wrong value is not, which is what the
-smoke test in `docs/deploying.md` step 8 is for. That document lists every
-name, and what each one does.
+**[SUPPORT EXPECTATIONS — not yet set.]**
 
-There is no database server to run. The four databases are SQLite files under
-`storage/`, on the same mounted volume as the Active Storage blobs — so that
-one path is the whole of this app's state, and backing it up backs up
-everything.
+One sentence, the owner's to write, saying what a stranger should expect:
+whether questions are read, whether they are answered, and how quickly. It is
+the only line in this file that promises anything, so nobody else can write
+it. Security reports are separate and go through `SECURITY.md`, which already
+states a reply window.
 
-### Outbound network — a deploy step this app cannot do for itself
+## Licence
 
-Ingest fetches the images newsletters link to, which means URLs written by
-anyone who can email the inbound address decide where this app makes
-requests. `Newsletter::ImageDownload::Destination` refuses anything that
-resolves off the public internet and hands back the address it checked, so
-the connection goes there rather than to whatever a second DNS lookup might
-answer.
-
-**That is the application layer only.** The stronger control is an egress
-rule on the host, blocking outbound traffic from the app container to
-`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8` and
-`169.254.0.0/16` — the last of those being where cloud providers serve
-instance credentials. Kamal does not install one, and nothing in this
-repository will: it is a firewall or Docker network rule on the host, and it
-has to be done by hand when the host is chosen.
-
-It is worth doing even though the code checks already: it holds for any
-outbound request the app ever grows, not only this one fetcher, and it does
-not depend on the checks staying correct through future edits. Until then,
-the code is the only thing enforcing this.
-
-`docs/deploying.md` has the ranges to block, and what is particular about
-doing it on a Hetzner host.
-
-### Deploy steps
-
-One-off steps that do not install themselves:
-
-```bash
-bin/rails lead_images:backfill
-```
-
-Reads the lead image out of every newsletter stored before the column
-existed. Without it the whole archive renders the feed's "no image in email"
-box. Idempotent, so it is safe to run again.
-
-```bash
-bin/rails confirmations:preview
-bin/rails confirmations:backfill
-```
-
-Holds the subscription confirmations sitting in mail stored before detection
-existed — detection runs at ingest, so without this the pen is empty on the
-first morning while every confirmation the reader has ever received is behind
-it in the archive. Idempotent. Run the preview first: it is the same walk
-inside a transaction that rolls back, and it prints what would be held. Mail
-a published edition already cites is left alone, whatever its subject says.
-
-The app was called `newsbox` until recently. If you are upgrading a running
-deployment, rename its `NEWSBOX_*` variables to `SIFTBOX_*` in the same
-release as the code, or the app boots on placeholder values. The Kamal
-storage volume was renamed with them.
-
-## Decisions worth knowing
-
-**Sanitizing happens at render, not at ingest.** `NewslettersHelper#newsletter_body`
-runs the stored HTML through Action View's `sanitize`, which returns an
-already-safe string — so nothing in the app calls `html_safe` or `raw` on
-reader-supplied content. Tuning the allowlist in `Newsletter::Body` applies to
-the whole archive immediately, with no cached column to reprocess.
-
-**Images are self-hosted.** Everything a newsletter carries inside the
-message (`cid:` references) is stored with Active Storage during ingest, and
-everything it hotlinks is fetched by `Newsletter::RemoteImagesJob` just
-after — in both cases the reference in the body is rewritten to a path this
-app serves. So opening a newsletter makes no request to the sender, which is
-the only way to stop an open being tracked: a tracking pixel that declares
-no size is indistinguishable from a real image, and `Newsletter::TrackingPixelScrubber`
-only catches the ones that declare 2px or less. It also means the archive
-keeps its images once senders' CDNs stop serving them.
-
-The sender still learns the message was processed, because the server
-fetches once at delivery. That is what Apple Mail Privacy Protection and
-Gmail's image proxy do too, and delivery is something an ESP already knows.
-
-A download that fails leaves the `src` pointing where it did, so the reader
-still sees the image — which is why the CSP keeps `img-src https:` and the
-`same-origin` referrer policy in the layout still earns its place. The same
-is true of a source past `Newsletter::RemoteImages::MAX_IMAGES`: nothing
-bounds how many `<img>` tags a sender writes, and each one costs a request
-and up to `MAX_BYTES` of disk on a queue three threads wide, so the count is
-capped and the overflow stays hotlinked.
-
-`Newsletter::ImageDownload` is the part to read before changing any of this:
-it fetches attacker-supplied URLs from inside the network, so it checks
-resolved addresses rather than hostnames, re-checks every redirect, and caps
-redirects, bytes and time. Read `Destination` with the IPv6 forms in mind —
-`::ffff:169.254.169.254` is the metadata address wearing a different hat, and
-`IPAddr`'s `loopback?` and `link_local?` do not see through it. That is why
-IPv6 gets an allowlist of global unicast rather than another denied prefix.
-
-**Turbo's hover prefetching is off in the layout.** It was there because
-opening a newsletter used to mark it read, so a prefetch wrote. Read state is
-retired and nothing writes on a GET now, but the tag stays for a different
-reason: an archive row points at an original, and prefetching one on hover
-pulls a body that runs to hundreds of kilobytes for a row nobody opened.
-
-**The feed is bounded to seven days**, which is what its end-of-feed copy
-claims. Showing more history needs a pagination design first.
-
-**Each newsletter's lead image is captured at ingest**, into
-`newsletters.lead_image_url`, so the feed can render a thumbnail per row
-without loading a `body_html` to find one — `Newsletter::FEED_COLUMNS` exists
-precisely to keep the index off that column. Extraction runs *after*
-`Newsletter::InlineImages`, which rewrites `cid:` references to app paths;
-reading the lead first would store a URL no browser can resolve.
-
-**The landing page is the only public write path.** It is guarded four ways:
-an off-screen honeypot answered exactly like a real signup, a rate limit
-counting in `Rails.cache`, strong parameters, and treating a duplicate address
-as success — the unique index raises and `WaitlistSignup#join` rescues, rather
-than a uniqueness validation reporting a clash and answering a question about
-someone else's address. Nothing is emailed: the copy promises exactly one
-message, and a confirmation would break that on day one.
-
-**`noindex, nofollow` is not site-wide.** The layout emits it unless a
-template sets `content_for :indexable`, which only the landing page does.
-
-## Deferred
-
-Archiving, search and tagging are all deliberately out of v1. The design
-handoff shows `ARCHIVED` in the feed header, `ARCHIVE` in the reader top bar
-and a search icon; none of them are built. Both bars are flex rows, so they
-degrade cleanly with the controls absent. Archiving and search are roughly a
-migration and thirty lines each — with one note for whoever adds search: this
-app is SQLite, so `LIKE`, which is already case-insensitive for ASCII, not the
-`ILIKE` the handoff assumes.
-
-The handoff's sponsor block (its §5.4) is not built and is not planned. There
-is no way to identify a sponsor section in arbitrary newsletter HTML without a
-heuristic per sender.
-
-Multiple readers would take three steps: a wildcard inbound domain
-(`*.your-domain`), a token address per user, and resolving the `To:` address
-to a user in `NewslettersMailbox`. Until then `Feed` is deliberately not
-scoped to a user — with one account the authentication gate is the scope, and
-a `user_id` nothing filters on would be theatre.
+MIT. See `LICENSE`.

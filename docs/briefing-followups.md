@@ -373,6 +373,9 @@ were covering the removed code rather than passing vacuously over it.
   the landing page's own composition, not a stale reference to live code — but
   it is now a picture of a screen that does not exist.
 
+  **Closed.** The shot draws an edition now, and `.shot__row--read` went with
+  the feed markup it belonged to.
+
 - **Nothing verified the archive in a browser after the header changed.** The
   system specs run under `rack_test`, which renders no CSS, so what is proven
   is markup and links rather than layout. The archive wears the shared

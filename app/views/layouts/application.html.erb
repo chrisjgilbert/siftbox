@@ -16,9 +16,11 @@
         origin check rejects. %>
     <meta name="referrer" content="same-origin">
 
-    <%# Opening a newsletter marks it read, so GET /newsletters/:id writes.
-        Turbo prefetches links on hover, which would mark a row read from the
-        feed without the reader ever opening it. %>
+    <%# Read state is retired and nothing writes on a GET now, but the tag
+        stays for a different reason: an archive row points at an original,
+        and rendering one reads the whole newsletter row — a body_html that
+        runs to hundreds of kilobytes. Prefetching on hover would pay that
+        read for every row nobody opened. See docs/operating.md. %>
     <meta name="turbo-prefetch" content="false">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
