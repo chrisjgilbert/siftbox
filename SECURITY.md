@@ -2,10 +2,15 @@
 
 ## Reporting
 
-Email **[SECURITY CONTACT ADDRESS — not yet set]** rather than opening a
-public issue. Say what you found, how to reproduce it, and what it reaches.
-You will get a reply within **[REPLY WINDOW — not yet set] days** saying
-whether it is confirmed and what happens next.
+Use GitHub's private vulnerability reporting rather than opening a public
+issue: open the **Security** tab and choose **Report a vulnerability**. That
+opens a thread only you and the maintainer can read, so nothing is disclosed
+while it is being fixed, and it needs no email address published here.
+
+Say what you found, how to reproduce it, and what it reaches. You will get a
+reply within five working days saying whether it is confirmed and what
+happens next. This is one person's side project, so a fix may take longer
+than the reply does.
 
 ## What is in scope
 
