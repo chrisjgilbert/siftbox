@@ -8,8 +8,12 @@
   <div class="landing__nav">
     <div class="landing__frame landing__nav-inner">
       <%= render "application/lockup", size: 24 %>
-      <%= link_to t("waitlist_signups.nav.waitlist"), "#waitlist-hero",
-            class: "landing__nav-link" %>
+      <div class="landing__nav-links">
+        <%= link_to t("waitlist_signups.nav.source"), source_url,
+              class: "landing__nav-link" %>
+        <%= link_to t("waitlist_signups.nav.waitlist"), "#waitlist-hero",
+              class: "landing__nav-link" %>
+      </div>
     </div>
   </div>
 
@@ -24,7 +28,7 @@
   <%= render "waitlist_signups/shot" %>
 
   <section class="landing__frame landing__points">
-    <% [ "address", "feed" ].each do |point| %>
+    <% [ "address", "edition" ].each do |point| %>
       <div class="point">
         <p class="point__kicker"><%= t("waitlist_signups.points.#{point}.kicker") %></p>
         <h2 class="point__title"><%= t("waitlist_signups.points.#{point}.title") %></h2>
@@ -33,14 +37,29 @@
     <% end %>
   </section>
 
+  <%# The two ways in, as two rows of one grid: an address here, or the source.
+      What separates them is a break between two subjects, so it is an <hr>
+      rather than an empty div with a border on it. %>
   <div class="closing">
     <div class="landing__frame closing__inner">
       <div>
-        <h2 class="closing__title"><%= t("waitlist_signups.closing.title") %></h2>
-        <p class="closing__body"><%= t("waitlist_signups.closing.body") %></p>
+        <h2 class="closing__title"><%= t("waitlist_signups.closing.address.title") %></h2>
+        <p class="closing__body"><%= t("waitlist_signups.closing.address.body") %></p>
       </div>
 
       <%= render waitlist, signup: signup, id: "waitlist-band", inverted: true %>
+
+      <hr class="closing__rule">
+
+      <div>
+        <h2 class="closing__title"><%= t("waitlist_signups.closing.source.title") %></h2>
+        <p class="closing__body"><%= t("waitlist_signups.closing.source.body") %></p>
+      </div>
+
+      <p class="closing__action">
+        <%= link_to t("waitlist_signups.closing.source.link"), source_url,
+              class: "landing__nav-link" %>
+      </p>
     </div>
   </div>
 
@@ -49,6 +68,9 @@
       <%= render "application/mark", size: 16 %>
       <span><%= t("waitlist_signups.footer.wordmark") %></span>
     </span>
-    <span><%= t("waitlist_signups.footer.built") %></span>
+    <span>
+      <%= link_to t("waitlist_signups.footer.source"), source_url %>
+      <span class="landing__footer-built"><%= t("waitlist_signups.footer.built") %></span>
+    </span>
   </footer>
 </div>

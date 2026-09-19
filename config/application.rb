@@ -50,6 +50,12 @@ module Siftbox
     # sign in, and a signup answers 404.
     config.x.waitlist = ENV.fetch("SIFTBOX_WAITLIST", "false") == "true"
 
+    # Where the source lives, linked from the landing page's nav, closing band
+    # and footer. Not read from the environment: nothing needs to change it per
+    # deployment, and a fork with the waitlist on, pointing at the repository it
+    # came from, is accurate.
+    config.x.source_url = "https://github.com/chrisjgilbert/siftbox"
+
     config.action_mailer.preview_paths << Rails.root.join("spec/mailers/previews")
 
     # Don't generate system test files.

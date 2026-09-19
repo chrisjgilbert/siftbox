@@ -1604,8 +1604,14 @@ a {
   border-bottom: 2px solid var(--ink);
 }
 
+/* It wraps for the reason .masthead__bar does: the nav grew a second link, and
+   the nameplate with "Source" and "Join the waitlist" beside it comes to more
+   than a 320px screen has once the gutters are paid for. Without this the
+   links shrink instead of dropping, and "Join the waitlist" breaks across two
+   lines mid-phrase. The gap does double duty as the row gap when they drop. */
 .landing__nav-inner {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -1613,12 +1619,21 @@ a {
   padding-bottom: 22px;
 }
 
+.landing__nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* Each link stays one phrase, so the row above wraps rather than a label
+   breaking inside itself. */
 .landing__nav-link {
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .landing__nav-link::after {
@@ -1692,6 +1707,13 @@ a {
   align-items: center;
   gap: 10px;
   color: var(--ink);
+}
+
+/* The separator between the source link and the rest belongs to the layout
+   rather than to the copy, so it is drawn here — the same reason the feed's
+   mono lines draw their slashes. The non-breaking space keeps "· MIT" whole. */
+.landing__footer-built::before {
+  content: "·\00a0";
 }
 
 @media (min-width: 720px) {
@@ -1987,6 +2009,26 @@ a {
   line-height: 1.6;
   color: var(--read);
   text-wrap: pretty;
+}
+
+/* The break between the two ways in, spanning both columns. --read is the grey
+   the band already sets its own paragraphs in, and the thin rule's --rule is
+   for light surfaces: on ink it is all but invisible. No opacity — the landing
+   lattice is the only translucent colour in the system and stays the only one. */
+.closing__rule {
+  grid-column: 1 / -1;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--read);
+}
+
+.closing__action {
+  margin: 0;
+}
+
+/* The nav link's treatment on the dark band, where --blue is 1.6:1 on ink. */
+.closing .landing__nav-link {
+  color: var(--paper);
 }
 
 @media (min-width: 720px) {

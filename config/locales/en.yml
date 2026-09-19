@@ -170,44 +170,57 @@ en:
 
   waitlist_signups:
     closing:
-      body: Siftbox is a side project, built for one person's reading habit. The
-        waitlist tells me whether to make it work for more.
-      title: Want an address?
+      address:
+        body: siftbox.co is one person's instance for now. The waitlist tells me
+          whether to open it up, and you get one message if it does.
+        title: Want an address?
+      source:
+        body: >-
+          The whole app is open source under the MIT licence: one Rails app, one
+          container, one SQLite file on one volume. Point a Postmark inbound
+          stream at it and you have an address by the evening.
+        link: Read the source
+        title: Or run your own
     errors:
       email: That does not look like an email address.
     footer:
-      built: A side project · built on Rails and Action Mailbox
+      built: MIT · built on Rails and Action Mailbox
+      source: Open source
       wordmark: siftbox
     form:
       honeypot: Leave this field empty
       label: Email
-      note: One message when it opens. Nothing else.
+      note: One message when the hosted version opens. Nothing else.
       placeholder: you@example.com
       submit: Join the waitlist
     joined:
       label: On the list
-      note: You'll get one message when siftbox opens.
+      note: You'll get one message when the hosted version opens.
       reply: If you want to say what you read, reply to it.
     nav:
+      source: Source
       waitlist: Join the waitlist
     new:
-      eyebrow: Early access
-      page_title: siftbox — your news feed
-      standfirst: Siftbox gives your subscriptions a dedicated address and collects
-        everything that arrives into one feed. Newest first, grouped by day, stripped
-        of the styling that makes newsletters hard to read.
-      title: Your news feed
+      eyebrow: Open source · Early access
+      page_title: siftbox — your morning edition
+      standfirst: >-
+        Siftbox gives your subscriptions a dedicated address and reads everything
+        that arrives, newsletters and blogs alike, into one edition each morning:
+        what the stories were, who covered them, and where they disagree. Every
+        line links to the original.
+      title: Your morning edition
     points:
       address:
         body: Every list gets pointed at one dedicated address. Nothing new lands in
           your work inbox, and there are no forwarding rules to maintain.
         kicker: 01 / One address
         title: Subscribe with siftbox, not with you
-      feed:
-        body: Newest first, grouped by day. Nothing accumulates into a number you have
-          to clear, and nothing gets buried under a receipt.
-        kicker: 02 / A feed, not a mailbox
-        title: Read what you want, when you want
+      edition:
+        body: An editor reads everything that arrived overnight and writes the stories
+          up, with the sources under each one. The originals stay in the archive for
+          when you want the whole thing.
+        kicker: 02 / An edition, not an inbox
+        title: Read the morning, not the mail
     shot:
       caption: No. 31 · Friday 18 September
       # Fixed sample content, and invented. The design handoff asks for a live
