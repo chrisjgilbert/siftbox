@@ -35,8 +35,7 @@ class SampleEdition
         "editor tooling viable, and the grammar is a readable artefact of " \
         "its own. They agree on what changed and part on what it means. " \
         "One calls the migration note required reading for anything that " \
-        "touches RubyVM::AbstractSyntaxTree; the other says most gems will " \
-        "never notice."
+        "walks the syntax tree; the other says most gems will never notice."
     },
     {
       section: Edition::Story::BRIEFLY, cites: [ 2 ],
