@@ -27,7 +27,9 @@ create the only account, from `SIFTBOX_READER_EMAIL` and
 volume gets the account back from the same two variables. Seeds create the
 account and never update it, so changing the password here does nothing to an
 account that already exists; that is deliberate, since the reader may have
-changed it through the reset flow.
+changed it through the reset flow. On a clone whose development database is
+already there, `db:prepare` migrates rather than creates and so runs no seeds —
+export the two variables and run `bin/rails db:seed` once by hand.
 
 See `CLAUDE.md` and `.claude/rules` for the conventions this codebase
 follows, and `bin/ci` for what has to pass.

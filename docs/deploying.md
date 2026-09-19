@@ -109,11 +109,17 @@ every delivery is refused.
 
 `SECRET_KEY_BASE` is generated only for a deployment that has never run. One
 that is already running carries its existing value across, because a new one
-signs the reader out and voids any password-reset link in flight.
+signs the reader out and voids any password-reset link in flight. That value
+used to be derived from the encrypted credentials, so read it out before this
+release removes them — `bin/rails credentials:show` on the machine that holds
+`config/master.key`, the `secret_key_base` key — and put it in
+`.kamal/secrets-common`. Once the credentials file is gone it cannot be
+recovered, and the sign-out is the only way through.
 
 `config/master.key` is no part of a deploy any more, and neither is
 `RAILS_MASTER_KEY`. A clone made before the credentials file was removed may
-still hold a key; it is gitignored, nothing reads it, and it can go.
+still hold a key; it is gitignored, nothing reads it, and it can go once the
+values above are out.
 
 ## 4. config/deploy.yml
 
@@ -148,10 +154,12 @@ ANTHROPIC_API_KEY=...
 HONEYBADGER_API_KEY=...
 ```
 
-A name that is missing fails loudly, and before anything on the host changes:
-Kamal looks every `env.secret` name up as it builds the config and stops with
-`Secret 'SECRET_KEY_BASE' not found in .kamal/secrets-common` rather than
-deploying. A value that is wrong fails silently, and later. A mistyped
+A name that is missing fails loudly: Kamal looks every `env.secret` name up
+when it writes the container's env file and stops with `Secret
+'SECRET_KEY_BASE' not found in .kamal/secrets-common, .kamal/secrets` rather
+than booting the new container. The image has been built and pushed by then, so
+this is not free — but the running container is untouched and no wrong value
+reaches it. A value that is wrong fails silently, and later. A mistyped
 `RAILS_INBOUND_EMAIL_PASSWORD` is a 401 on every webhook with nothing in the
 log to say why; a wrong `POSTMARK_SMTP_TOKEN` surfaces the first time someone
 needs a password reset; a fresh `SECRET_KEY_BASE` signs the reader out. That
@@ -168,8 +176,15 @@ HONEYBADGER_API_KEY=
 ```
 
 `ANTHROPIC_API_KEY` spends money every day the composition job runs — see
-step 9. An empty value there is not the same trade: the job fails with a
-`KeyError` naming the variable, once a morning, and there is no edition.
+step 9. An empty value there is not the same trade, and it is not a `KeyError`
+either: Kamal writes the name into the container's env file whatever the value,
+so the variable is set rather than absent and the `ENV.fetch` in
+`app/models/edition/draft.rb` returns the empty string instead of raising. The
+request goes out, the API refuses it, and `Edition::CompositionJob` discards
+`Edition::Draft::Rejected` with `no edition composed: the request was refused`
+in the worker log — once a morning, and there is no edition. Leaving the name
+out of `.kamal/secrets-common` altogether is the loud version, and it stops the
+deploy rather than the morning.
 
 Do not restate any of these in `.kamal/secrets`. That file is merged over the
 top, so a `KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD` passthrough
@@ -312,6 +327,14 @@ ip -4 addr show | grep -E "docker0|br-"
    yet; this is the step that finds out whether the phrase set recognises one
    in the wild. If it does not, the mail is in the feed instead and the fix is
    `Newsletter::Confirmation::PHRASES`.
+6. Sign out, ask for a password reset, and confirm the mail arrives and its
+   link works. Nothing else on this list touches `POSTMARK_SMTP_TOKEN` or
+   `SIFTBOX_MAIL_FROM`, and both fail silently: the token is read with a
+   default so the image can be built without it, and a From address Postmark
+   has no signature for is rejected at send time. Reset mail is the only way
+   back into an account with no sign-up flow, so a wrong value here is found
+   either now or on the day it is needed. Signing back in afterwards is also
+   what proves `SECRET_KEY_BASE` reached the container.
 
 The ingress is armed in production only, so the webhook endpoint answers 404
 in development by design. Locally, use the conductor at
