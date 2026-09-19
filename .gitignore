@@ -47,3 +47,14 @@
 # Ignore the raw deploy secrets. /.kamal/secrets itself is safe for git and
 # stays committed; this is the file that holds actual values.
 /.kamal/secrets-common
+
+# Ignore the per-destination secrets files, which hold values the same way
+# secrets-common does. Kamal reads .kamal/secrets.production for a deploy with
+# -d production, and there is no committed file by that name to shadow.
+/.kamal/secrets.*
+
+# Ignore the destination files that name one deployment. config/deploy.yml is
+# the committed template; config/deploy.production.yml carries the host, the
+# registry account and the values that belong to one machine, and Kamal merges
+# it over the template for -d production.
+/config/deploy.*.yml

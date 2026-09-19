@@ -84,9 +84,12 @@ mailbox against real newsletter MIME, which is where the surprises are.
 each other, worked through against a Hetzner host. What follows here is the
 part worth understanding before running any of it.
 
-The Kamal files declare what the app needs and, since the first deploy, where
-it runs: `siftbox.co` on a Hetzner host. Every one of these variables fails
-quietly rather than loudly, except the first, which stops the app dead:
+The Kamal files declare what the app needs. They no longer declare where it
+runs: `config/deploy.yml` is a committed template whose host, registry account
+and `SIFTBOX_*` values are placeholders, and a deployment puts its own in a
+gitignored `config/deploy.production.yml` that Kamal merges over the top when a
+command is given `-d production`. Every one of these variables fails quietly
+rather than loudly, except the first, which stops the app dead:
 
 | Variable | Missing means |
 |---|---|
@@ -100,12 +103,14 @@ quietly rather than loudly, except the first, which stops the app dead:
 | `SIFTBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
 | `SIFTBOX_WAITLIST` | Defaults to off: `/` sends a signed-out visitor to sign in and a signup answers 404. siftbox.co sets it to `true`; so does a development environment that wants the landing page (`SIFTBOX_WAITLIST=true bin/dev`) |
 
-Every secret goes in `.kamal/secrets-common`, which is gitignored. Kamal reads
-that file before `.kamal/secrets` with no flags, so `bin/kamal deploy` picks
-them up without anything being exported into the shell first. Note the merge
-order: Kamal applies `.kamal/secrets` over the top, so naming a variable in
-both takes the value from the committed file, not the real one — which is why
-`.kamal/secrets` names them in comments and assigns nothing.
+Every secret goes in `.kamal/secrets-common`, which is gitignored and which
+Kamal reads whether or not the command names a destination, so nothing has to
+be exported into the shell first. What it reads after that does depend on the
+destination: `.kamal/secrets.production` with `-d production`, and the
+committed `.kamal/secrets` without one. Either way the second file is merged
+over the first, so naming a variable in both takes the value from the second,
+not the real one — which is why `.kamal/secrets` names them in comments and
+assigns nothing.
 
 Kamal refuses to deploy when a name in `env.secret` is in neither file, so a
 name left out is loud. A wrong value is not, which is what the smoke test in
