@@ -3,21 +3,28 @@ namespace :sample_data do
   task load: :environment do
     raise "Development only" unless Rails.env.development?
 
-    # Editions first, and not only for tidiness: a newsletter's citations
-    # cascade with it, so clearing newsletters alone would leave yesterday's
-    # sample editions standing with stories that cite nothing.
-    Edition.destroy_all
-    Newsletter.destroy_all
-    newsletters = SampleData.newsletters.map do |attributes|
-      Newsletter.create!(attributes).tap(&:capture_lead_image)
+    # One transaction over the clearing and the writing, the way editions.rake
+    # composes: a sample edition that fails to write rolls the load back to
+    # what was there, rather than leaving an archive full of newsletters
+    # under "No editions yet" — the state this task exists to remove.
+    Edition.transaction do
+      # Editions first, and not only for tidiness: a newsletter's citations
+      # cascade with it, so clearing newsletters alone would leave yesterday's
+      # sample editions standing with stories that cite nothing.
+      Edition.destroy_all
+      Newsletter.destroy_all
+      newsletters = SampleData.newsletters.map do |attributes|
+        Newsletter.create!(attributes).tap(&:capture_lead_image)
+      end
+
+      # The edition cites the newsletters by their place in the list above, so
+      # the records go in the order the task listed them rather than being
+      # read back. SampleEdition says what it is and why it composes nothing.
+      edition = SampleEdition.new(newsletters).write
+
+      puts "Created #{newsletters.length} newsletters " \
+        "and edition No. #{edition.number}"
     end
-
-    # The edition cites the newsletters by their place in the list above, so
-    # the records go in the order the task listed them rather than being
-    # read back. SampleEdition says what it is and why it composes nothing.
-    edition = SampleEdition.new(newsletters).write
-
-    puts "Created #{Newsletter.count} newsletters and edition No. #{edition.number}"
   end
 end
 

@@ -15,7 +15,7 @@
 # citations and all, and one save!, so there is no moment at which an
 # edition exists without its stories.
 #
-# Development material. Nothing the reader's browser reaches loads it.
+# Development material. Nothing the reader's browser reaches calls it.
 class SampleEdition
   # Which newsletters each story cites, by position in the list the task
   # creates: the lead reads the first two, which both carry the parser
@@ -67,7 +67,7 @@ class SampleEdition
 
   def write
     edition = Edition.new(identity.merge(provenance))
-    STORIES.each_with_index { |story, index| build(edition, story, index + 1) }
+    stories.each_with_index { |story, index| build(edition, story, index + 1) }
 
     edition.save!
     edition
@@ -77,9 +77,32 @@ class SampleEdition
 
   attr_reader :newsletters
 
+  # STORIES, once it is known to cover the list it was handed. The coupling
+  # is by position across two files, so a newsletter added to the task's
+  # list has no story here until one is written — and fetch only catches the
+  # list being shorter than STORIES expects, never longer. The task fails on
+  # this rather than writing an edition that quietly leaves one out, which is
+  # the failure the real editor exists to refuse.
+  def stories
+    return STORIES if uncited.empty?
+
+    raise ArgumentError, "no story cites newsletter #{uncited.join(", ")}"
+  end
+
+  def uncited
+    newsletters.each_index.to_a - cited
+  end
+
+  def cited
+    STORIES.flat_map { |story| story.fetch(:cites) }
+  end
+
   # What Edition::Window#edition sets, and Edition validates all of it. The
-  # window opens on the oldest newsletter, so the sample covers everything it
-  # cites, and closes now, which is also when it is published.
+  # window opens at the oldest newsletter's arrival and closes now, which is
+  # also when it is published. Nothing reads the two columns back as a range
+  # — EditionRegeneration recovers a window from its citations — so the
+  # sample makes no attempt to sit the oldest newsletter inside the exclusive
+  # lower bound Edition::Window queries by; the citations are the window.
   def identity
     {
       number: Edition.next_number, published_at: closed_at,
@@ -105,7 +128,8 @@ class SampleEdition
   # them. Cited by object, because belongs_to would otherwise load each
   # newsletter back out to satisfy its presence check.
   def build(edition, story, position)
-    built = edition.stories.build(story.except(:cites).merge(position: position))
+    attributes = story.except(:cites).merge(position: position)
+    built = edition.stories.build(attributes)
 
     story.fetch(:cites).each do |index|
       built.citations.build(newsletter: newsletters.fetch(index))
