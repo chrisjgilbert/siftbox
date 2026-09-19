@@ -7,6 +7,7 @@ every pull request, not only to the author's.
   anything. Match the surrounding code first.
 - Write the test first. Red, green, refactor.
 - Run `bin/ci` before pushing: tests, RuboCop, Brakeman and bundler-audit.
+  CI runs `bin/importmap audit` as well.
 - Style-only changes go in their own commit, apart from behaviour changes.
 - Commit messages have an imperative subject and a prose body that says
   what changed and why.

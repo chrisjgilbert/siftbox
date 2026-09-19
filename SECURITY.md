@@ -2,11 +2,10 @@
 
 ## Reporting
 
-Email <!-- TODO(owner): the real address --> **security@example.com**
-rather than opening a public issue. Say what you found, how to reproduce
-it, and what it reaches. You will get a reply within
-<!-- TODO(owner): the reply window --> **N days** saying whether it is
-confirmed and what happens next.
+Email **[SECURITY CONTACT ADDRESS — not yet set]** rather than opening a
+public issue. Say what you found, how to reproduce it, and what it reaches.
+You will get a reply within **[REPLY WINDOW — not yet set] days** saying
+whether it is confirmed and what happens next.
 
 ## What is in scope
 
