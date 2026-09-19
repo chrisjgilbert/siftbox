@@ -13,27 +13,21 @@ shows the sender's HTML in a sandboxed iframe.
 ## Getting started
 
 ```bash
-bin/setup
-bin/rails credentials:edit   # add the reader block below
-bin/rails db:seed
+export SIFTBOX_READER_EMAIL=you@example.com
+export SIFTBOX_READER_PASSWORD=a-long-enough-password
+bin/setup                    # its db:prepare seeds the account from those two
 bin/rails sample_data:load   # development only, gives the feed something to show
 bin/dev
 ```
 
-The authentication generator deliberately ships no sign-up flow, so `db:seed`
-creates the only account, from credentials:
-
-```yaml
-reader:
-  email_address: you@example.com
-  password: ...
-```
-
-Credentials rather than the environment, so a rebuilt volume gets the account
-back on its own — `db:prepare` loads the seeds whenever it creates the
-database. Seeds create the account and never update it, so changing the
-password here does nothing to an account that already exists; that is
-deliberate, since the reader may have changed it through the reset flow.
+The authentication generator deliberately ships no sign-up flow, so the seeds
+create the only account, from `SIFTBOX_READER_EMAIL` and
+`SIFTBOX_READER_PASSWORD`. Nothing here is encrypted and no key is needed:
+`db:prepare` loads the seeds whenever it creates the database, so a rebuilt
+volume gets the account back from the same two variables. Seeds create the
+account and never update it, so changing the password here does nothing to an
+account that already exists; that is deliberate, since the reader may have
+changed it through the reset flow.
 
 See `CLAUDE.md` and `.claude/rules` for the conventions this codebase
 follows, and `bin/ci` for what has to pass.
@@ -60,23 +54,10 @@ placeholder until the inbound domain is settled.
 4. **Tick "Include raw email content in JSON payload."** Action Mailbox needs
    the raw message, and without this the ingress fails with no obvious cause.
 
-`PASSWORD` is `action_mailbox.ingress_password` in credentials. Generate a
-long random one; Action Mailbox compares it in constant time.
-
-Action Mailbox also reads a `RAILS_INBOUND_EMAIL_PASSWORD` variable, but only
-as a fallback — the credential wins whenever it is set:
-
-```ruby
-Rails.application.credentials.dig(:action_mailbox, :ingress_password) || ENV["RAILS_INBOUND_EMAIL_PASSWORD"]
-```
-
-Setting both is how you end up debugging a 401 against a password the app
-never reads, so this app uses the credential only and names the variable
-nowhere. Change the password with `bin/rails credentials:edit`, and update
-the Postmark webhook URL to match in the same sitting.
-
-`config/master.key` is not in the repository — it is gitignored, and
-`.kamal/secrets` reads it from disk. Anyone deploying needs a copy.
+`PASSWORD` is `RAILS_INBOUND_EMAIL_PASSWORD`, which Action Mailbox
+authenticates every delivery against. Generate a long random one; Action
+Mailbox compares it in constant time, and changing it means changing the
+Postmark webhook URL in the same sitting.
 
 Postmark retries a failed inbound webhook 10 times over intervals growing
 from 1 minute to 6 hours, so ingestion has to be idempotent — a partial
@@ -103,11 +84,13 @@ part worth understanding before running any of it.
 
 The Kamal files declare what the app needs and, since the first deploy, where
 it runs: `siftbox.co` on a Hetzner host. Every one of these variables fails
-quietly rather than loudly:
+quietly rather than loudly, except the first, which stops the app dead:
 
 | Variable | Missing means |
 |---|---|
-| `RAILS_MASTER_KEY` | Credentials will not decrypt, so the ingress password is unreadable and every Postmark webhook 500s |
+| `SECRET_KEY_BASE` | Rails has nothing to sign session cookies or reset tokens with and raises rather than serving. Changed rather than missing, the reader is signed out and any reset link in flight is void |
+| `RAILS_INBOUND_EMAIL_PASSWORD` | Action Mailbox has nothing to authenticate against, so every Postmark webhook 500s. Wrong rather than missing, every one is a 401 with nothing in the log to say why |
+| `SIFTBOX_READER_EMAIL`, `SIFTBOX_READER_PASSWORD` | No account is created on a fresh volume, so there is no way to sign in. The boot log says `No reader account created` |
 | `SIFTBOX_INBOUND_ADDRESS` | The feed tells the reader to subscribe to `example.com` |
 | `POSTMARK_SMTP_TOKEN` | Password reset silently fails — the only way back in |
 | `SIFTBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
@@ -115,13 +98,17 @@ quietly rather than loudly:
 | `SIFTBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
 | `SIFTBOX_WAITLIST` | Defaults to off: `/` sends a signed-out visitor to sign in and a signup answers 404. siftbox.co sets it to `true`; so does a development environment that wants the landing page (`SIFTBOX_WAITLIST=true bin/dev`) |
 
-The two secrets that are neither in credentials nor on disk —
-`KAMAL_REGISTRY_PASSWORD` and `POSTMARK_SMTP_TOKEN` — go in
-`.kamal/secrets-common`, which is gitignored. Kamal reads that file before
-`.kamal/secrets` with no flags, so `bin/kamal deploy` picks them up without
-anything being exported into the shell first. Note the merge order: Kamal
-applies `.kamal/secrets` over the top, so naming a variable in both takes the
-value from the committed file, not the real one.
+Every secret goes in `.kamal/secrets-common`, which is gitignored. Kamal reads
+that file before `.kamal/secrets` with no flags, so `bin/kamal deploy` picks
+them up without anything being exported into the shell first. Note the merge
+order: Kamal applies `.kamal/secrets` over the top, so naming a variable in
+both takes the value from the committed file, not the real one — which is why
+`.kamal/secrets` names them in comments and assigns nothing.
+
+Kamal refuses to deploy when a name in `env.secret` is in neither file, so a
+name left out is loud. A wrong value is not, which is what the smoke test in
+`docs/deploying.md` step 8 is for. That document lists every name, and what
+each one does.
 
 There is no database server to run. The four databases are SQLite files under
 `storage/`, on the same mounted volume as the Active Storage blobs — so that
