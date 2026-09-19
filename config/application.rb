@@ -43,6 +43,13 @@ module Siftbox
     config.x.inbound_address =
       ENV.fetch("SIFTBOX_INBOUND_ADDRESS", "newsletters@example.com")
 
+    # Whether / serves the landing page and the waitlist takes signups. That
+    # page collects signups for siftbox.co and speaks as its owner, so it is
+    # something a deployment turns on rather than something every instance
+    # shows. Off is the self-hoster's default: a signed-out visitor is sent to
+    # sign in, and a signup answers 404.
+    config.x.waitlist = ENV.fetch("SIFTBOX_WAITLIST", "false") == "true"
+
     config.action_mailer.preview_paths << Rails.root.join("spec/mailers/previews")
 
     # Don't generate system test files.

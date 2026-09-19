@@ -101,6 +101,12 @@ env:
     # signature, or Postmark rejects the send.
     SIFTBOX_MAIL_FROM: siftbox@siftbox.co
 
+    # Whether / serves the landing page and the waitlist takes signups. Off
+    # is the default, for anyone running their own siftbox, so without this
+    # the landing page disappears on deploy: a signed-out visitor is sent to
+    # sign in and a signup answers 404.
+    SIFTBOX_WAITLIST: "true"
+
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
     SOLID_QUEUE_IN_PUMA: true
