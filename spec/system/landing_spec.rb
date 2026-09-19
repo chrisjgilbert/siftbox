@@ -21,6 +21,7 @@ RSpec.describe "The landing page" do
 
     visit root_path
 
+    expect(page).to have_text("Ruby Weekly")
     expect(page).not_to have_link("Ruby Weekly")
   end
 end

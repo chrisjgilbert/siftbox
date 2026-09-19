@@ -2075,7 +2075,15 @@ a {
   text-wrap: pretty;
 }
 
+/* Flex with a gap, the way .story__sources is laid out. It also keeps the
+   template's own newlines out of the line: the label is a flex item, so the
+   whitespace it is written across is trimmed rather than drawn as a space in
+   front of the slash. */
 .shot__sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
   margin: 10px 0 0;
   font-family: var(--mono);
   font-size: 10px;
@@ -2085,8 +2093,9 @@ a {
 }
 
 /* The separator belongs to the layout rather than to the copy, so it is drawn
-   here — the same slash the edition's sources line and the feed's mono rows
-   draw between their fields. */
+   here — the same slash the feed's mono rows draw between their fields, and
+   after the label as well as between the names, because at this size the whole
+   line is one mono field list rather than a label with a list beside it. */
 .shot__sources-label:not(:last-child)::after,
 .shot__source:not(:last-child)::after {
   content: "\00a0/";
