@@ -47,3 +47,13 @@
 # Ignore the raw deploy secrets. /.kamal/secrets itself is safe for git and
 # stays committed; this is the file that holds actual values.
 /.kamal/secrets-common
+
+# Ignore the per-destination secrets files. These hold values the way
+# secrets-common does; .kamal/secrets itself assigns nothing and stays
+# committed.
+/.kamal/secrets.*
+
+# Ignore the destination files. config/deploy.yml is the committed template;
+# config/deploy.production.yml is the one that names a host, a registry account
+# and one machine's values.
+/config/deploy.*.yml

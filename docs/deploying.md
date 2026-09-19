@@ -8,13 +8,24 @@ and host.
 quietly, what lives on the volume, and the egress rule. This is the order to
 do them in.
 
+`config/deploy.yml` is a template and names no deployment. What names one is
+`config/deploy.production.yml`, which is gitignored, which step 4 writes, and
+which Kamal merges over the template when a command is given `-d production`.
+Every `bin/kamal` command below carries that flag for the same reason. A
+self-hoster who would rather put their values straight into
+`config/deploy.yml` can: drop the `-d production` from every command here and
+skip the destination file. Nothing else about the runbook changes — but that
+file is committed, so their host and registry account become a tracked
+modification that `git commit -a` would publish and that the next pull
+conflicts with. The destination file is what avoids both.
+
 ## 1. DNS
 
 Two records, on purpose:
 
 | Record | Name | Value | Why |
 |---|---|---|---|
-| A | `siftbox.co` | `46.224.179.132` | Where the app is served |
+| A | `siftbox.co` | `<the host's address>` | Where the app is served |
 | MX | `news.siftbox.co` | `inbound.postmarkapp.com`, priority `10` | Where newsletters arrive |
 
 The two are unrelated lookups. A browser asks for the A record; a mail
@@ -121,18 +132,74 @@ recovered, and the sign-out is the only way through.
 still hold a key; it is gitignored, nothing reads it, and it can go once the
 values above are out.
 
-## 4. config/deploy.yml
+## 4. config/deploy.production.yml
 
-Already filled in: the host, `cjgilbert/siftbox` on Docker Hub, `siftbox.co`
-as `proxy.host`, and the five `SIFTBOX_*` variables. `SIFTBOX_MAIL_FROM` is
-the one to check against reality — it has to match the sender signature you
-verified in step 2, or every password reset is rejected. `SIFTBOX_WAITLIST`
-is what puts the landing page and the waitlist on `/`, and off is the
-default, so dropping it makes the landing page disappear on the next deploy.
+`config/deploy.yml` is committed and names no deployment: it carries the
+service name, the volume, the proxy block, the health check, the `env.secret`
+names and the `SIFTBOX_*` names with placeholder values. Everything that names
+this deployment goes in `config/deploy.production.yml` beside it, which is
+gitignored and which a fresh clone therefore does not have:
 
-`service: siftbox` and the volume `siftbox_storage` are what keep this app
-apart from the others on the box, so leave both alone unless something else
-there already claims those names.
+```yaml
+image: <the registry account>/siftbox
+
+servers:
+  web:
+    hosts:
+      - <the host's address>
+
+proxy:
+  host: siftbox.co
+
+registry:
+  username: <the registry account>
+
+env:
+  clear:
+    SIFTBOX_INBOUND_ADDRESS: news@news.siftbox.co
+    SIFTBOX_TIME_ZONE: London
+    SIFTBOX_HOST: siftbox.co
+    SIFTBOX_MAIL_FROM: siftbox@siftbox.co
+    SIFTBOX_WAITLIST: "true"
+
+builder:
+  arch: amd64
+  remote: ssh://root@<the host's address>
+```
+
+Kamal deep-merges that over the template, so the file carries only what
+differs, and two things follow from how the merge works. A hash in both merges
+key by key: the `env.clear` above adds to and overrides the template's rather
+than replacing it, so a name left out here keeps its placeholder value — which
+is why every `SIFTBOX_*` name is listed even where the value happens to match.
+An array in both is replaced whole: the `hosts` list here *is* the list rather
+than an addition to the template's.
+
+`bin/kamal config -d production` is how to confirm the destination file was
+picked up at all: it prints the hosts, the image repository and the builder
+from the merged config. It prints neither `proxy` nor `env`, so the two values
+below that a typo hides — `proxy.host` and `SIFTBOX_MAIL_FROM` — have to be
+read in the file itself. After a deploy, one of them can be read back off the
+container:
+
+```bash
+bin/kamal app exec -d production --reuse "printenv SIFTBOX_MAIL_FROM"
+```
+
+`SIFTBOX_MAIL_FROM` is the value to check against reality — it has to match
+the sender signature verified in step 2, or every password reset is rejected.
+`SIFTBOX_WAITLIST` is what puts the landing page and the waitlist on `/`, and
+off is the default, so dropping it makes the landing page disappear on the
+next deploy.
+
+`builder.remote` builds the image on the target host rather than through
+emulation, and belongs here rather than in the template because it is a fact
+about the machine deploying, not about the app: drop it if the deploy machine
+is amd64 already.
+
+`service: siftbox` and the volume `siftbox_storage` stay in the template.
+They are what keep this app apart from the others on the box, so leave both
+alone unless something else there already claims those names.
 
 Pointing `image` at a different registry: Kamal prefixes `registry.server`
 onto it, so `image` is the path within the registry rather than the full
@@ -140,8 +207,9 @@ reference. Naming the registry in both gives you
 `ghcr.io/ghcr.io/user/siftbox`.
 
 The values behind `env.secret` go in `.kamal/secrets-common`, which is
-gitignored. Kamal reads it before `.kamal/secrets` with no flags, so nothing
-needs exporting into the shell. Every name from step 3, and all of them:
+gitignored and which Kamal reads whether or not the command names a
+destination, so nothing needs exporting into the shell. Every name from
+step 3, and all of them:
 
 ```bash
 KAMAL_REGISTRY_PASSWORD=...
@@ -156,15 +224,15 @@ HONEYBADGER_API_KEY=...
 
 A name that is missing fails loudly: Kamal looks every `env.secret` name up
 when it writes the container's env file and stops with `Secret
-'SECRET_KEY_BASE' not found in .kamal/secrets-common, .kamal/secrets` rather
-than booting the new container. The image has been built and pushed by then, so
-this is not free — but the running container is untouched and no wrong value
-reaches it. A value that is wrong fails silently, and later. A mistyped
-`RAILS_INBOUND_EMAIL_PASSWORD` is a 401 on every webhook with nothing in the
-log to say why; a wrong `POSTMARK_SMTP_TOKEN` surfaces the first time someone
-needs a password reset; a fresh `SECRET_KEY_BASE` signs the reader out. That
-asymmetry is what step 8 is for — a deploy that runs proves the names, and
-only the smoke test proves the values.
+'SECRET_KEY_BASE' not found in .kamal/secrets-common` — it names the files it
+actually read — rather than booting the new container. The image has been
+built and pushed by then, so this is not free — but the running container is
+untouched and no wrong value reaches it. A value that is wrong fails silently,
+and later. A mistyped `RAILS_INBOUND_EMAIL_PASSWORD` is a 401 on every webhook
+with nothing in the log to say why; a wrong `POSTMARK_SMTP_TOKEN` surfaces the
+first time someone needs a password reset; a fresh `SECRET_KEY_BASE` signs the
+reader out. That asymmetry is what step 8 is for — a deploy that runs proves
+the names, and only the smoke test proves the values.
 
 Running without a Honeybadger account is fine, and an empty value is how: the
 name is present, so Kamal deploys, and the gem treats an empty key exactly as
@@ -186,19 +254,13 @@ in the worker log — once a morning, and there is no edition. Leaving the name
 out of `.kamal/secrets-common` altogether is the loud version, and it stops the
 deploy rather than the morning.
 
-Do not restate any of these in `.kamal/secrets`. That file is merged over the
-top, so a `KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD` passthrough
-resolves against an unset shell variable and overwrites the real value with
-an empty string.
-
-If the host is arm64 and the target is amd64, set `builder.remote` to the
-target host rather than building through emulation:
-
-```yaml
-builder:
-  arch: amd64
-  remote: ssh://root@the-vm
-```
+`.kamal/secrets-common` is the only secrets file this deployment needs, and the
+only one it should have. Which file Kamal reads after it depends on the
+destination — `.kamal/secrets.production` with `-d production`, the committed
+`.kamal/secrets` without one — and the comments in `.kamal/secrets` set out
+both traps that follow: a name restated in the second file overwrites the real
+value with an empty string, and a value put in `.kamal/secrets` is not read at
+all on a destination deploy, with nothing said about it either way.
 
 `proxy.ssl: true` is already set, so Kamal gets a Let's Encrypt certificate
 for `proxy.host` on the first deploy. That is also why step 1 comes first —
@@ -212,11 +274,17 @@ fetches newsletter images.
 ## 5. First deploy
 
 ```bash
-bin/kamal setup
+bin/kamal setup -d production
 ```
 
 The container entrypoint runs `db:prepare` when it starts the server, so the
 four SQLite databases are created on the volume without a separate step.
+
+The containers this brings up are named `siftbox-web-production`: with a
+destination, Kamal names both them and the kamal-proxy service it registers
+`service-role-destination`. A deployment already running without a destination
+is a separate thing to this one, however identical the values — see "Moving a
+running deployment onto a destination" below.
 
 ## 6. Create the reader account
 
@@ -237,7 +305,7 @@ If the databases already exist — the variables were added after the first
 deploy, say — seeds will not have run. Do it once by hand:
 
 ```bash
-bin/kamal app exec --reuse "bin/rails db:seed"
+bin/kamal app exec -d production --reuse "bin/rails db:seed"
 ```
 
 Seeds create the account and never update it. Changing
@@ -252,7 +320,7 @@ There is no sign-up flow, by design. This is the only account.
 Run once, on the first deploy that carries `image_processing`:
 
 ```bash
-bin/kamal app exec --reuse "bin/rails images:analyze"
+bin/kamal app exec -d production --reuse "bin/rails images:analyze"
 ```
 
 Active Storage measures an image with libvips, which the app had no gem for
@@ -355,7 +423,7 @@ which means the schedule only exists after a deploy that carries it. Confirm
 it once, after that deploy:
 
 ```bash
-bin/kamal app exec --reuse "bin/rails runner 'puts SolidQueue::RecurringTask.all.map(&:to_s)'"
+bin/kamal app exec -d production --reuse "bin/rails runner 'puts SolidQueue::RecurringTask.all.map(&:to_s)'"
 ```
 
 Two entries, one of them `Edition::CompositionJob.perform_later() [ 0 7 * * *
@@ -439,7 +507,7 @@ archive.
 To compose one by hand — a morning missed while the key was wrong, say:
 
 ```bash
-bin/kamal app exec --reuse "bin/rails runner 'Edition::CompositionJob.perform_now'"
+bin/kamal app exec -d production --reuse "bin/rails runner 'Edition::CompositionJob.perform_now'"
 ```
 
 It covers everything since the last edition closed, so on a day that already
@@ -452,6 +520,66 @@ the scheduler, or two of them fire at 07:00. Solid Queue's unique index on
 `(task_key, run_at)` already collapses that into one enqueue, and the unique
 indexes on `editions.number` and `editions.published_on` are the backstop
 under it, but neither is a reason to run two.
+
+## Moving a running deployment onto a destination
+
+A deployment that was set up before `config/deploy.yml` became a template runs
+containers named `siftbox-web`, and kamal-proxy holds `siftbox.co` for that
+name. The first `-d production` deploy asks for `siftbox-web-production`, which
+is a different service as far as both Docker and kamal-proxy are concerned. So
+the old one has to go before the new one arrives. This is a one-off, and it
+costs a minute or two of downtime.
+
+`bin/kamal app remove` has to run against the config that still names the real
+host, which means running it **before** the deploy machine pulls the change
+that turns `config/deploy.yml` into a template. Pulled already, bring that one
+file back for the length of the command:
+
+```bash
+git show <the commit before this change>:config/deploy.yml > config/deploy.yml
+```
+
+The order:
+
+1. Write `config/deploy.production.yml` (step 4). It is gitignored, so it
+   survives the pull and nothing reads it until a command asks for
+   `-d production`.
+2. `bin/kamal app remove` — no destination. **The app has to be running when
+   this goes in.** Stopping a role behind the proxy runs `kamal-proxy remove`
+   for it, which is what releases `siftbox.co` rather than leaving it held —
+   but Kamal only runs that when it finds a container up for the currently
+   running version, and says nothing when it does not. So boot it first
+   (`bin/kamal app boot`) if it is stopped or crashed, or `siftbox.co` stays
+   registered to `siftbox-web` and the deploy below asks kamal-proxy for a host
+   it already holds. After the release it removes the app's containers, its
+   images and the `.kamal/apps/siftbox` directory on the host. It does not
+   touch volumes, so `siftbox_storage` and everything in it stay where they
+   are. The site is down from here.
+3. Pull the change, if it is not pulled already. If step 2 needed the line
+   above, put the committed template back with
+   `git checkout -- config/deploy.yml`.
+4. `bin/kamal deploy -d production`. New containers, a new claim on
+   `siftbox.co`, the same volume mounted at the same path. The certificate is
+   re-issued for the same hostname.
+5. Smoke test, step 8, and confirm the state came with it:
+
+   ```bash
+   bin/kamal app exec -d production --reuse "ls storage"
+   ```
+
+   Four `.sqlite3` files and their `-shm`/`-wal` companions, plus the Active
+   Storage tree. An empty directory means the volume was not attached and the
+   entrypoint built fresh databases beside it — stop and look at
+   `volumes:` before signing in, because a sign-in would seed a new reader
+   into the wrong place.
+
+It is `bin/kamal app remove`, not `bin/kamal remove`. The second also removes
+kamal-proxy itself, which on a shared host is serving the other apps there.
+
+Nothing is lost in the gap. Postmark retries an inbound delivery for hours, so
+newsletters arriving during the cutover land afterwards; a reader mid-page sees
+an error and a reload fixes it. Do it at a quiet hour, and not at 07:00, when
+the composition job runs.
 
 ## Backups
 

@@ -1,28 +1,55 @@
+# The committed template. Nothing in this file names one deployment: the host,
+# the registry account, the proxy hostname and the SIFTBOX_* values are all
+# placeholders, and a deploy run against them reaches nothing.
+#
+# A deployment puts its own values in config/deploy.production.yml, which is
+# gitignored, and deploys with a destination:
+#
+#   bin/kamal deploy -d production
+#
+# Kamal deep-merges that file over this one, so it carries only what differs: a
+# key it leaves out keeps the value here, a key in both takes its value, and an
+# array in both is replaced whole rather than appended to — a destination file
+# that names hosts replaces the list below rather than adding to it.
+# docs/deploying.md step 4 shows the whole file with placeholders.
+#
+# Two other things change when a destination is given. Containers and the
+# kamal-proxy service are named service-role-destination, so what runs is
+# siftbox-web-production rather than siftbox-web. And Kamal reads
+# .kamal/secrets-common and .kamal/secrets.production for secrets, and does not
+# read .kamal/secrets at all — see the comments in that file.
+
 # Name of your application. Used to uniquely configure containers.
 #
-# Shares a host with other apps, so this name and the volume below both have
-# to stay unique on it — they are what keep one app's containers and state
-# from colliding with another's.
+# Where the host is shared with other apps, this name and the volume below both
+# have to stay unique on it — they are what keep one app's containers and state
+# from colliding with another's. Two destinations of this app on one host keep
+# their containers apart by the destination suffix, but they share the volume
+# below unless it is renamed too.
 service: siftbox
 
 # Name of the container image.
-image: cjgilbert/siftbox
+#
+# A path within the registry rather than a full reference: Kamal prefixes
+# registry.server onto it, so naming the registry in both gives you
+# ghcr.io/ghcr.io/user/siftbox.
+image: your-registry-user/siftbox
 
 # Deploy to these servers.
 #
 # This host needs an egress rule blocking outbound traffic from *this app's*
 # container to private, loopback and link-local addresses. Ingest fetches
 # newsletter images, so senders choose the URLs this app requests. Scope the
-# rule to this container rather than the box: the other apps here did not ask
+# rule to this container rather than the box: the other apps there did not ask
 # for it. Kamal will not install it and nothing in this repository can — see
 # "Outbound network" in README.md and docs/deploying.md.
 servers:
   web:
     hosts:
-      - 46.224.179.132
+      - your-host.example.com
   # job:
   #   hosts:
-  #     - 46.224.179.132
+  #     - your-host.example.com
   #   cmd: bin/jobs
 
 # Enable SSL auto certification via Let's Encrypt and allow for multiple apps on a single web server.
@@ -46,7 +73,7 @@ servers:
 # The MX record is unaffected — Cloudflare only proxies A, AAAA and CNAME.
 proxy:
   ssl: true
-  host: siftbox.co
+  host: siftbox.example.com
   app_port: 80
   healthcheck:
     path: /up
@@ -55,8 +82,9 @@ proxy:
 
 # Credentials for your image host.
 registry:
-  # Docker Hub, which is where the other apps on this host come from too.
-  username: cjgilbert
+  # Docker Hub, which is what the image above is a path within. Another
+  # registry needs a server: line here as well.
+  username: your-registry-user
 
   # Always use an access token rather than real password when possible.
   password:
@@ -95,8 +123,8 @@ env:
     # Edition::CompositionJob and by nothing else in the app. Missing, it is
     # not a boot failure or a broken page: it is one KeyError in the worker
     # log and no edition that morning. The raw value goes in
-    # .kamal/secrets-common beside KAMAL_REGISTRY_PASSWORD — do not restate
-    # it in .kamal/secrets, for the reason given there.
+    # .kamal/secrets-common beside KAMAL_REGISTRY_PASSWORD — do not restate it
+    # in whichever file Kamal merges over that one, for the reason given there.
     - ANTHROPIC_API_KEY
 
     # The Honeybadger project key, which config/honeybadger.yml no longer
@@ -107,32 +135,38 @@ env:
     # neither secrets file is a refused deploy rather than a warning.
     - HONEYBADGER_API_KEY
   clear:
+    # Every SIFTBOX_* value below is a placeholder, overridden name by name in
+    # config/deploy.production.yml.
+
     # The address subscriptions are pointed at, shown in the feed header and
     # the empty state. Without it, a deployed siftbox tells the reader to
     # subscribe to example.com.
     #
     # A subdomain, so the MX record that sends mail here does not also claim
-    # every address at siftbox.co. Any local part reaches the app —
+    # every address at the apex. Any local part reaches the app —
     # ApplicationMailbox routes all — so this only decides what the reader is
     # told to subscribe with, and it should be what they actually use.
-    SIFTBOX_INBOUND_ADDRESS: news@news.siftbox.co
+    SIFTBOX_INBOUND_ADDRESS: news@news.siftbox.example.com
 
-    # The feed groups by calendar day, so this decides where the day breaks.
+    # The feed groups by calendar day, so this decides where the day breaks. A
+    # real zone rather than a placeholder, because an unknown one raises at
+    # boot: a deployment that reads somewhere else overrides it.
     SIFTBOX_TIME_ZONE: London
 
-    # The host password-reset links are built against. The app's own host,
-    # not the inbound one — it has to match proxy.host above.
-    SIFTBOX_HOST: siftbox.co
+    # The host password-reset links are built against. The app's own host, not
+    # the inbound one — it has to match proxy.host above, and both come from
+    # the same destination file, so they are changed together.
+    SIFTBOX_HOST: siftbox.example.com
 
     # The From address on password-reset mail. Must be a Postmark sender
     # signature, or Postmark rejects the send.
-    SIFTBOX_MAIL_FROM: siftbox@siftbox.co
+    SIFTBOX_MAIL_FROM: siftbox@siftbox.example.com
 
     # Whether / serves the landing page and the waitlist takes signups. Off
-    # is the default, for anyone running their own siftbox, so without this
-    # the landing page disappears on deploy: a signed-out visitor is sent to
-    # sign in and a signup answers 404.
-    SIFTBOX_WAITLIST: "true"
+    # here, which is what anyone running their own siftbox wants: a signed-out
+    # visitor is sent to sign in and a signup answers 404. The deployment that
+    # collects signups turns it on in its destination file.
+    SIFTBOX_WAITLIST: "false"
 
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
@@ -152,6 +186,9 @@ env:
 
 # Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
 # "bin/kamal logs -r job" will tail logs from the first server in the job section.
+#
+# An alias takes a destination like any other command: "bin/kamal console -d
+# production".
 aliases:
   console: app exec --interactive --reuse "bin/rails console"
   shell: app exec --interactive --reuse "bash"
@@ -161,6 +198,11 @@ aliases:
 
 # The whole of this app's state: the SQLite databases and the Active Storage
 # blobs. Back this path up and you have backed up siftbox.
+#
+# The name is the deployment's rather than the destination's — Kamal passes it
+# to Docker as it is written here — so moving a running deployment onto a
+# destination leaves the volume where it is and the new containers mount the
+# same state.
 volumes:
   - "siftbox_storage:/rails/storage"
 
@@ -174,9 +216,10 @@ asset_path: /rails/public/assets
 builder:
   arch: amd64
 
-  # Built on the target host, which is amd64 already. The deploy machine is an
-  # arm64 Mac, so building locally would go through emulation.
-  remote: ssh://root@46.224.179.132
+  # A deploy machine whose architecture differs from the target's builds
+  # through emulation unless builder.remote points at the target. That is one
+  # machine's fact rather than this app's, so it belongs in the destination
+  # file — see docs/deploying.md step 4.
 
   #
   # # Pass arguments and secrets to the Docker build process
