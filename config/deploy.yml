@@ -80,14 +80,12 @@ env:
     # it in .kamal/secrets, for the reason given there.
     - ANTHROPIC_API_KEY
 
-    # The Honeybadger project key. config/honeybadger.yml names no api_key, so
-    # the gem takes it from here. Missing, the app boots and every page serves
-    # as normal: the gem logs "API key is missing" once per report and sends
-    # nothing, so an error reaches the container log and nowhere else. Kamal
-    # will not let it be missing at deploy time, though — it refuses to deploy
-    # when a name in env.secret is absent from the secrets files, so the value
-    # has to be in .kamal/secrets-common first. Beside KAMAL_REGISTRY_PASSWORD,
-    # and not restated in .kamal/secrets, for the reason given there.
+    # The Honeybadger project key, which config/honeybadger.yml no longer
+    # carries, so the gem reads it from here. Missing, it is not a boot failure
+    # or a broken page: the gem logs "API key is missing" once per report, and
+    # the error reaches the container log and nowhere else. Kamal will not let
+    # it be missing on a deploy, though — a name in env.secret that is in
+    # neither secrets file is a refused deploy rather than a warning.
     - HONEYBADGER_API_KEY
   clear:
     # The address subscriptions are pointed at, shown in the feed header and
