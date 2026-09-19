@@ -31,21 +31,9 @@
 # Ignore assets compiled by Propshaft.
 /public/assets
 
-# Ignore master key for decrypting credentials and more.
+# The app carries no encrypted credentials any more, so nothing needs this
+# key. An older clone may still hold one, and it must never be committed.
 /config/master.key
-
-# Per-environment credentials. Rails' own convention commits the .enc and
-# ignores the .key, and that is right for an environment whose secrets the
-# whole team shares. These are not that: a test credentials file is scratch,
-# generated locally so the suite can boot, and a development one so the app
-# can be driven in a browser, where config/master.key is absent — and one
-# encrypted with a key nobody else holds would take precedence over the
-# shared credentials and fail to decrypt on every other machine. Committed
-# they would break both for everyone; delete these three lines the day either
-# environment wants real, shared secrets.
-/config/credentials/*.key
-/config/credentials/development.yml.enc
-/config/credentials/test.yml.enc
 
 # Ignore the raw deploy secrets. /.kamal/secrets itself is safe for git and
 # stays committed; this is the file that holds actual values.

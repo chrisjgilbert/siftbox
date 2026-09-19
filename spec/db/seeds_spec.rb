@@ -2,12 +2,24 @@ require "rails_helper"
 
 # `db:prepare` loads the seeds whenever it creates the database, which on a
 # deployed host is the first container boot. The guard is what stops a missing
-# credential aborting that boot before the app is reachable.
+# variable aborting that boot before the app is reachable.
 RSpec.describe "db/seeds" do
-  def stub_reader(reader)
-    credentials = Rails.application.credentials
+  # The seeds read the two variables as they run, so a value set for the
+  # example's duration is what they see. Set and put back rather than stubbed,
+  # the way `through` does in spec/jobs/edition/composition_job_spec.rb: ENV is
+  # process-wide, and an example that left a reader behind would seed an
+  # account in every later one. Assigning nil deletes the variable, which is
+  # how the absent cases are written.
+  def with_reader(email_address:, password:)
+    original_email_address = ENV["SIFTBOX_READER_EMAIL"]
+    original_password = ENV["SIFTBOX_READER_PASSWORD"]
+    ENV["SIFTBOX_READER_EMAIL"] = email_address
+    ENV["SIFTBOX_READER_PASSWORD"] = password
 
-    allow(credentials).to receive(:reader).and_return(reader)
+    yield
+  ensure
+    ENV["SIFTBOX_READER_EMAIL"] = original_email_address
+    ENV["SIFTBOX_READER_PASSWORD"] = original_password
   end
 
   # Seeds report to stdout, which is worth having during a deploy and not in
@@ -20,42 +32,42 @@ RSpec.describe "db/seeds" do
     $stdout = original
   end
 
-  it "creates the reader account from credentials" do
-    stub_reader(email_address: "reader@example.com", password: "a-long-enough-password")
-
-    load_seeds
+  it "creates the reader account from the environment" do
+    with_reader(email_address: "reader@example.com", password: "a-long-enough-password") do
+      load_seeds
+    end
 
     expect(User.pluck(:email_address)).to eq([ "reader@example.com" ])
   end
 
   it "sets a password the reader can sign in with" do
-    stub_reader(email_address: "reader@example.com", password: "a-long-enough-password")
-
-    load_seeds
+    with_reader(email_address: "reader@example.com", password: "a-long-enough-password") do
+      load_seeds
+    end
 
     expect(User.sole.authenticate("a-long-enough-password")).to be_truthy
   end
 
-  it "creates nothing when the credential is absent" do
-    stub_reader(nil)
-
-    load_seeds
+  it "creates nothing when both variables are absent" do
+    with_reader(email_address: nil, password: nil) do
+      load_seeds
+    end
 
     expect(User.count).to eq(0)
   end
 
   it "creates nothing when the email address is missing" do
-    stub_reader(password: "a-long-enough-password")
-
-    load_seeds
+    with_reader(email_address: nil, password: "a-long-enough-password") do
+      load_seeds
+    end
 
     expect(User.count).to eq(0)
   end
 
   it "creates nothing when the password is missing" do
-    stub_reader(email_address: "reader@example.com")
-
-    load_seeds
+    with_reader(email_address: "reader@example.com", password: nil) do
+      load_seeds
+    end
 
     expect(User.count).to eq(0)
   end
@@ -65,9 +77,10 @@ RSpec.describe "db/seeds" do
   # them out of the only account.
   it "leaves an existing account's password alone" do
     User.create!(email_address: "reader@example.com", password: "the-password-in-use")
-    stub_reader(email_address: "reader@example.com", password: "a-different-password")
 
-    load_seeds
+    with_reader(email_address: "reader@example.com", password: "a-different-password") do
+      load_seeds
+    end
 
     expect(User.sole.authenticate("the-password-in-use")).to be_truthy
   end

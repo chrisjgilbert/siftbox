@@ -25,24 +25,28 @@ RSpec.describe "Action Mailbox ingress" do
   # inline, so the job has to run for a Newsletter to exist.
   def armed(&delivery)
     ActionMailbox.ingress = :postmark
-    stub_ingress_password("ingress-password")
-    perform_enqueued_jobs(&delivery)
+
+    with_ingress_password("ingress-password") do
+      perform_enqueued_jobs(&delivery)
+    end
   ensure
     ActionMailbox.ingress = nil
   end
 
-  # Action Mailbox reads the credential first and only falls back to
-  # RAILS_INBOUND_EMAIL_PASSWORD, so the credential is what decides. Stubbing
-  # the fallback instead passes locally and authenticates nothing in
-  # production.
-  def stub_ingress_password(password)
-    credentials = Rails.application.credentials
+  # Action Mailbox still reads action_mailbox.ingress_password first and only
+  # falls back to RAILS_INBOUND_EMAIL_PASSWORD, but there are no credentials to
+  # hold one any more, so the fallback is the whole mechanism and the variable
+  # is what decides in production too. It is read per request, so a value set
+  # for the example's duration is what the controller authenticates against.
+  # Set and put back rather than stubbed, the way `through` does in
+  # spec/jobs/edition/composition_job_spec.rb: ENV is process-wide.
+  def with_ingress_password(password)
+    original = ENV["RAILS_INBOUND_EMAIL_PASSWORD"]
+    ENV["RAILS_INBOUND_EMAIL_PASSWORD"] = password
 
-    allow(credentials).to receive(:dig).and_call_original
-    allow(credentials)
-      .to receive(:dig)
-      .with(:action_mailbox, :ingress_password)
-      .and_return(password)
+    yield
+  ensure
+    ENV["RAILS_INBOUND_EMAIL_PASSWORD"] = original
   end
 
   it "turns an authenticated Postmark delivery into a newsletter" do

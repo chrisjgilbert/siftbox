@@ -35,6 +35,7 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
 fi
 
 # Test database only. db:prepare would also run the seeds, which read the
-# reader's account out of encrypted credentials — unreadable here, since a
-# remote container has no master key.
+# reader's account out of SIFTBOX_READER_EMAIL and SIFTBOX_READER_PASSWORD —
+# neither of which a remote container sets, so seeding here would create
+# nothing and say so.
 bin/rails db:test:prepare

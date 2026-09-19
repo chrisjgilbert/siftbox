@@ -96,14 +96,18 @@ RSpec.describe "Passwords" do
 
   # Asserts on the configuration rather than behaviour, the same way the
   # Action Mailbox ingress spec does: booting the production environment
-  # in-suite is not worth it, and the failure worth catching is someone
-  # putting the token back in ENV. Reset mail is the only way into an account
-  # with no sign-up flow, and a wrong token fails at send time, long after the
-  # deploy that broke it.
-  it "authenticates Postmark from credentials in production" do
+  # in-suite is not worth it. Two failures are worth catching here. Dropping
+  # the default — which .claude/rules/ruby.md would otherwise ask for — breaks
+  # the image build rather than the suite, because the Dockerfile precompiles
+  # assets with this environment loaded and no secrets present. And putting
+  # the token back into credentials, which this app no longer has, would send
+  # reset mail authenticated by nothing. Reset mail is the only way into an
+  # account with no sign-up flow, and a wrong token fails at send time, long
+  # after the deploy that broke it.
+  it "authenticates Postmark from the environment in production" do
     production = Rails.root.join("config/environments/production.rb").read
 
-    expect(production).to include("credentials.dig(:postmark, :smtp_token)")
-    expect(production).not_to include("POSTMARK_SMTP_TOKEN")
+    expect(production).to include('ENV.fetch("POSTMARK_SMTP_TOKEN", nil)')
+    expect(production).not_to include("credentials")
   end
 end

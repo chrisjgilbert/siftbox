@@ -72,10 +72,15 @@ Rails.application.configure do
     host: ENV.fetch("SIFTBOX_HOST", "localhost"),
     protocol: "https"
   }
-  # Postmark takes the same server token as both username and password. It
-  # lives in credentials alongside the ingress password, so nothing secret is
-  # left on the deploy machine outside config/master.key.
-  postmark_token = Rails.application.credentials.dig(:postmark, :smtp_token)
+  # Postmark takes the same server token as both username and password. A
+  # deployment passes it through env.secret, beside the ingress password.
+  #
+  # With a default, against .claude/rules/ruby.md: the Dockerfile boots this
+  # environment to precompile assets with no secrets present, and a fetch
+  # without one would fail the image build rather than the deploy. Absent at
+  # run time it is a silent failure instead — reset mail authenticated by
+  # nothing — which is what the smoke test in docs/deploying.md catches.
+  postmark_token = ENV.fetch("POSTMARK_SMTP_TOKEN", nil)
 
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
