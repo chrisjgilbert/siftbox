@@ -113,6 +113,7 @@ quietly rather than loudly:
 | `SIFTBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
 | `SIFTBOX_HOST` | Reset links point at localhost |
 | `SIFTBOX_TIME_ZONE` | Defaults to London; decides where the feed's day breaks |
+| `SIFTBOX_WAITLIST` | Defaults to off: `/` sends a signed-out visitor to sign in and a signup answers 404. siftbox.co sets it to `true`; so does a development environment that wants the landing page |
 
 The two secrets that are neither in credentials nor on disk —
 `KAMAL_REGISTRY_PASSWORD` and `POSTMARK_SMTP_TOKEN` — go in

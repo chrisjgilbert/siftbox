@@ -113,6 +113,9 @@ Already filled in: the host, `cjgilbert/siftbox` on Docker Hub, `siftbox.co`
 as `proxy.host`, and the four `SIFTBOX_*` variables. `SIFTBOX_MAIL_FROM` is
 the one to check against reality — it has to match the sender signature you
 verified in step 2, or every password reset is rejected.
+`SIFTBOX_WAITLIST` is the fifth: it is what puts the landing page and the
+waitlist on `/`, and off is the default, so dropping it makes the landing
+page disappear on the next deploy.
 
 `service: siftbox` and the volume `siftbox_storage` are what keep this app
 apart from the others on the box, so leave both alone unless something else

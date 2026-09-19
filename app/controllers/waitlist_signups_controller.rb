@@ -4,6 +4,12 @@
 class WaitlistSignupsController < ApplicationController
   allow_unauthenticated_access only: [ :new, :create ]
 
+  # Declared above rate_limit, which is itself a before_action, so that a
+  # closed waitlist answers 404 before anything is counted or read from
+  # params. Declared below it, the sixth signup would get a 429 instead —
+  # an answer that says the waitlist is open.
+  before_action :require_open_waitlist, only: :create
+
   # A honeypot rather than a captcha handles the bots that read the form; this
   # handles the ones that do not. Rails 8's rate limiter counts in Rails.cache,
   # which is Solid Queue's database-backed store in production, so the count is
@@ -12,6 +18,7 @@ class WaitlistSignupsController < ApplicationController
 
   def new
     return redirect_to reader_home_url if authenticated?
+    return redirect_to new_session_url unless waitlist_open?
 
     @waitlist_signup = WaitlistSignup.new
   end
@@ -44,6 +51,10 @@ class WaitlistSignupsController < ApplicationController
     edition_url(edition)
   end
 
+  def require_open_waitlist
+    head :not_found unless waitlist_open?
+  end
+
   # Rails answers a bare `head :too_many_requests` by default, and Turbo drops
   # a response carrying no body — the submit button would simply stop doing
   # anything. Rendering the page back gives Turbo something to swap in.
@@ -51,6 +62,10 @@ class WaitlistSignupsController < ApplicationController
     @waitlist_signup = WaitlistSignup.new
 
     render :new, status: :too_many_requests
+  end
+
+  def waitlist_open?
+    Rails.configuration.x.waitlist
   end
 
   def waitlist_signup_params
