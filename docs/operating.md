@@ -1,10 +1,10 @@
 # Operating siftbox
 
-This was the README until the repository went public, and it is the day-two
-document: what each environment variable costs when it is missing, the deploy
-step this app cannot do for itself, and the reasoning behind the decisions a
-change is most likely to undo. `README.md` is the introduction and carries the
-five commands that run it locally; `docs/deploying.md` is the runbook.
+This was the README. It is the day-two document: what each environment
+variable costs when it is missing, the deploy step this app cannot do for
+itself, and the reasoning behind the decisions a change is most likely to
+undo. `README.md` is the introduction and carries the five commands that run
+it locally; `docs/deploying.md` is the runbook.
 
 ## The screens
 
@@ -216,11 +216,11 @@ rest of the measure-and-size chain that died with the reader.
 **Images are self-hosted.** Everything a newsletter carries inside the
 message (`cid:` references) is stored with Active Storage during ingest, and
 everything it hotlinks is fetched by `RemoteImagesJob` just after — in both
-cases the reference in the body is rewritten to a path this app serves. A
-blog post goes through the same job when the roster polls it, for the same
-reason. So opening a newsletter makes no request to the sender, which is
-the only way to stop an open being tracked: a tracking pixel that declares
-no size is indistinguishable from a real image, and `Newsletter::TrackingPixelScrubber`
+cases the reference in the body is rewritten to a path this app serves, and a
+blog post goes through the same job when the roster polls it. So opening a
+newsletter makes no request to the sender, which is the only way to stop an
+open being tracked: a tracking pixel that declares no size is
+indistinguishable from a real image, and `Newsletter::TrackingPixelScrubber`
 only catches the ones that declare 2px or less. It also means the archive
 keeps its images once senders' CDNs stop serving them.
 
@@ -231,10 +231,10 @@ Gmail's image proxy do too, and delivery is something an ESP already knows.
 A download that fails leaves the `src` pointing where it did, so the reader
 still sees the image — which is why the CSP keeps `img-src https:` and the
 `same-origin` referrer policy in the layout still earns its place. The same
-is true of a source past `RemoteImages::MAX_IMAGES`: nothing
-bounds how many `<img>` tags a sender writes, and each one costs a request
-and up to `MAX_BYTES` of disk on a queue three threads wide, so the count is
-capped and the overflow stays hotlinked.
+is true of a source past `RemoteImages::MAX_IMAGES`: nothing bounds how many
+`<img>` tags a sender writes, and each one costs a request and up to
+`MAX_BYTES` of disk on a queue three threads wide, so the count is capped and
+the overflow stays hotlinked.
 
 `Newsletter::ImageDownload` is the part to read before changing any of this:
 it fetches attacker-supplied URLs from inside the network, so it checks
@@ -269,21 +269,19 @@ demand, so a change moving which image a body leads with reaches rows already
 ingested only after `bin/rails lead_images:backfill`.
 
 **The landing page is the only public write path the app advertises**, and
-only where `SIFTBOX_WAITLIST` is on. Off — the default, and what anyone
-running their own siftbox wants — a signed-out visitor is sent to sign in and
-a signup answers 404. What stays unauthenticated either way is sign-in and
-password reset, and both of them write: a session, and a reset mail through
-the same Postmark account the newsletters arrive on. That is why both carry a
-`rate_limit`, and why `SessionsController` and `PasswordsController` are the
-two to read before widening anything public.
-
-With the waitlist on, the landing page is guarded four ways: an off-screen
+only where `SIFTBOX_WAITLIST` is on. It is guarded four ways: an off-screen
 honeypot answered exactly like a real signup, a rate limit counting in
 `Rails.cache`, strong parameters, and treating a duplicate address as
 success — the unique index raises and `WaitlistSignup#join` rescues, rather
 than a uniqueness validation reporting a clash and answering a question about
 someone else's address. Nothing is emailed: the copy promises exactly one
 message, and a confirmation would break that on day one.
+
+It is not the only unauthenticated one, whatever the switch says. Sign-in and
+password reset are open by necessity and both write — a session, and a reset
+mail through the same Postmark account the newsletters arrive on. That is why
+both carry a `rate_limit`, and why `SessionsController` and
+`PasswordsController` are the two to read before widening anything public.
 
 **`noindex, nofollow` is not site-wide.** The layout emits it unless a
 template sets `content_for :indexable`, which only the landing page does.

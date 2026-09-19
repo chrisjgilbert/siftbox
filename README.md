@@ -23,12 +23,12 @@ always be taken back to the thing that made it.
 
 Nothing an outsider wrote is ever rendered as markup on an app page: the
 edition is the editor's words through ordinary escaping, and a newsletter is
-shown as it arrived only inside a sandboxed iframe with its own
-`default-src 'none'` policy. The images a newsletter hotlinks are fetched
-once at ingest and re-hosted, so opening one makes no request to the sender —
-and because those URLs come from whoever sent the mail, `Download::Destination`
-resolves each one, refuses any address off the public internet, and asks
-again at every redirect.
+shown as it arrived only inside a sandboxed frame that can reach nothing of
+this app's. The images a newsletter hotlinks are fetched once at ingest and
+re-hosted, so opening one makes no request to the sender — and because those
+URLs come from whoever sent the mail, `Download::Destination` resolves each
+one, refuses any address off the public internet, and asks again at every
+redirect. `docs/operating.md` has the mechanism behind each of those.
 
 ## Run it locally
 
