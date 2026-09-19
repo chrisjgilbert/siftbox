@@ -1,7 +1,13 @@
 ---
 # For more options, see https://docs.honeybadger.io/lib/ruby/gem-reference/configuration
 
-api_key: 'hbp_852rjzTiH3qGdmjhhlytqe0sBAn3Hh4sOw8p'
+# No api_key here. The gem maps every HONEYBADGER_* variable in the
+# environment onto its own configuration (Honeybadger::Config::Env), so the key
+# comes from HONEYBADGER_API_KEY — named in env.secret in config/deploy.yml,
+# with the value in .kamal/secrets-common. With neither set the gem logs "API
+# key is missing" once per report and sends nothing; it does not stop the app
+# booting, which is what anyone running siftbox without a Honeybadger account
+# wants.
 
 # The environment your app is running in.
 env: "<%= Rails.env %>"
