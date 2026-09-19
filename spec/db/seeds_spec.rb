@@ -7,9 +7,9 @@ RSpec.describe "db/seeds" do
   # The seeds read the two variables as they run, so a value set for the
   # example's duration is what they see. Set and put back rather than stubbed,
   # the way `through` does in spec/jobs/edition/composition_job_spec.rb: ENV is
-  # process-wide, and an example that left a reader behind would seed an
-  # account in every later one. Assigning nil deletes the variable, which is
-  # how the absent cases are written.
+  # process-wide, and an example that left a reader behind would decide what
+  # every later one seeds. Assigning nil deletes the variable, which is how the
+  # absent cases are written.
   def with_reader(email_address:, password:)
     original_email_address = ENV["SIFTBOX_READER_EMAIL"]
     original_password = ENV["SIFTBOX_READER_PASSWORD"]

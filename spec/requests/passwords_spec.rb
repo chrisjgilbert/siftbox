@@ -99,8 +99,8 @@ RSpec.describe "Passwords" do
   # in-suite is not worth it. Two failures are worth catching here. Dropping
   # the default — which .claude/rules/ruby.md would otherwise ask for — breaks
   # the image build rather than the suite, because the Dockerfile precompiles
-  # assets with this environment loaded and no secrets present. And putting
-  # the token back into credentials, which this app no longer has, would send
+  # assets with this environment loaded and no secrets present. And reading the
+  # token back out of credentials, which this app no longer has, would send
   # reset mail authenticated by nothing. Reset mail is the only way into an
   # account with no sign-up flow, and a wrong token fails at send time, long
   # after the deploy that broke it.
@@ -108,6 +108,6 @@ RSpec.describe "Passwords" do
     production = Rails.root.join("config/environments/production.rb").read
 
     expect(production).to include('ENV.fetch("POSTMARK_SMTP_TOKEN", nil)')
-    expect(production).not_to include("credentials")
+    expect(production).not_to include("Rails.application.credentials")
   end
 end

@@ -1,9 +1,9 @@
 require "rails_helper"
 
 # The path Postmark posts to. Losing any part of it — the route, the ingress
-# setting, the RawEmail parameter, the credentials — is silent and total: the
-# webhook fails, Postmark eventually stops retrying, and the newsletters are
-# gone with nothing logged.
+# setting, the RawEmail parameter, the ingress password — is silent and total:
+# the webhook fails, Postmark eventually stops retrying, and the newsletters
+# are gone with nothing logged.
 RSpec.describe "Action Mailbox ingress" do
   include ActiveJob::TestHelper
 
