@@ -1,7 +1,11 @@
-<%# Fixed sample content, not the reader's own feed. The design handoff asks
-    for a live feed here; this page is unauthenticated, so that would publish
-    real subjects and senders to anyone who loads it. The row spec, scale and
-    caption bar are the handoff's. %>
+<%# Fixed sample content, not the reader's own edition. The design handoff asks
+    for a live one here; this page is unauthenticated, so that would publish
+    real stories and sources to anyone who loads it. The frame, scale and
+    caption bar are the handoff's; the hierarchy inside them is the edition
+    page's, reduced.
+
+    Nothing in here is a link. It is a picture made of markup, and a source
+    that looked like one would promise a page a visitor cannot open. %>
 <section class="landing__frame landing__shot">
   <div class="shot">
     <div class="shot__caption">
@@ -10,19 +14,28 @@
     </div>
 
     <div class="shot__body">
-      <div class="shot__group">
-        <span><%= t("waitlist_signups.shot.day") %></span>
-        <span class="shot__date"><%= t("waitlist_signups.shot.date") %></span>
-      </div>
+      <% t("waitlist_signups.shot.sections").each do |section| %>
+        <p class="shot__group"><%= section[:heading] %></p>
 
-      <% t("waitlist_signups.shot.rows").each do |row| %>
-        <%= tag.div(class: class_names("shot__row", "shot__row--read" => row[:read])) do %>
-          <span class="shot__number"><%= row[:number] %></span>
-          <span class="shot__text">
-            <span class="shot__sender"><%= row[:sender] %></span>
-            <span class="shot__subject"><%= row[:subject] %></span>
-          </span>
-          <span class="shot__time"><%= row[:time] %></span>
+        <% section[:stories].each do |story| %>
+          <div class="shot__story">
+            <% if story[:headline] %>
+              <p class="shot__headline"><%= story[:headline] %></p>
+            <% end %>
+
+            <p class="shot__story-body"><%= story[:body] %></p>
+
+            <p class="shot__sources">
+              <span class="shot__sources-label">
+                <%= t("waitlist_signups.shot.sources",
+                      count: story[:sources].length) %>
+              </span>
+
+              <% story[:sources].each do |source| %>
+                <span class="shot__source"><%= source %></span>
+              <% end %>
+            </p>
+          </div>
         <% end %>
       <% end %>
     </div>

@@ -2008,8 +2008,11 @@ a {
 
 /* Product shot ------------------------------------------------------------ */
 
-/* Fixed sample content, at the feed's row spec and reduced scale. Not the
-   reader's own feed: this page is unauthenticated. */
+/* Fixed sample content, at the edition's hierarchy and a reduced scale. Not
+   the reader's own edition: this page is unauthenticated. The frame is the
+   handoff's, a 1px ink border under a caption bar on the 2px rule, and inside
+   it is the shape the edition page draws: a mono section heading on the 2px
+   rule, the stories under it on the 1px one, sources in mono beneath each. */
 .shot {
   border: 1px solid var(--ink);
   background: var(--paper);
@@ -2037,10 +2040,7 @@ a {
 }
 
 .shot__group {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
+  margin: 0;
   border-bottom: 2px solid var(--ink);
   padding: 24px 0 8px;
   font-family: var(--mono);
@@ -2049,46 +2049,42 @@ a {
   text-transform: uppercase;
 }
 
-.shot__date {
-  color: var(--mute);
-}
-
-.shot__row {
-  display: grid;
-  grid-template-columns: 28px 1fr 60px;
-  column-gap: 12px;
-  align-items: baseline;
+.shot__story {
   padding: 14px 0;
   border-bottom: 1px solid var(--rule);
 }
 
-.shot__row--read {
-  opacity: 0.66;
+/* One headline treatment for the whole shot. The real page sets a lead, a
+   Briefly line and a reading list entry at three sizes; at this scale the
+   shape is what separates them — a Briefly line has no headline at all — and a
+   second size in here would be noise at 17px. */
+.shot__headline {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  text-wrap: pretty;
 }
 
-.shot__number,
-.shot__time {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--blue);
+.shot__story-body {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--body);
+  text-wrap: pretty;
 }
 
-.shot__row--read .shot__number {
-  color: var(--read);
-}
-
-.shot__time {
-  color: var(--mute);
-  text-align: right;
-}
-
-.shot__text {
-  display: block;
-  min-width: 0;
-}
-
-.shot__sender {
-  display: block;
+/* Flex with a gap, the way .story__sources is laid out. It also keeps the
+   template's own newlines out of the line: the label is a flex item, so the
+   whitespace it is written across is trimmed rather than drawn as a space in
+   front of the slash. */
+.shot__sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin: 10px 0 0;
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -2096,14 +2092,13 @@ a {
   color: var(--mute);
 }
 
-.shot__subject {
-  display: block;
-  margin-top: 6px;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-  text-wrap: pretty;
+/* The separator belongs to the layout rather than to the copy, so it is drawn
+   here — the same slash the feed's mono rows draw between their fields, and
+   after the label as well as between the names, because at this size the whole
+   line is one mono field list rather than a label with a list beside it. */
+.shot__sources-label:not(:last-child)::after,
+.shot__source:not(:last-child)::after {
+  content: "\00a0/";
 }
 
 @media (min-width: 720px) {
@@ -2121,13 +2116,11 @@ a {
     padding-bottom: 36px;
   }
 
-  .shot__row {
-    grid-template-columns: 36px 1fr 80px;
-    column-gap: 20px;
+  .shot__story {
     padding: 18px 0;
   }
 
-  .shot__subject {
+  .shot__headline {
     font-size: 20px;
   }
 }
