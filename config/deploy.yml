@@ -135,9 +135,8 @@ env:
     # neither secrets file is a refused deploy rather than a warning.
     - HONEYBADGER_API_KEY
   clear:
-    # Every SIFTBOX_* value below is a placeholder. A deployment overrides the
-    # ones it needs in config/deploy.production.yml; env.clear is a hash, so
-    # the ones it leaves out keep the values here rather than disappearing.
+    # Every SIFTBOX_* value below is a placeholder, overridden name by name in
+    # config/deploy.production.yml.
 
     # The address subscriptions are pointed at, shown in the feed header and
     # the empty state. Without it, a deployed siftbox tells the reader to

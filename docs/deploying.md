@@ -254,20 +254,13 @@ in the worker log — once a morning, and there is no edition. Leaving the name
 out of `.kamal/secrets-common` altogether is the loud version, and it stops the
 deploy rather than the morning.
 
-`.kamal/secrets-common` is the only secrets file this deployment needs, and
-the only one it should have. Which file Kamal reads after it depends on the
-destination: `-d production` reads `.kamal/secrets.production`, which does not
-exist here, and a deploy with no destination reads the committed
-`.kamal/secrets`, which assigns nothing. Either way the second file is merged
-over the first, so restating a name in it — a
-`KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD` passthrough, say — resolves
-against an unset shell variable and overwrites the real value with an empty
-string.
-
-The corollary is worth keeping in mind on a destination deploy: a value put in
-`.kamal/secrets` is not read at all, and nothing says so. It is neither used
-nor complained about. Keep every value in `secrets-common`, which both paths
-read.
+`.kamal/secrets-common` is the only secrets file this deployment needs, and the
+only one it should have. Which file Kamal reads after it depends on the
+destination — `.kamal/secrets.production` with `-d production`, the committed
+`.kamal/secrets` without one — and the comments in `.kamal/secrets` set out
+both traps that follow: a name restated in the second file overwrites the real
+value with an empty string, and a value put in `.kamal/secrets` is not read at
+all on a destination deploy, with nothing said about it either way.
 
 `proxy.ssl: true` is already set, so Kamal gets a Let's Encrypt certificate
 for `proxy.host` on the first deploy. That is also why step 1 comes first —
@@ -557,8 +550,8 @@ The order:
    but Kamal only runs that when it finds a container up for the currently
    running version, and says nothing when it does not. So boot it first
    (`bin/kamal app boot`) if it is stopped or crashed, or `siftbox.co` stays
-   registered to `siftbox-web` and step 4 asks kamal-proxy for a host it
-   already holds. After the release it removes the app's containers, its
+   registered to `siftbox-web` and the deploy below asks kamal-proxy for a host
+   it already holds. After the release it removes the app's containers, its
    images and the `.kamal/apps/siftbox` directory on the host. It does not
    touch volumes, so `siftbox_storage` and everything in it stay where they
    are. The site is down from here.
