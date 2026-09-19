@@ -93,6 +93,46 @@ exploration did not make:
 - **No user-facing string in a template.** Everything goes through
   `config/locales/en.yml`, keys sorted alphabetically. A missing translation
   raises in development and test.
+- **Three passes before the pull request opens**, in this order, once
+  `bin/ci` is green: `/code-review --fix high`, then `/simplify`, then
+  `/verify`. Each is a skill in this session. What each one does and what
+  it produces is in the next section.
+
+## The three passes
+
+Every package runs all three, after its own work is done and `bin/ci` is
+green, and before the pull request is opened. In order:
+
+1. **`/code-review --fix high`.** Reviews the branch's diff for correctness
+   at high effort and applies the fixes it is confident in. Run `bin/ci`
+   again afterwards. Fixes go in their own commit, so the review's changes
+   are separable from the package's work. A finding the review reports but
+   does not fix goes in the pull request description with a sentence on why
+   it was left.
+2. **`/simplify`.** Reviews the same diff for reuse, simplification and
+   efficiency and applies what it finds. Same rule: `bin/ci` again, its own
+   commit. It looks for quality, not bugs; that is why it runs after the
+   review and not instead of it.
+3. **`/verify`.** Launches the app and drives the change at its real
+   surface, through the browser, signed in where the page needs it. The
+   `verify` skill in `.claude/skills/` has the recipe: a development
+   database, a reader account created by `bin/rails runner`, the server on
+   a spare port, curl or Playwright through the sign-in form. What to drive
+   differs per package and is in the table below. The pass produces
+   evidence for the pull request: a sentence per check and, where the
+   package changes a page, screenshots at 375px and 1280px.
+
+| Package | What `/verify` drives |
+|---|---|
+| A0 | Boot the app with `HONEYBADGER_API_KEY` unset and confirm it boots and serves the sign-in page. There is no page to change; the check is that removing the key line broke nothing at boot. |
+| E | No runtime surface. Confirm `bin/rails server` still boots (a stray file in the root cannot break it, but say it was checked) and stop there. Say in the pull request that the pass had nothing to drive. |
+| C1 | With the switch unset: `/` answers 302 to `/session/new`, `POST /waitlist_signup` answers 404. With `SIFTBOX_WAITLIST=true`: `/` renders the landing page and a signup answers "On the list". Signed in, both settings: `/` redirects to the edition or the archive. Screenshots of the landing page in the on state. |
+| A | Boot with the new variables set and none of the old: `SIFTBOX_READER_EMAIL` and `SIFTBOX_READER_PASSWORD` in the environment, `bin/rails db:seed`, sign in through the form with those values. Then the password-reset request page renders. The ingress cannot be driven locally (production only); the request spec covers it, and the pass says so. |
+| B | No runtime surface in the app. `bin/kamal config` with no destination prints placeholders and does not error; that is the whole check, and it needs no host. |
+| C2 | The landing page in the on state at both widths: the nav's two links, the hero copy, the two points, the closing band's two rows and the source link's href, the footer. A signup from the hero. Screenshots at both widths go in the pull request; they are also what the owner edits copy against. |
+| C3 | The same page, the shot only: three section headings, every story with a body, sources as text and not links, at both widths. Screenshots. |
+| F | `bin/rails sample_data:load`, then sign in and open `/`: it lands on the sample edition, every section present, every citation linking to an original that opens. This pass is also where the README screenshot is taken. |
+| D | The README rendered (GitHub's preview, or any Markdown renderer) with the image showing and the badge resolving; every link in it and in `docs/operating.md` opened once. The layout comment change is a comment; nothing to drive. |
 
 ## Handing a package to an agent
 
@@ -101,8 +141,13 @@ agent is:
 
 > Read `docs/open-source-plan.md` and do package X. Read
 > `docs/open-source.md` first for why. Work on a branch named for the
-> package, open a pull request against `main`, and stop there. Do not merge,
-> do not deploy, and do not carry out owner steps.
+> package. When `bin/ci` is green, run the three passes the plan describes,
+> in order: `/code-review --fix high`, `/simplify`, `/verify`, with `bin/ci`
+> green again after each of the first two. Then open a pull request against
+> `main` whose description leads with what changed and what it costs, lists
+> any review finding left unfixed and why, and carries the verify pass's
+> evidence. Stop there. Do not merge, do not deploy, and do not carry out
+> owner steps.
 
 Give the agent the letter and nothing else. If the package's "Owner steps"
 section has a step that has to happen before the code can be written (there
