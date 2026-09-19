@@ -59,6 +59,10 @@ class SampleEdition
     }
   ].freeze
 
+  # No model, no prompt, no tokens: what the row says about how it was
+  # written is that it was not.
+  PROVENANCE = { editor_model: "sample", prompt_version: "sample" }.freeze
+
   # The newsletters in the order the task lists them, which is the order
   # STORIES cites them by.
   def initialize(newsletters)
@@ -66,7 +70,7 @@ class SampleEdition
   end
 
   def write
-    edition = Edition.new(identity.merge(provenance))
+    edition = Edition.new(identity.merge(PROVENANCE))
     stories.each_with_index { |story, index| build(edition, story, index + 1) }
 
     edition.save!
@@ -84,13 +88,10 @@ class SampleEdition
   # this rather than writing an edition that quietly leaves one out, which is
   # the failure the real editor exists to refuse.
   def stories
+    uncited = newsletters.each_index.to_a - cited
     return STORIES if uncited.empty?
 
     raise ArgumentError, "no story cites newsletter #{uncited.join(", ")}"
-  end
-
-  def uncited
-    newsletters.each_index.to_a - cited
   end
 
   def cited
@@ -116,12 +117,6 @@ class SampleEdition
   # than reading the clock.
   def closed_at
     @_closed_at ||= Time.current
-  end
-
-  # No model, no prompt, no tokens: what the row says about how it was
-  # written is that it was not.
-  def provenance
-    { editor_model: "sample", prompt_version: "sample" }
   end
 
   # Positions run across the whole edition, the way Edition::Editor numbers
