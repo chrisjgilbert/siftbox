@@ -18,8 +18,9 @@
 
     <%# Read state is retired and nothing writes on a GET now, but the tag
         stays for a different reason: an archive row points at an original,
-        and Turbo prefetching one on hover pulls a body that runs to hundreds
-        of kilobytes for a row nobody opened. See docs/operating.md. %>
+        and rendering one reads the whole newsletter row — a body_html that
+        runs to hundreds of kilobytes. Prefetching on hover would pay that
+        read for every row nobody opened. See docs/operating.md. %>
     <meta name="turbo-prefetch" content="false">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>

@@ -208,10 +208,10 @@ would not apply.
 Nothing is sanitized at ingest either: `Newsletter::Body` walks the stored
 HTML through Loofah on demand, which is what the lead-image capture and the
 prose the editor reads are both built on, so a change to it applies to the
-whole archive immediately with no cached column to reprocess. Its `TAGS` and
-`ATTRIBUTES` allowlist is a leftover from the retired reading view — see
-`docs/briefing-followups.md`, Milestone 6, which lists it with the rest of the
-measure-and-size chain that died with the reader.
+whole archive's prose immediately with no cached column to reprocess. Its
+`TAGS` and `ATTRIBUTES` allowlist is a leftover from the retired reading
+view — see `docs/briefing-followups.md`, Milestone 6, which lists it with the
+rest of the measure-and-size chain that died with the reader.
 
 **Images are self-hosted.** Everything a newsletter carries inside the
 message (`cid:` references) is stored with Active Storage during ingest, and
@@ -247,8 +247,12 @@ IPv6 gets an allowlist of global unicast rather than another denied prefix.
 **Turbo's hover prefetching is off in the layout.** It was there because
 opening a newsletter used to mark it read, so a prefetch wrote. Read state is
 retired and nothing writes on a GET now, but the tag stays for a different
-reason: an archive row points at an original, and prefetching one on hover
-pulls a body that runs to hundreds of kilobytes for a row nobody opened.
+reason: an archive row points at an original, and
+`Newsletters::OriginalsController` reads the whole newsletter row — a
+`body_html` that runs to hundreds of kilobytes — to render it. Hovering the
+archive would pay that read per row nobody opened. The body itself does not
+travel: it is served by `Newsletters::SourcesController` into a lazily loaded
+iframe, which a prefetch never reaches.
 
 **The archive is bounded to seven days**, by `Newsletter::Age::WINDOW`, which
 the day buckets and both queries read. Showing more history needs a pagination
@@ -259,14 +263,23 @@ design first.
 without loading a `body_html` to find one — `Newsletter::FEED_COLUMNS` exists
 precisely to keep the index off that column. Extraction runs *after*
 `Newsletter::InlineImages`, which rewrites `cid:` references to app paths;
-reading the lead first would store a URL no browser can resolve.
+reading the lead first would store a URL no browser can resolve. It is also
+the one thing `Newsletter::Body` feeds that is cached rather than read on
+demand, so a change moving which image a body leads with reaches rows already
+ingested only after `bin/rails lead_images:backfill`.
 
-**The landing page is the only public write path**, and only where
-`SIFTBOX_WAITLIST` is on. Off — the default, and what anyone running their own
-siftbox wants — a signed-out visitor is sent to sign in and a signup answers
-404, so there is no public write path at all. On, it is guarded four ways: an
-off-screen honeypot answered exactly like a real signup, a rate limit counting
-in `Rails.cache`, strong parameters, and treating a duplicate address as
+**The landing page is the only public write path the app advertises**, and
+only where `SIFTBOX_WAITLIST` is on. Off — the default, and what anyone
+running their own siftbox wants — a signed-out visitor is sent to sign in and
+a signup answers 404. What stays unauthenticated either way is sign-in and
+password reset, and both of them write: a session, and a reset mail through
+the same Postmark account the newsletters arrive on. That is why both carry a
+`rate_limit`, and why `SessionsController` and `PasswordsController` are the
+two to read before widening anything public.
+
+With the waitlist on, the landing page is guarded four ways: an off-screen
+honeypot answered exactly like a real signup, a rate limit counting in
+`Rails.cache`, strong parameters, and treating a duplicate address as
 success — the unique index raises and `WaitlistSignup#join` rescues, rather
 than a uniqueness validation reporting a clash and answering a question about
 someone else's address. Nothing is emailed: the copy promises exactly one
