@@ -90,11 +90,13 @@ request has to clear; `SECURITY.md` says where a vulnerability report goes.
 
 ## Support
 
-**[SUPPORT EXPECTATIONS — not yet set.** One sentence, the owner's to write,
-saying what a stranger should expect: whether questions are read, whether
-they are answered, and how quickly. It is the only line here that promises
-anything, so nobody but the owner can write it. Security reports are separate
-and go through `SECURITY.md`, which already states a reply window.**]**
+**[SUPPORT EXPECTATIONS — not yet set.]**
+
+One sentence, the owner's to write, saying what a stranger should expect:
+whether questions are read, whether they are answered, and how quickly. It is
+the only line in this file that promises anything, so nobody else can write
+it. Security reports are separate and go through `SECURITY.md`, which already
+states a reply window.
 
 ## Licence
 
