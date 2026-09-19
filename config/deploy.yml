@@ -65,12 +65,31 @@ registry:
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
   secret:
-    # Decrypts credentials, which carry action_mailbox.ingress_password —
-    # what Action Mailbox authenticates the Postmark webhook against — and
-    # postmark.smtp_token, which sends password-reset mail. Without this the
-    # ingress rejects every delivery and newsletters are lost once Postmark
-    # gives up retrying.
-    - RAILS_MASTER_KEY
+    # What Rails signs cookies and generates password-reset tokens with. Rails
+    # reads it from here before it looks anywhere else, and there is nowhere
+    # else left to look. A different value from the last deploy's signs the
+    # reader out and voids any reset link in flight, so carry the existing one
+    # across rather than generating a new one.
+    - SECRET_KEY_BASE
+
+    # What Action Mailbox authenticates the Postmark webhook against, and the
+    # other half of the password in the webhook URL Postmark posts to. Wrong,
+    # it is a 401 on every delivery with nothing in the log to say why, and the
+    # newsletters are gone once Postmark gives up retrying.
+    - RAILS_INBOUND_EMAIL_PASSWORD
+
+    # The Postmark server token, which sends password-reset mail — the only way
+    # back into an app with no sign-up flow. Wrong, the send fails at reset
+    # time rather than at deploy time.
+    - POSTMARK_SMTP_TOKEN
+
+    # The reader's account, created by db/seeds.rb at the first boot on a fresh
+    # volume and never updated after. The address is not a secret, but it is
+    # the reader's, and env.secret is what keeps it out of this committed file.
+    # Missing, the boot logs "No reader account created" and carries on, and
+    # there is no way to sign in.
+    - SIFTBOX_READER_EMAIL
+    - SIFTBOX_READER_PASSWORD
 
     # What the AI editor authenticates with, read at 07:00 by
     # Edition::CompositionJob and by nothing else in the app. Missing, it is
@@ -165,7 +184,6 @@ builder:
   #   RUBY_VERSION: 3.3.6
   # secrets:
   #   - GITHUB_TOKEN
-  #   - RAILS_MASTER_KEY
 
 # Use a different ssh user than root
 # ssh:

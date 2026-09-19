@@ -82,30 +82,44 @@ renewing itself without a proxy in the way.
    Postmark rejects sends from anything else, and reset mail is the only way
    back into the account.
 
-Generate `PASSWORD` as a long random string. It goes in credentials in step 3,
-and the same value goes in this webhook URL.
+Generate `PASSWORD` as a long random string. It goes in the secrets in step 3,
+as `RAILS_INBOUND_EMAIL_PASSWORD`, and the same value goes in this webhook URL.
 
-## 3. Credentials
+## 3. Secrets
 
-The ingress password lives in credentials, under `action_mailbox`:
+This app carries no encrypted credentials. Everything secret reaches the
+container as an environment variable, named in `env.secret` in
+`config/deploy.yml` and valued in `.kamal/secrets-common`, which step 4 writes:
 
-```bash
-bin/rails credentials:edit
-```
+| Variable | What it is |
+|---|---|
+| `KAMAL_REGISTRY_PASSWORD` | An access token for the image registry, rather than the account password |
+| `SECRET_KEY_BASE` | What Rails signs session cookies and password-reset tokens with. `bin/rails secret` generates one |
+| `RAILS_INBOUND_EMAIL_PASSWORD` | The `PASSWORD` from step 2, which Action Mailbox authenticates every Postmark webhook against |
+| `POSTMARK_SMTP_TOKEN` | The Postmark server token, which sends password-reset mail |
+| `SIFTBOX_READER_EMAIL`, `SIFTBOX_READER_PASSWORD` | The only account, created at first boot — step 6 |
+| `ANTHROPIC_API_KEY` | What the morning edition is written with — step 9 |
+| `HONEYBADGER_API_KEY` | Where errors are reported |
 
-```yaml
-action_mailbox:
-  ingress_password: the PASSWORD from step 2
-```
+Two of them are worth a sentence each.
 
-Action Mailbox does read a `RAILS_INBOUND_EMAIL_PASSWORD` variable, but only
-when the credential is unset — so do not set both. With the credential
-present the variable is ignored, and a mismatch shows up as a 401 on every
-webhook with nothing to say why.
+`RAILS_INBOUND_EMAIL_PASSWORD` has to match the password in the webhook URL
+from step 2 exactly. Change one and change the other in the same sitting, or
+every delivery is refused.
 
-`config/credentials.yml.enc` is committed; `config/master.key` is not. Kamal
-reads the key off disk as `RAILS_MASTER_KEY`, so the machine you deploy from
-needs a copy. Never commit it.
+`SECRET_KEY_BASE` is generated only for a deployment that has never run. One
+that is already running carries its existing value across, because a new one
+signs the reader out and voids any password-reset link in flight. That value
+used to be derived from the encrypted credentials, so read it out before this
+release removes them — `bin/rails credentials:show` on the machine that holds
+`config/master.key`, the `secret_key_base` key — and put it in
+`.kamal/secrets-common`. Once the credentials file is gone it cannot be
+recovered, and the sign-out is the only way through.
+
+`config/master.key` is no part of a deploy any more, and neither is
+`RAILS_MASTER_KEY`. A clone made before the credentials file was removed may
+still hold a key; it is gitignored, nothing reads it, and it can go once the
+values above are out.
 
 ## 4. config/deploy.yml
 
@@ -125,21 +139,54 @@ onto it, so `image` is the path within the registry rather than the full
 reference. Naming the registry in both gives you
 `ghcr.io/ghcr.io/user/siftbox`.
 
-The two secrets that live neither in credentials nor on disk go in
-`.kamal/secrets-common`, which is gitignored. Kamal reads it before
-`.kamal/secrets` with no flags, so nothing needs exporting into the shell:
+The values behind `env.secret` go in `.kamal/secrets-common`, which is
+gitignored. Kamal reads it before `.kamal/secrets` with no flags, so nothing
+needs exporting into the shell. Every name from step 3, and all of them:
 
 ```bash
 KAMAL_REGISTRY_PASSWORD=...
+SECRET_KEY_BASE=...
+RAILS_INBOUND_EMAIL_PASSWORD=...
 POSTMARK_SMTP_TOKEN=...
+SIFTBOX_READER_EMAIL=...
+SIFTBOX_READER_PASSWORD=...
 ANTHROPIC_API_KEY=...
+HONEYBADGER_API_KEY=...
 ```
 
-`ANTHROPIC_API_KEY` is what the morning edition is written with, and it is
-named in `env.secret` so Kamal passes it into the container. It spends money
-every day the job runs — see step 9.
+A name that is missing fails loudly: Kamal looks every `env.secret` name up
+when it writes the container's env file and stops with `Secret
+'SECRET_KEY_BASE' not found in .kamal/secrets-common, .kamal/secrets` rather
+than booting the new container. The image has been built and pushed by then, so
+this is not free — but the running container is untouched and no wrong value
+reaches it. A value that is wrong fails silently, and later. A mistyped
+`RAILS_INBOUND_EMAIL_PASSWORD` is a 401 on every webhook with nothing in the
+log to say why; a wrong `POSTMARK_SMTP_TOKEN` surfaces the first time someone
+needs a password reset; a fresh `SECRET_KEY_BASE` signs the reader out. That
+asymmetry is what step 8 is for — a deploy that runs proves the names, and
+only the smoke test proves the values.
 
-Do not restate those two in `.kamal/secrets`. That file is merged over the
+Running without a Honeybadger account is fine, and an empty value is how: the
+name is present, so Kamal deploys, and the gem treats an empty key exactly as
+it treats none at all — it logs that the key is missing, once per report, and
+sends nothing.
+
+```bash
+HONEYBADGER_API_KEY=
+```
+
+`ANTHROPIC_API_KEY` spends money every day the composition job runs — see
+step 9. An empty value there is not the same trade, and it is not a `KeyError`
+either: Kamal writes the name into the container's env file whatever the value,
+so the variable is set rather than absent and the `ENV.fetch` in
+`app/models/edition/draft.rb` returns the empty string instead of raising. The
+request goes out, the API refuses it, and `Edition::CompositionJob` discards
+`Edition::Draft::Rejected` with `no edition composed: the request was refused`
+in the worker log — once a morning, and there is no edition. Leaving the name
+out of `.kamal/secrets-common` altogether is the loud version, and it stops the
+deploy rather than the morning.
+
+Do not restate any of these in `.kamal/secrets`. That file is merged over the
 top, so a `KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD` passthrough
 resolves against an unset shell variable and overwrites the real value with
 an empty string.
@@ -173,30 +220,30 @@ four SQLite databases are created on the volume without a separate step.
 
 ## 6. Create the reader account
 
-Put the account in credentials, back in step 3:
+The account is two of the variables from step 3:
 
-```yaml
-reader:
-  email_address: you@example.com
-  password: ...
+```bash
+SIFTBOX_READER_EMAIL=you@example.com
+SIFTBOX_READER_PASSWORD=...
 ```
 
-`db:prepare` loads `db/seeds.rb` whenever it creates the database, so with
-that block present the first container boot creates the account by itself and
-a rebuilt volume gets it back the same way. Without it, boot logs
-`No reader account created` and carries on rather than failing.
+`db:prepare` loads `db/seeds.rb` whenever it creates the database, so with both
+set the first container boot creates the account by itself and a rebuilt volume
+gets it back the same way — they belong to the deployment rather than to the
+volume. Without them, boot logs `No reader account created` and carries on
+rather than failing.
 
-If the databases already exist — the credential was added after the first
+If the databases already exist — the variables were added after the first
 deploy, say — seeds will not have run. Do it once by hand:
 
 ```bash
 bin/kamal app exec --reuse "bin/rails db:seed"
 ```
 
-Seeds create the account and never update it. Changing the password in
-credentials does nothing to an account that already exists, because the
-reader may have changed it through the reset flow and rewriting it here would
-lock them out. To change an existing password, do it in the console.
+Seeds create the account and never update it. Changing
+`SIFTBOX_READER_PASSWORD` does nothing to an account that already exists,
+because the reader may have changed it through the reset flow and rewriting it
+here would lock them out. To change an existing password, do it in the console.
 
 There is no sign-up flow, by design. This is the only account.
 
@@ -280,6 +327,14 @@ ip -4 addr show | grep -E "docker0|br-"
    yet; this is the step that finds out whether the phrase set recognises one
    in the wild. If it does not, the mail is in the feed instead and the fix is
    `Newsletter::Confirmation::PHRASES`.
+6. Sign out, ask for a password reset, and confirm the mail arrives and its
+   link works. Nothing else on this list touches `POSTMARK_SMTP_TOKEN` or
+   `SIFTBOX_MAIL_FROM`, and both fail silently: the token is read with a
+   default so the image can be built without it, and a From address Postmark
+   has no signature for is rejected at send time. Reset mail is the only way
+   back into an account with no sign-up flow, so a wrong value here is found
+   either now or on the day it is needed. Signing back in afterwards is also
+   what proves `SECRET_KEY_BASE` reached the container.
 
 The ingress is armed in production only, so the webhook endpoint answers 404
 in development by design. Locally, use the conductor at

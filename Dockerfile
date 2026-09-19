@@ -3,7 +3,10 @@
 
 # This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
 # docker build -t siftbox .
-# docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name siftbox siftbox
+# docker run -d -p 80:80 -e SECRET_KEY_BASE=<a long random string> --name siftbox siftbox
+# That is the minimum to boot. The rest of what a deployment needs — the
+# inbound password, the Postmark token, the reader's account — is the
+# env.secret list in config/deploy.yml.
 
 # For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
 
@@ -45,7 +48,9 @@ COPY . .
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/
 
-# Precompiling assets for production without requiring secret RAILS_MASTER_KEY
+# Precompiling assets for production without requiring the real SECRET_KEY_BASE.
+# This loads config/environments/production.rb with no secrets present, which is
+# why the Postmark token there is fetched with a default rather than without one.
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 
