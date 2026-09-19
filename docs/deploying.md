@@ -14,7 +14,10 @@ which Kamal merges over the template when a command is given `-d production`.
 Every `bin/kamal` command below carries that flag for the same reason. A
 self-hoster who would rather put their values straight into
 `config/deploy.yml` can: drop the `-d production` from every command here and
-skip the destination file. Nothing else changes.
+skip the destination file. Nothing else about the runbook changes — but that
+file is committed, so their host and registry account become a tracked
+modification that `git commit -a` would publish and that the next pull
+conflicts with. The destination file is what avoids both.
 
 ## 1. DNS
 
@@ -172,8 +175,16 @@ is why every `SIFTBOX_*` name is listed even where the value happens to match.
 An array in both is replaced whole: the `hosts` list here *is* the list rather
 than an addition to the template's.
 
-`bin/kamal config -d production` prints the merged result, and is how to read
-this file back before a deploy acts on it.
+`bin/kamal config -d production` is how to confirm the destination file was
+picked up at all: it prints the hosts, the image repository and the builder
+from the merged config. It prints neither `proxy` nor `env`, so the two values
+below that a typo hides — `proxy.host` and `SIFTBOX_MAIL_FROM` — have to be
+read in the file itself. After a deploy, one of them can be read back off the
+container:
+
+```bash
+bin/kamal app exec -d production --reuse "printenv SIFTBOX_MAIL_FROM"
+```
 
 `SIFTBOX_MAIL_FROM` is the value to check against reality — it has to match
 the sender signature verified in step 2, or every password reset is rejected.
@@ -215,14 +226,13 @@ A name that is missing fails loudly: Kamal looks every `env.secret` name up
 when it writes the container's env file and stops with `Secret
 'SECRET_KEY_BASE' not found in .kamal/secrets-common` — it names the files it
 actually read — rather than booting the new container. The image has been
-built and pushed by then, so
-this is not free — but the running container is untouched and no wrong value
-reaches it. A value that is wrong fails silently, and later. A mistyped
-`RAILS_INBOUND_EMAIL_PASSWORD` is a 401 on every webhook with nothing in the
-log to say why; a wrong `POSTMARK_SMTP_TOKEN` surfaces the first time someone
-needs a password reset; a fresh `SECRET_KEY_BASE` signs the reader out. That
-asymmetry is what step 8 is for — a deploy that runs proves the names, and
-only the smoke test proves the values.
+built and pushed by then, so this is not free — but the running container is
+untouched and no wrong value reaches it. A value that is wrong fails silently,
+and later. A mistyped `RAILS_INBOUND_EMAIL_PASSWORD` is a 401 on every webhook
+with nothing in the log to say why; a wrong `POSTMARK_SMTP_TOKEN` surfaces the
+first time someone needs a password reset; a fresh `SECRET_KEY_BASE` signs the
+reader out. That asymmetry is what step 8 is for — a deploy that runs proves
+the names, and only the smoke test proves the values.
 
 Running without a Honeybadger account is fine, and an empty value is how: the
 name is present, so Kamal deploys, and the gem treats an empty key exactly as
@@ -541,9 +551,14 @@ The order:
 1. Write `config/deploy.production.yml` (step 4). It is gitignored, so it
    survives the pull and nothing reads it until a command asks for
    `-d production`.
-2. `bin/kamal app remove` — no destination. This stops the role, which for a
-   role behind the proxy runs `kamal-proxy remove` for it first, so `siftbox.co`
-   is released rather than held; then it removes the app's containers, its
+2. `bin/kamal app remove` — no destination. **The app has to be running when
+   this goes in.** Stopping a role behind the proxy runs `kamal-proxy remove`
+   for it, which is what releases `siftbox.co` rather than leaving it held —
+   but Kamal only runs that when it finds a container up for the currently
+   running version, and says nothing when it does not. So boot it first
+   (`bin/kamal app boot`) if it is stopped or crashed, or `siftbox.co` stays
+   registered to `siftbox-web` and step 4 asks kamal-proxy for a host it
+   already holds. After the release it removes the app's containers, its
    images and the `.kamal/apps/siftbox` directory on the host. It does not
    touch volumes, so `siftbox_storage` and everything in it stay where they
    are. The site is down from here.

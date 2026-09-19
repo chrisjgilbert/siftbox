@@ -85,11 +85,13 @@ each other, worked through against a Hetzner host. What follows here is the
 part worth understanding before running any of it.
 
 The Kamal files declare what the app needs. They no longer declare where it
-runs: `config/deploy.yml` is a committed template whose host, registry account
-and `SIFTBOX_*` values are placeholders, and a deployment puts its own in a
-gitignored `config/deploy.production.yml` that Kamal merges over the top when a
-command is given `-d production`. Every one of these variables fails quietly
-rather than loudly, except the first, which stops the app dead:
+runs: `config/deploy.yml` is a committed template whose host, registry
+account, proxy hostname and `SIFTBOX_*` addresses are placeholders —
+`SIFTBOX_TIME_ZONE` is the exception, and is a real zone because an unknown one
+raises at boot. A deployment puts its own values in a gitignored
+`config/deploy.production.yml` that Kamal merges over the top when a command is
+given `-d production`. Every one of these variables fails quietly rather than
+loudly, except the first, which stops the app dead:
 
 | Variable | Missing means |
 |---|---|
@@ -112,10 +114,10 @@ over the first, so naming a variable in both takes the value from the second,
 not the real one — which is why `.kamal/secrets` names them in comments and
 assigns nothing.
 
-Kamal refuses to deploy when a name in `env.secret` is in neither file, so a
-name left out is loud. A wrong value is not, which is what the smoke test in
-`docs/deploying.md` step 8 is for. That document lists every name, and what
-each one does.
+Kamal refuses to deploy when a name in `env.secret` is in none of the files it
+read, so a name left out is loud. A wrong value is not, which is what the
+smoke test in `docs/deploying.md` step 8 is for. That document lists every
+name, and what each one does.
 
 There is no database server to run. The four databases are SQLite files under
 `storage/`, on the same mounted volume as the Active Storage blobs — so that
