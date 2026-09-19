@@ -1604,8 +1604,14 @@ a {
   border-bottom: 2px solid var(--ink);
 }
 
+/* It wraps for the reason .masthead__bar does: the nav grew a second link, and
+   the nameplate with "Source" and "Join the waitlist" beside it comes to more
+   than a 320px screen has once the gutters are paid for. Without this the
+   links shrink instead of dropping, and "Join the waitlist" breaks across two
+   lines mid-phrase. The gap does double duty as the row gap when they drop. */
 .landing__nav-inner {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -1619,12 +1625,15 @@ a {
   gap: 24px;
 }
 
+/* Each link stays one phrase, so the row above wraps rather than a label
+   breaking inside itself. */
 .landing__nav-link {
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .landing__nav-link::after {
@@ -2013,11 +2022,11 @@ a {
   border-top: 1px solid var(--read);
 }
 
-/* The nav link's treatment on the dark band, where --blue is 1.6:1 on ink. */
 .closing__action {
   margin: 0;
 }
 
+/* The nav link's treatment on the dark band, where --blue is 1.6:1 on ink. */
 .closing .landing__nav-link {
   color: var(--paper);
 }
