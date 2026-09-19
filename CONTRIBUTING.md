@@ -12,4 +12,5 @@ every pull request, not only to the author's.
 - Commit messages have an imperative subject and a prose body that says
   what changed and why.
 - The pull request description leads with what the change does and what
-  it costs. A change that adds an environment variable touches the README.
+  it costs. A change that adds an environment variable touches the table of
+  them in `docs/operating.md`.

@@ -42,7 +42,7 @@ image: your-registry-user/siftbox
 # newsletter images, so senders choose the URLs this app requests. Scope the
 # rule to this container rather than the box: the other apps there did not ask
 # for it. Kamal will not install it and nothing in this repository can — see
-# "Outbound network" in README.md and docs/deploying.md.
+# "Outbound network" in docs/operating.md and docs/deploying.md.
 servers:
   web:
     hosts:

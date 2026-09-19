@@ -4,7 +4,7 @@ A first deploy in the order the steps actually depend on each other. The
 worked example is `siftbox.co` on a Hetzner VM; substitute your own domain
 and host.
 
-`README.md` covers *why* several of these matter — the variables that fail
+`docs/operating.md` covers *why* several of these matter — the variables that fail
 quietly, what lives on the volume, and the egress rule. This is the order to
 do them in.
 
@@ -339,7 +339,7 @@ Ingest fetches the images newsletters link to, so URLs written by anyone who
 can email the inbound address decide where this app makes outbound requests.
 `Download::Destination` refuses anything resolving off the
 public internet, but the durable control is at the network layer. See
-"Outbound network" in `README.md` for why it is worth having both.
+"Outbound network" in `docs/operating.md` for why it is worth having both.
 
 Two things specific to Hetzner:
 
@@ -406,7 +406,8 @@ ip -4 addr show | grep -E "docker0|br-"
 
 The ingress is armed in production only, so the webhook endpoint answers 404
 in development by design. Locally, use the conductor at
-`/rails/conductor/action_mailbox/inbound_emails` instead — see `README.md`.
+`/rails/conductor/action_mailbox/inbound_emails` instead — see
+`docs/operating.md`.
 
 ## 9. The morning edition
 
@@ -605,7 +606,7 @@ plan for this release to be "restore", not "roll back the migration".
 ## Still open
 
 - `Feed` is not scoped to a user. With one account the authentication gate is
-  the scope; see the note at the end of `README.md` for what multiple readers
-  would take.
+  the scope; see the note at the end of `docs/operating.md` for what multiple
+  readers would take.
 - A failed image fetch is not retried, so an image whose host was briefly
   unreachable at ingest stays hotlinked.

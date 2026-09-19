@@ -24,8 +24,11 @@ So the reports that matter are:
 - Any request that reaches a private, link-local or otherwise non-public
   address through `Download::Destination`, which is the whole of the
   application-layer defence against server-side request forgery.
-- Any script that runs on a rendered page, or markup that survives the
-  sanitiser in a form it should not.
+- Any script that runs, or any way out of the sandboxed frame that shows a
+  newsletter as it arrived. That frame is the only place this app serves
+  sender markup unchanged: `Newsletters::SourcesController` sends it under a
+  policy of its own, with an opaque origin and no session cookie. Markup from
+  a stranger reaching an ordinary page, which today renders none, counts too.
 - Anything that lets a signed-out visitor read a newsletter, a post or an
   edition, or lets anyone but the reader change one.
 
