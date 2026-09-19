@@ -52,8 +52,8 @@ module Siftbox
 
     # Where the source lives, linked from the landing page's nav, closing band
     # and footer. Not read from the environment: nothing needs to change it per
-    # deployment, and a fork that turns the waitlist on while pointing at the
-    # repository it was forked from is telling the truth.
+    # deployment, and a fork with the waitlist on, pointing at the repository it
+    # came from, is accurate.
     config.x.source_url = "https://github.com/chrisjgilbert/siftbox"
 
     config.action_mailer.preview_paths << Rails.root.join("spec/mailers/previews")
