@@ -35,6 +35,15 @@
 # key. An older clone may still hold one, and it must never be committed.
 /config/master.key
 
+# The per-environment keys Rails writes if anyone runs credentials:edit out of
+# habit. Nothing here reads credentials, so there should never be one — which
+# is the reason to keep this rather than to drop it: no other line would stop
+# such a file being committed, and a Rails key is thirty-two hex characters
+# with no prefix, so secret scanning has nothing to match on. The two .enc
+# lines that used to sit here are gone; an encrypted file without its key
+# gives nothing away.
+/config/credentials/*.key
+
 # Ignore the raw deploy secrets. /.kamal/secrets itself is safe for git and
 # stays committed; this is the file that holds actual values.
 /.kamal/secrets-common
