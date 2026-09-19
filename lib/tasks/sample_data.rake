@@ -1,5 +1,5 @@
 namespace :sample_data do
-  desc "Fill the development feed with newsletters to look at"
+  desc "Fill the development archive with newsletters and an edition to look at"
   task load: :environment do
     raise "Development only" unless Rails.env.development?
 
@@ -8,11 +8,16 @@ namespace :sample_data do
     # sample editions standing with stories that cite nothing.
     Edition.destroy_all
     Newsletter.destroy_all
-    SampleData.newsletters.each do |attributes|
-      Newsletter.create!(attributes).capture_lead_image
+    newsletters = SampleData.newsletters.map do |attributes|
+      Newsletter.create!(attributes).tap(&:capture_lead_image)
     end
 
-    puts "Created #{Newsletter.count} newsletters"
+    # The edition cites the newsletters by their place in the list above, so
+    # the records go in the order the task listed them rather than being
+    # read back. SampleEdition says what it is and why it composes nothing.
+    edition = SampleEdition.new(newsletters).write
+
+    puts "Created #{Newsletter.count} newsletters and edition No. #{edition.number}"
   end
 end
 
