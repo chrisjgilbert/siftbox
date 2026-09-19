@@ -32,9 +32,9 @@ below it is the plan as written before any of it ran.
 | C3, the product shot | Merged, #47. |
 | C2, the landing copy and the source path | Merged, #48. The copy on the page is still the draft below, for the owner to edit. |
 | A0, the Honeybadger key | Merged, #49. The key has to be in `.kamal/secrets-common` before the next deploy: Kamal refuses to deploy on a name in `env.secret` it cannot find. |
-| A, secrets from the environment | In progress. |
-| B, the deploy template | Not started; follows A. |
-| D, README and docs | Not started; follows all of them. |
+| A, secrets from the environment | Merged, #51. Every secret comes from the environment and the encrypted credentials file is gone. |
+| B, the deploy template | Merged, #52. One deployment's values live in a gitignored `config/deploy.production.yml`. |
+| D, README and docs | In progress, and the last of the nine. |
 
 Two decisions the plan left to the owner have been taken. Package B goes
 ahead: the host address and registry username move to a gitignored
