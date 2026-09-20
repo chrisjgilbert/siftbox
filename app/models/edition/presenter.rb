@@ -40,6 +40,18 @@ class Edition::Presenter
     I18n.l(edition.published_on, format: :edition_masthead)
   end
 
+  # What the archive sorts by, and which template draws the row. Both are here
+  # so the archive can hold published mornings and failed ones in one list —
+  # see Edition::Gap::Presenter, which answers them for the mornings that
+  # produced nothing and picks a template that does not link.
+  def covered_on
+    edition.published_on
+  end
+
+  def to_partial_path
+    "editions/row"
+  end
+
   # Lead stories, then Briefly, then the reading list. A section with nothing
   # in it is left out entirely rather than drawn as a heading over nothing —
   # which on a quiet day is what happens to the reading list.

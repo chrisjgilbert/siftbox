@@ -1,0 +1,8 @@
+<%# One morning that produced an edition: its number and the day it covered,
+    the whole line being the way in. %>
+<li class="archive__row">
+  <%= link_to edition_path(row), class: "archive__link" do %>
+    <span class="archive__number"><%= row.number %></span>
+    <span class="archive__date"><%= row.date %></span>
+  <% end %>
+</li>

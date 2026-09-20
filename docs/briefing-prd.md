@@ -279,17 +279,34 @@ all.
 
 An edition covers newsletters received after the previous edition's
 cutoff, up to the moment composition starts. No fixed 07:00→07:00 ranges:
-with fixed windows, a failed run or an email landing at 07:02 falls into a
-gap and is never covered. With a watermark, every newsletter belongs to
-exactly one edition, whichever runs next. `received_at` (already indexed)
-is the clock; anything arriving mid-composition belongs to the next
-edition.
+with fixed windows, an email landing at 07:02 falls into a gap and is
+never covered. With a watermark, every newsletter belongs to exactly one
+edition, whichever runs next. `received_at` (already indexed) is the
+clock; anything arriving mid-composition belongs to the next edition.
 
-### Empty windows skip silently
+**Revised for failed runs.** The mark moves whenever a window has been
+*considered*, not whenever one produced an edition, so a morning that
+failed closes its window rather than handing it on. The promise above
+holds for a run that never fired; it does not hold for one that fired and
+could not answer, and that is the trade. A window that grew with every
+failure aimed a multi-day prompt at a ceiling it cannot clear — at ~60k
+input tokens a day, three days is past a 200k context — so the old promise
+of a bigger window tomorrow degraded into a truncation and no edition at
+all, silently. The morning is written down and shown instead, and the
+originals are still there to read.
 
-No newsletters since the last cutoff → no edition. The home page shows the
-most recent edition regardless of age, its timestamp doing the honesty
-work.
+### Empty windows publish nothing, and say so quietly
+
+Nothing since the last cutoff → no edition. The home page shows the most
+recent edition regardless of age, its timestamp doing the honesty work.
+
+The morning is still recorded, because the watermark has to move or
+tomorrow reconsiders the same window. It is not drawn in the archive: a
+morning nothing arrived on needs no explanation, and a list of quiet days
+is not an archive of anything. A morning composition *failed* on is drawn,
+permanently — an edition missing with nothing in its place is
+indistinguishable from a quiet day, and the reader cannot tell which they
+are looking at.
 
 ### Masthead and numbering
 

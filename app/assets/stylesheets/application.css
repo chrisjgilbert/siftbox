@@ -512,6 +512,13 @@ a {
   color: inherit;
 }
 
+/* A morning composition failed on. It keeps the row's shape so the list reads
+   as one column of days, and drops the date to the body ink so a reader
+   scanning down can see at a glance that there is nothing behind it. */
+.archive__link--absent .archive__date {
+  color: var(--body);
+}
+
 .archive__number {
   font-family: var(--mono);
   font-size: 10px;
@@ -558,7 +565,10 @@ a {
     margin: 0 -14px;
   }
 
-  .archive__link:hover {
+  /* The anchor only. A failed morning wears the same class for its shape and
+     is a div, so without the element here it would light up under the pointer
+     as something to press. */
+  a.archive__link:hover {
     background: var(--hover);
   }
 

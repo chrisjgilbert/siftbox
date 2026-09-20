@@ -76,6 +76,7 @@ en:
       empty: No editions yet. The first one is written at 07:00, from whatever has
         arrived by then.
       line: Archive
+      no_edition: No edition
       order: By the day covered
     masthead: "%{number} · %{date}"
     number: No. %{number}
