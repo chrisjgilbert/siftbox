@@ -42,6 +42,21 @@ RSpec.describe SampleEdition do
       .to match_array(Edition::Story::SECTIONS)
   end
 
+  # config.autoload_lib puts lib/ on the eager-load path, so this class is
+  # resident in every production process and a console there is one line away
+  # from filing a fabricated edition in the live archive — taking the next
+  # real edition number and the day's unique published_on with it. The rake
+  # task that calls it guards itself; this is the guard the class carries
+  # wherever it is called from.
+  it "refuses to write anywhere but a local environment" do
+    newsletters = sample_newsletters(5)
+    allow(Rails).to receive(:env)
+      .and_return(ActiveSupport::EnvironmentInquirer.new("production"))
+
+    expect { SampleEdition.new(newsletters).write }
+      .to raise_error(SampleEdition::OutsideDevelopment)
+  end
+
   # The one column that says how an edition came to read this way. A row the
   # model never wrote must never claim a model wrote it.
   it "marks the edition as a sample" do
