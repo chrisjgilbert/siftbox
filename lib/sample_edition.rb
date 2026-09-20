@@ -15,8 +15,19 @@
 # citations and all, and one save!, so there is no moment at which an
 # edition exists without its stories.
 #
-# Development material. Nothing the reader's browser reaches calls it.
+# Development material. Nothing the reader's browser reaches calls it, and
+# #write refuses anywhere but development or test.
 class SampleEdition
+  # What a call from anywhere but development or test gets. config.autoload_lib
+  # puts lib/ on the eager-load path, so this class is resident in every
+  # production process however development-only the task that calls it is, and
+  # a console there is one line from filing a fabricated edition in the live
+  # archive — taking the next real edition number and the day's unique
+  # published_on with it, so the morning's real edition cannot be written at
+  # all. lib/tasks/sample_data.rake keeps its own guard; a guard the class
+  # carries holds wherever it is called from instead.
+  class OutsideDevelopment < StandardError; end
+
   # Which newsletters each story cites, by position in the list the task
   # creates: the lead reads the first two, which both carry the parser
   # release; each Briefly line reads one; the reading list entry reads the
@@ -72,6 +83,8 @@ class SampleEdition
   end
 
   def write
+    refuse_outside_development
+
     edition = Edition.new(identity.merge(PROVENANCE))
     stories.each_with_index { |story, index| build(edition, story, index + 1) }
 
@@ -82,6 +95,14 @@ class SampleEdition
   private
 
   attr_reader :newsletters
+
+  # local? rather than development?, because the suite is where the refusal
+  # is proved and the class has to be able to write inside it.
+  def refuse_outside_development
+    return if Rails.env.local?
+
+    raise OutsideDevelopment, "sample editions are development material"
+  end
 
   # STORIES, once it is known to cover the list it was handed. The coupling
   # is by position across two files, so a newsletter added to the task's

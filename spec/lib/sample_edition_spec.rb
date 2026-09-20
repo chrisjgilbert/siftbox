@@ -42,6 +42,18 @@ RSpec.describe SampleEdition do
       .to match_array(Edition::Story::SECTIONS)
   end
 
+  # The class is eager-loaded in production whatever calls it, so the refusal
+  # is the only thing between a console there and a fabricated edition in the
+  # live archive. SampleEdition::OutsideDevelopment says what that costs.
+  it "refuses to write anywhere but a local environment" do
+    newsletters = sample_newsletters(5)
+    allow(Rails).to receive(:env)
+      .and_return(ActiveSupport::EnvironmentInquirer.new("production"))
+
+    expect { SampleEdition.new(newsletters).write }
+      .to raise_error(SampleEdition::OutsideDevelopment)
+  end
+
   # The one column that says how an edition came to read this way. A row the
   # model never wrote must never claim a model wrote it.
   it "marks the edition as a sample" do

@@ -70,12 +70,46 @@ module SampleData
 
   PLAIN_BODY = (OPENING + ARTICLE).freeze
 
-  def self.illustrated_body(seed)
+  # The same release from the Rails side, which is the second half of the
+  # story the sample edition's lead collapses into one paragraph. The two
+  # newsletters the lead cites have to carry one release between them or the
+  # README's screenshot is a picture of an edition citing a source that says
+  # something else — the one thing this app promises it never does. They agree
+  # on what changed and part on what it means, and that is where each half of
+  # the parting is: the migration note is in ARTICLE, "most gems will never
+  # notice" is here.
+  RAILS_ARTICLE = <<~HTML.freeze
+    <p>Rails itself needed three lines changed, all of them in generators that
+    write Ruby rather than read it. For an application the upgrade is quieter
+    still.</p>
+
+    <ul>
+      <li>The new error messages arrive for free and name the token that
+      failed</li>
+      <li>Anything that generates or rewrites Ruby — annotations, fixtures,
+      a form builder with an <code>eval</code> in it — is worth a run of the
+      test suite before you go</li>
+      <li>Bootsnap's compile cache is invalidated once, so the first boot
+      after the upgrade is slow and every boot after it is not</li>
+    </ul>
+
+    <p>The short version is that most gems will never notice, and the handful
+    that will already know who they are.</p>
+
+    <h2>Also this week</h2>
+
+    <p>A fix for eager loading through a polymorphic association, and the
+    usual half-dozen documentation improvements.</p>
+  HTML
+
+  # The article is passed in because two of these newsletters cover the same
+  # release from different sides, and the opening is what they share.
+  def self.illustrated_body(seed, article)
     <<~HTML
       #{OPENING}
       <img src="https://picsum.photos/seed/#{seed}/1200/600"
            alt="A diagram nobody will look at twice">
-      #{ARTICLE}
+      #{article}
     HTML
   end
 
@@ -89,16 +123,19 @@ module SampleData
         subject: "#742: Ruby 3.4 lands with a rewritten parser",
         snippet: "The parser rewrite landed this week, and it is the largest " \
                  "change to the language's front end in a decade.",
-        body_html: illustrated_body("parser"),
+        body_html: illustrated_body("parser", ARTICLE),
         received_at: 2.hours.ago
       },
+      # The second half of the lead story's pair, and the reason it cites two:
+      # the same release, read from the Rails side. Subject, snippet and body
+      # all say so, because the edition claims they do.
       {
         sender_name: "This Week in Rails",
         sender_email: "editors@weblog.rubyonrails.org",
-        subject: "Solid Queue gets recurring jobs, plus a faster query cache",
-        snippet: "Recurring jobs are now part of Solid Queue proper, so most " \
-                 "apps can drop their scheduler gem.",
-        body_html: illustrated_body("queue"),
+        subject: "What the new parser changes for your application",
+        snippet: "Ruby 3.4's rewritten front end is here, and for most Rails " \
+                 "applications the upgrade is quieter than the release note.",
+        body_html: illustrated_body("rails", RAILS_ARTICLE),
         received_at: 6.hours.ago
       },
       {
@@ -116,7 +153,7 @@ module SampleData
         subject: "On reading things that do not want your attention",
         snippet: "A short argument for media that has no idea whether you " \
                  "finished it.",
-        body_html: illustrated_body("offscreen"),
+        body_html: illustrated_body("offscreen", ARTICLE),
         received_at: 3.days.ago
       },
       {

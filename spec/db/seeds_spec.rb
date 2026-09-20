@@ -6,20 +6,15 @@ require "rails_helper"
 RSpec.describe "db/seeds" do
   # The seeds read the two variables as they run, so a value set for the
   # example's duration is what they see. Set and put back rather than stubbed,
-  # the way `through` does in spec/jobs/edition/composition_job_spec.rb: ENV is
-  # process-wide, and an example that left a reader behind would decide what
-  # every later one seeds. Assigning nil deletes the variable, which is how the
-  # absent cases are written.
-  def with_reader(email_address:, password:)
-    original_email_address = ENV["SIFTBOX_READER_EMAIL"]
-    original_password = ENV["SIFTBOX_READER_PASSWORD"]
-    ENV["SIFTBOX_READER_EMAIL"] = email_address
-    ENV["SIFTBOX_READER_PASSWORD"] = password
-
-    yield
-  ensure
-    ENV["SIFTBOX_READER_EMAIL"] = original_email_address
-    ENV["SIFTBOX_READER_PASSWORD"] = original_password
+  # through spec/support/environment_helper.rb, which is where the putting back
+  # lives: ENV is process-wide, and an example that left a reader behind would
+  # decide what every later one seeds. nil is how the absent cases are written.
+  def with_reader(email_address:, password:, &seeding)
+    with_environment(
+      "SIFTBOX_READER_EMAIL" => email_address,
+      "SIFTBOX_READER_PASSWORD" => password,
+      &seeding
+    )
   end
 
   # Seeds report to stdout, which is worth having during a deploy and not in

@@ -121,16 +121,48 @@ every delivery is refused.
 `SECRET_KEY_BASE` is generated only for a deployment that has never run. One
 that is already running carries its existing value across, because a new one
 signs the reader out and voids any password-reset link in flight. That value
-used to be derived from the encrypted credentials, so read it out before this
-release removes them — `bin/rails credentials:show` on the machine that holds
-`config/master.key`, the `secret_key_base` key — and put it in
-`.kamal/secrets-common`. Once the credentials file is gone it cannot be
-recovered, and the sign-out is the only way through.
+used to be derived from the encrypted credentials, so it has to come out of
+them and into `.kamal/secrets-common` before the first deploy of this release.
 
-`config/master.key` is no part of a deploy any more, and neither is
-`RAILS_MASTER_KEY`. A clone made before the credentials file was removed may
-still hold a key; it is gitignored, nothing reads it, and it can go once the
-values above are out.
+It is not a now-or-never read. What opens the credentials is
+`config/master.key`, and the encrypted file is in the git history whether or
+not it is still in the working tree, so the value is recoverable for as long
+as that key exists. Which of the two commands you need depends only on whether
+this release has reached the machine you are standing on.
+
+Before it has, the file is still there:
+
+```bash
+bin/rails credentials:show
+```
+
+After it has, the file is gone from the working tree and unchanged in the
+history. Put the last committed copy back for the length of the command:
+
+```bash
+removal=$(git log -1 --format=%H --diff-filter=D -- config/credentials.yml.enc)
+git show "$removal^:config/credentials.yml.enc" > config/credentials.yml.enc
+bin/rails credentials:show
+rm config/credentials.yml.enc
+```
+
+`config/credentials.yml.enc` is gitignored, so that copy cannot be committed
+back by accident — remove it anyway once you have the value. Either command
+prints the decrypted file; the key to copy is `secret_key_base`, and it goes
+into `.kamal/secrets-common` under that name in capitals.
+
+**`config/master.key` goes last, and not until a deploy has proved the
+values.** It is no part of a deploy any more, and neither is
+`RAILS_MASTER_KEY`: a clone made before the credentials file was removed may
+still hold a key, it is gitignored, and nothing in the app reads it. But it is
+also the only thing that opens the blob in the history, so deleting it is
+precisely what makes the old `secret_key_base` unrecoverable — the file being
+gone from the working tree does not. The order is: read the values out, write
+them into `.kamal/secrets-common`, deploy, and sign in at the end of the smoke
+test in step 8, which is what proves `SECRET_KEY_BASE` reached the container.
+Then the key can go. Delete it before that and the only way forward is a fresh
+`SECRET_KEY_BASE`, which signs the reader out of an app with no sign-up flow
+and voids any password-reset link already in flight.
 
 ## 4. config/deploy.production.yml
 
