@@ -7,9 +7,9 @@
 # came round. The edition page is the app, and the README's screenshot is of
 # it, so the sample task writes one. It is a picture of an edition rather
 # than a composed one: fixed prose in the shape the real page draws — a lead
-# with a headline, Briefly lines without, a reading list entry with one — and
-# editor_model and prompt_version both read "sample", so the row can never
-# be mistaken for the model's work.
+# with a headline and two paragraphs, Briefly lines with neither, a reading
+# list entry with a headline and a list — and editor_model and prompt_version
+# both read "sample", so the row can never be mistaken for the model's work.
 #
 # Written the way Edition::Editor#record writes: the graph built in memory,
 # citations and all, and one save!, so there is no moment at which an
@@ -33,9 +33,10 @@ class SampleEdition
         "change to the language's front end in a decade: error messages " \
         "now point at the token that failed, incremental parsing makes " \
         "editor tooling viable, and the grammar is a readable artefact of " \
-        "its own. They agree on what changed and part on what it means. " \
-        "One calls the migration note required reading for anything that " \
-        "walks the syntax tree; the other says most gems will never notice."
+        "its own.\n\n" \
+        "They agree on what changed and part on what it means. One calls " \
+        "the migration note required reading for anything that walks the " \
+        "syntax tree; the other says most gems will never notice."
     },
     {
       section: Edition::Story::BRIEFLY, cites: [ 2 ],
@@ -52,9 +53,11 @@ class SampleEdition
     {
       section: Edition::Story::READING_LIST, cites: [ 4 ],
       headline: "Five articles worth your evening",
-      body: "Lighthouse keepers, a very long bridge, and why nobody agrees " \
-        "what a sandwich is. The kind of reading that goes better slowly; " \
-        "keep it for a quiet hour."
+      body: "The kind of reading that goes better slowly; keep it for a " \
+        "quiet hour.\n" \
+        "- Lighthouse keepers, and what they did all winter\n" \
+        "- A very long bridge, measured end to end\n" \
+        "- Why nobody agrees what a sandwich is"
     }
   ].freeze
 

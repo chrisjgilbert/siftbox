@@ -1,0 +1,8 @@
+<%# A list the editor wrote. The marker is drawn in CSS as a mono counter,
+    the way the feed numbers its rows — the copy itself carries no
+    punctuation the editor did not write. %>
+<ul class="story__bullets">
+  <% block.items.each do |item| %>
+    <li class="story__bullet"><%= item %></li>
+  <% end %>
+</ul>

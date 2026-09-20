@@ -123,6 +123,30 @@ RSpec.describe EditionTranscript do
     expect(printed).to match(/THE READING LIST.*Consistent hashing/m)
   end
 
+  # The fold below joins on whitespace, and the blank line between two
+  # paragraphs is whitespace — run over a whole body it would close every gap
+  # the editor wrote, and the transcript is where the prompt's paragraphing
+  # gets judged.
+  it "keeps the break the editor wrote between two paragraphs" do
+    edition = create(:edition)
+    story_in(edition, Edition::Story::LEAD, body: "Halcyon shipped it.\n\nTessera did not.")
+
+    printed = transcript(edition, [])
+
+    expect(printed).to match(/Halcyon shipped it\.\n\n\s+Tessera did not\./)
+  end
+
+  # The marker is drawn in CSS on the page and written out here, because a
+  # terminal has no way to draw one.
+  it "prints a list with a marker against each item" do
+    edition = create(:edition)
+    story_in(edition, Edition::Story::LEAD, body: "It covers:\n- Sharding\n- Retries")
+
+    printed = transcript(edition, [])
+
+    expect(printed).to match(/- Sharding\n\s+- Retries/)
+  end
+
   # Read in a terminal, so the prose is folded rather than left to the window
   # to wrap wherever it happens to end.
   it "folds a long story to the width of the page" do

@@ -113,7 +113,23 @@ class EditionTranscript
   end
 
   def entry(story)
-    [ "", headline(story), "" ] + folded(story.body) + [ "" ] + cited(story)
+    [ "", headline(story), "" ] + copy(story.body) + [ "" ] + cited(story)
+  end
+
+  # Block by block rather than over the whole body, because #folded joins on
+  # whitespace and the blank line between two paragraphs is whitespace: run
+  # over a body in one go it closes every gap the editor wrote. The gap is
+  # put back between blocks here, and dropped in front of the first.
+  def copy(body)
+    blocks = Edition::Story::Body.new(body).blocks
+
+    blocks.flat_map { |block| [ "" ] + set(block) }.drop(1)
+  end
+
+  # A list is written out with its markers, which is the one place they are:
+  # the page draws them in CSS instead, and a terminal has no CSS.
+  def set(block)
+    block.lines.flat_map { |line| folded(line) }
   end
 
   # The position, because it is the edition's own numbering and it runs across
@@ -171,11 +187,12 @@ class EditionTranscript
       .flat_map { |story| story.newsletters + story.blog_posts }.tally
   end
 
-  # A word longer than the measure is left to run past it rather than broken:
-  # this is the editor's copy quoted for judgement, and half a word is a word
-  # it did not write. Ordinary prose never reaches that case.
-  def folded(prose)
-    prose.gsub(/(.{1,#{WIDTH - INDENT.length}})(\s+|\z)/, "\\1\n")
-      .lines.map { |line| "#{INDENT}#{line.chomp}".rstrip }
+  # One line of copy, wrapped to the measure. A word longer than the measure
+  # is left to run past it rather than broken: this is the editor's copy
+  # quoted for judgement, and half a word is a word it did not write.
+  # Ordinary prose never reaches that case.
+  def folded(line)
+    line.gsub(/(.{1,#{WIDTH - INDENT.length}})(\s+|\z)/, "\\1\n")
+      .lines.map { |folded| "#{INDENT}#{folded.chomp}".rstrip }
   end
 end

@@ -1,6 +1,6 @@
 # Everything the model is told and everything it is shown, for one edition.
 #
-# Version 2. The version travels with the edition rather than with the code,
+# Version 3. The version travels with the edition rather than with the code,
 # because editions are immutable once published and a bad one is read back
 # months later: without the version on the row, "why did the edition on the
 # 14th cluster like that" has no answer. Bump VERSION whenever anything in
@@ -12,7 +12,7 @@
 # an outcome and told what it may not do; it is better at deciding the rest
 # than this file is at prescribing it.
 class Edition::Prompt
-  VERSION = "2".freeze
+  VERSION = "3".freeze
 
   # A standing caution rather than a per-post marker, and that is a deviation
   # from docs/blogs-rss-plan.md worth naming here as well as there. The plan
@@ -126,14 +126,15 @@ class Edition::Prompt
 
     Each story belongs to one section:
 
-    - lead: the day's significant threads, a paragraph each. Between two and
-      five of them, on your judgement. A thin day gets two; do not pad to
-      five, and a day with fewer threads than that gets fewer leads rather
-      than a promoted one.
-    - briefly: the rest of the news, a sentence or two each. A story that one
-      source covered and that carries little belongs here rather than being
-      worked up into a lead. A single source is not itself a reason to file
-      here — a long piece from one blog can lead.
+    - lead: the day's significant threads, two or three short paragraphs
+      each. Between two and five of them, on your judgement. A thin day gets
+      two; do not pad to five, and a day with fewer threads than that gets
+      fewer leads rather than a promoted one.
+    - briefly: the rest of the news, a sentence or two each, in one
+      paragraph. A story that one source covered and that carries little
+      belongs here rather than being worked up into a lead. A single source
+      is not itself a reason to file here — a long piece from one blog can
+      lead.
     - reading_list: the evergreen items. Write a review, not a summary — what
       it teaches, how deep it goes, roughly how long a read, and whether it is
       worth an evening. Condensing a tutorial into its conclusions helps
@@ -166,8 +167,21 @@ class Edition::Prompt
       Every story cites at least one source, and every source is cited by at
       least one story — a dull one earns a deadpan line in briefly, not
       silence.
-    - Headlines are short and plain. Bodies are plain prose: no markdown, no
-      HTML, no links, no bullets.
+    - Headlines are short and plain.
+    - Break a body the reader would otherwise meet as one block of text. A
+      lead is paragraphs, a blank line between them, one turn of the story
+      each — what happened, then what the sources make of it, then where they
+      part. A paragraph running past roughly a hundred words is two
+      paragraphs.
+    - Where what you are writing is genuinely a list of parallel things — the
+      topics a piece covers, the figures a filing reports, what each of
+      several sources adds — write it as one: a line per item, each line
+      starting with "- ". Use it where a list is the honest shape, never to
+      break an argument up, and never write a story that is only a list. A
+      list needs a sentence of prose above it saying what it is a list of.
+    - No markdown, no HTML, no links, no headings. The "- " that opens a list
+      item is the only mark the copy carries; everything else is plain
+      sentences.
   TEXT
 
   def initialize(sources)

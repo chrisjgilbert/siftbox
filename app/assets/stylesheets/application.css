@@ -291,16 +291,62 @@ a {
   text-wrap: pretty;
 }
 
-/* pre-line rather than a paragraph per line: the editor's copy arrives as
-   text and stays text, so a break in it is honoured by CSS reading the string
-   and never by markup assembled out of what a model wrote. */
+/* The measure the copy is set at. The blocks inside it carry no type of
+   their own — a bulleted line and a paragraph are the same size and colour,
+   which is what keeps a list reading as part of the story rather than as a
+   panel dropped into it. */
 .story__body {
   margin: 12px 0 0;
   font-size: 17px;
   line-height: 1.6;
   color: var(--body);
-  white-space: pre-line;
   text-wrap: pretty;
+}
+
+.story__paragraph {
+  margin: 0;
+}
+
+.story__bullets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: bullet;
+}
+
+/* Spacing between blocks lives on the gap rather than on the blocks, so a
+   paragraph following a list is separated by the same amount as a paragraph
+   following a paragraph. After the two rules above, and not before: it
+   matches on the same number of classes they do, so whichever is written
+   last wins and a margin reset above this line would take the gap away. */
+.story__body > * + * {
+  margin-top: 14px;
+}
+
+/* A two-column grid rather than a list marker, so an item that wraps lines
+   up under its own first word instead of under the counter. */
+.story__bullet {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 14px;
+}
+
+.story__bullet + .story__bullet {
+  margin-top: 8px;
+}
+
+/* Zero-padded mono counters, matching the feed's row numbers — the same
+   decision §8 of docs/siftbox-redesign.md makes for lists inside a
+   newsletter. Drawn here and not written into the copy, so nothing a model
+   produced is ever read back as punctuation. */
+.story__bullet::before {
+  content: counter(bullet, decimal-leading-zero);
+  counter-increment: bullet;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--mute);
 }
 
 .edition__section--lead .story__headline {
@@ -379,6 +425,18 @@ a {
     margin-top: 14px;
     font-size: 19px;
     line-height: 1.65;
+  }
+
+  .story__body > * + * {
+    margin-top: 16px;
+  }
+
+  .story__bullet {
+    column-gap: 16px;
+  }
+
+  .story__bullet::before {
+    font-size: 11px;
   }
 
   .edition__section--lead .story__headline {

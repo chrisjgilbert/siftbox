@@ -10,7 +10,27 @@ RSpec.describe Edition::Story::Presenter do
   it "reads the editor's copy" do
     story = build_stubbed(:edition_story, body: "Money Stuff and The Diff both read it.")
 
-    expect(Edition::Story::Presenter.new(story).body).to eq("Money Stuff and The Diff both read it.")
+    blocks = Edition::Story::Presenter.new(story).blocks
+
+    expect(blocks.map(&:text)).to eq([ "Money Stuff and The Diff both read it." ])
+  end
+
+  # The page draws one element per block, so a lead written in three
+  # paragraphs is three paragraphs on the page rather than one long one.
+  it "breaks the editor's copy where the editor broke it" do
+    story = build_stubbed(:edition_story, body: "Levine reads it.\n\nSo does The Diff.")
+
+    blocks = Edition::Story::Presenter.new(story).blocks
+
+    expect(blocks.map(&:name)).to eq([ "paragraph", "paragraph" ])
+  end
+
+  it "reads a list the editor wrote as a list" do
+    story = build_stubbed(:edition_story, body: "It covers:\n- Sharding\n- Retries")
+
+    blocks = Edition::Story::Presenter.new(story).blocks
+
+    expect(blocks.map(&:name)).to eq([ "paragraph", "bullets" ])
   end
 
   # The column defaults to "" and a Briefly line is short enough that the

@@ -30,7 +30,30 @@ RSpec.describe Edition::Prompt do
   it "names the version the edition records it under" do
     prompt = Edition::Prompt.new(sources_of())
 
-    expect(prompt.version).to eq("2")
+    expect(prompt.version).to eq("3")
+  end
+
+  # The page drew a wall of text because the prompt asked for one: a
+  # paragraph per lead, and lists forbidden outright.
+  it "asks for a lead in paragraphs rather than one block" do
+    prompt = Edition::Prompt.new(sources_of())
+
+    expect(prompt.instructions).to include("two or three short paragraphs")
+  end
+
+  it "asks for a list where the copy is genuinely a list of parallel things" do
+    prompt = Edition::Prompt.new(sources_of())
+
+    expect(prompt.instructions).to include(%(starting with "- "))
+  end
+
+  # The marker is the one mark the copy may carry, and Edition::Story::Body
+  # parses that and nothing else. Anything further would reach the page as
+  # the characters it is, because nothing renders a story as markup.
+  it "still refuses markdown, HTML and links in a body" do
+    prompt = Edition::Prompt.new(sources_of())
+
+    expect(prompt.instructions).to include("No markdown, no HTML, no links")
   end
 
   it "allows only the sections a story can be stored under" do

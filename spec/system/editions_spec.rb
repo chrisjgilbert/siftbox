@@ -47,6 +47,44 @@ RSpec.describe "Reading an edition" do
     expect(page).not_to have_text("The reading list")
   end
 
+  # A lead written off six sources runs to six hundred words, and the page
+  # used to set every one of them in a single element. The editor's own
+  # breaks now reach the page as paragraphs.
+  #
+  # By selector, which .claude/rules/testing.md allows where nothing else
+  # will do: what is being held here is the shape of the copy, and a
+  # paragraph has no accessible name to find it by.
+  it "sets a lead written in paragraphs as paragraphs" do
+    story = create(:edition_story, section: Edition::Story::LEAD,
+      body: "Levine reads the numbers first.\n\nThe Diff reads the filing instead.")
+    sign_in_through_the_form
+
+    visit edition_path(story.edition)
+
+    expect(page).to have_css("p.story__paragraph", count: 2)
+  end
+
+  it "sets a list the editor wrote as a list" do
+    story = create(:edition_story, section: Edition::Story::READING_LIST,
+      body: "It covers three things:\n- Sharding\n- Retries\n- Backpressure")
+    sign_in_through_the_form
+
+    visit edition_path(story.edition)
+
+    expect(page).to have_css("li.story__bullet", count: 3).and have_text("Backpressure")
+  end
+
+  # The marker is the page's and it is drawn in CSS, so the hyphen the editor
+  # typed is never read back to the reader as punctuation.
+  it "leaves the list marker out of the copy" do
+    story = create(:edition_story, body: "- Sharding")
+    sign_in_through_the_form
+
+    visit edition_path(story.edition)
+
+    expect(page).to have_text("Sharding").and have_no_text("- Sharding")
+  end
+
   # The editor writes prose, and prose contains angle brackets. They reach the
   # page as characters, through ordinary escaping, because a story is written
   # out of mail written by strangers — .claude/rules/security.md.
