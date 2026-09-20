@@ -101,7 +101,7 @@ en:
         file on one volume — point a Postmark inbound stream at it and an
         address is live by the evening.
       link: Read the source
-      title: Run a copy
+      title: Run your own
     footer:
       built: MIT · built on Rails and Action Mailbox
       source: Open source
@@ -113,7 +113,7 @@ en:
         body: Every list gets pointed at one dedicated address. Nothing new lands in
           my work inbox, and there are no forwarding rules to maintain.
         kicker: 01 / One address
-        title: The address is siftbox's, not mine
+        title: Newsletters go to siftbox, not to me
       edition:
         body: An editor reads everything that arrived overnight and writes the stories
           up, with the sources under each one. The originals stay in the archive for
