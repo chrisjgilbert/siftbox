@@ -135,12 +135,12 @@ env:
     # neither secrets file is a refused deploy rather than a warning.
     - HONEYBADGER_API_KEY
   clear:
-    # Every SIFTBOX_* value below is a placeholder, overridden name by name in
-    # config/deploy.production.yml — every one but SIFTBOX_TIME_ZONE, which is
-    # a real zone. It is the one name in this block where a wrong value fails
-    # loudly: an unknown zone raises at boot instead of quietly deciding
-    # something, and a placeholder here would mean a deploy that never comes
-    # up. A deployment elsewhere overrides it like the rest.
+    # Every SIFTBOX_* name below is overridden name by name in
+    # config/deploy.production.yml, and every value below is a placeholder —
+    # every one but SIFTBOX_TIME_ZONE, which is a real zone. It is the one
+    # name in this block where a wrong value fails loudly: an unknown zone
+    # raises at boot instead of quietly deciding something, and a placeholder
+    # here would mean a deploy that never comes up.
 
     # The address subscriptions are pointed at, shown in the feed header and
     # the empty state. Without it, a deployed siftbox tells the reader to
