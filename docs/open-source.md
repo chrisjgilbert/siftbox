@@ -62,7 +62,7 @@ found.
 |---|---|
 | Every string in history matching a secret pattern | One real value: the Honeybadger key, `config/honeybadger.yml:4`, added in `a5b6556` on 7 August 2026 and unchanged since. Every other match (`KAMAL_REGISTRY_PASSWORD=...` and the like) is a placeholder in documentation. |
 | Files ever committed with secret-like names | `config/credentials.yml.enc` only. No `master.key`, no `secrets-common`, no `.env`, no `.pem`. |
-| Personal details in history | The production address `46.224.179.132`, six occurrences across the history of `config/deploy.yml` and `docs/deploying.md`. One `chris@siftbox.co`, used as an example in `docs/deploying.md`. The Docker Hub username `cjgilbert` in `config/deploy.yml`. |
+| Personal details in history | The production host's address, six occurrences across the history of `config/deploy.yml` and `docs/deploying.md`. One address at the owner's own domain, used as an example in `docs/deploying.md`. The registry account name in `config/deploy.yml`. None is reproduced here: a document arguing that these should not be published is the last place to print them. They are in history, which is what the section on moving them says. |
 | Remote branches | `main` and this one. Nothing else would become public. |
 | Test fixtures | One 74-byte PNG. No `.eml` files, no real newsletter bodies. |
 | The editor's corpus and the sample data | `lib/edition_corpus.rb` says in its header that every sender, company and figure is invented, and the senders it lists bear that out. `lib/tasks/sample_data.rake` uses real newsletter names as senders but fabricated bodies. |

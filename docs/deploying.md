@@ -33,7 +33,7 @@ server delivering to `news@news.siftbox.co` asks for the MX and never sees
 the A record at all.
 
 Inbound mail goes to a **subdomain** so that the MX does not claim every
-address at `siftbox.co` — an MX on the root would send `chris@siftbox.co`
+address at `siftbox.co` — an MX on the root would send `you@siftbox.co`
 into the newsletter feed too. The web app on the root carries no such
 consequence, which is why the app is at `siftbox.co` and the mail at
 `news.siftbox.co`. Serving the app from `app.siftbox.co` instead works

@@ -27,15 +27,31 @@ below it is the plan as written before any of it ran.
 | Package | State |
 |---|---|
 | E, licence and repository files | Merged, #41. Its two `SECURITY.md` placeholders are filled separately in #45: reports go through GitHub's private vulnerability reporting, which the owner has to switch on before the repository is public. |
-| C1, the waitlist switch | Merged, #42. `spec/support/waitlist_helper.rb` is on `main` for C2 and C3 to use. |
+| C1, the waitlist switch | Merged, #42. `spec/support/waitlist_helper.rb` is on `main` for anything else that needs the page. |
 | F, the sample edition and screenshot | Merged, #43. `docs/images/edition.png` is there for package D. |
-| A0, C2, C3 | In progress. |
-| A, B, D | Not started. A follows A0, B follows A, D follows all of them. |
+| C3, the product shot | Merged, #47. |
+| C2, the landing copy and the source path | Merged, #48. The copy on the page is still the draft below, for the owner to edit. |
+| A0, the Honeybadger key | Merged, #49. The key has to be in `.kamal/secrets-common` before the next deploy: Kamal refuses to deploy on a name in `env.secret` it cannot find. |
+| A, secrets from the environment | Merged, #51. Every secret comes from the environment and the encrypted credentials file is gone. |
+| B, the deploy template | Merged, #52. One deployment's values live in a gitignored `config/deploy.production.yml`. |
+| D, README and docs | In progress, and the last of the nine. |
 
 Two decisions the plan left to the owner have been taken. Package B goes
 ahead: the host address and registry username move to a gitignored
 destination file, and the cutover is accepted. Security reports go through
 GitHub rather than a published address, so `SECURITY.md` names no email.
+
+Two things found while the packages ran, both for whoever picks up D or a
+follow-up rather than for a package still to come:
+
+- **The closing band's second row is lopsided above 720px.** The grid is
+  one flexible column and one of 620px, which the waitlist row fills with a
+  form. The source row puts a short link in that column and leaves the rest
+  of it empty. It is a layout question rather than a bug, and the page is
+  not deployed yet.
+- **`docs/briefing-followups.md` holds a parked item about
+  `.shot__row--read`**, which C3 deleted. The item is closed and the file
+  should say so.
 
 ## What's already decided
 
@@ -794,7 +810,7 @@ hierarchy at the shot's reduced scale:
 
 ```yaml
 shot:
-  caption: No. 31 · Thursday 18 September
+  caption: No. 31 · Friday 18 September
   sections:
     - heading: Lead stories
       stories:
