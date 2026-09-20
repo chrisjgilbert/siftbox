@@ -106,6 +106,11 @@ class Edition::CompositionJob < ApplicationJob
   # quarters of an hour retrying records the window as it stood at the last
   # attempt rather than the first — which is right: everything up to then has
   # now been considered and found unanswerable.
+  #
+  # An optional parameter against .claude/rules/ruby.md, and the reason is
+  # that the four handlers differ in one phrase of one log line. A second
+  # public method, or the same literal repeated at three call sites, both cost
+  # more than the phrase is worth.
   def abandon(error, complaint = "no edition composed")
     Rails.logger.error("#{complaint}: #{error.message}")
     Edition::Gap.failed(window, error.message)

@@ -64,6 +64,18 @@ RSpec.describe Edition::Gap do
     expect(Edition::Gap.sole).to be_failed
   end
 
+  # The gap closed the window, so a re-run the same morning finds nothing
+  # above the watermark and reports an empty window. The explanation has to
+  # survive that: what went wrong is still what went wrong.
+  it "keeps a failed morning failed when a later run finds nothing" do
+    morning = Time.zone.local(2026, 8, 15, 7)
+    Edition::Gap.failed(window(morning), "the model declined")
+
+    Edition::Gap.empty(window(morning))
+
+    expect(Edition::Gap.sole).to be_failed
+  end
+
   it "keeps the first explanation when a failed morning fails again" do
     morning = Time.zone.local(2026, 8, 15, 7)
     Edition::Gap.failed(window(morning), "the model declined")
