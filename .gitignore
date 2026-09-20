@@ -35,14 +35,23 @@
 # key. An older clone may still hold one, and it must never be committed.
 /config/master.key
 
-# The per-environment keys Rails writes if anyone runs credentials:edit out of
-# habit. Nothing here reads credentials, so there should never be one — which
-# is the reason to keep this rather than to drop it: no other line would stop
-# such a file being committed, and a Rails key is thirty-two hex characters
-# with no prefix, so secret scanning has nothing to match on. The two .enc
-# lines that used to sit here are gone; an encrypted file without its key
-# gives nothing away.
+# Both halves of the credentials pair Rails writes if anyone runs
+# credentials:edit out of habit — for different reasons, which is why neither
+# line can go without the other.
+#
+# A key must never be committed and nothing else here would stop one: a Rails
+# key is thirty-two hex characters with no prefix, so secret scanning has
+# nothing to match on.
+#
+# An encrypted file gives nothing away without its key, but committing one is
+# its own mess: the contributor who wrote it holds the only key, so it is a
+# file nobody else can ever open, and it takes precedence over nothing —
+# credentials:edit reads it, fails to decrypt it, and the next person to run
+# that command gets the error rather than an editor. Nothing here reads
+# credentials at all, so there should never be either file.
+/config/credentials.yml.enc
 /config/credentials/*.key
+/config/credentials/*.yml.enc
 
 # Ignore the raw deploy secrets. /.kamal/secrets itself is safe for git and
 # stays committed; this is the file that holds actual values.
