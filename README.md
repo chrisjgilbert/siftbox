@@ -46,9 +46,9 @@ bin/dev                     # the server and the job worker
 and the two commands after it never run.
 
 Then sign in at <http://localhost:3000> with the address and password you
-exported, and `/` is the sample edition. Add `SIFTBOX_WAITLIST=true` to the
-environment if you want the public landing page at `/` instead of a redirect
-to the sign-in form.
+exported, and `/` is the sample edition. Signed out, `/` is the public page:
+what siftbox is, a morning's edition and a link to this repository. It takes
+nothing from a visitor.
 
 ## What it needs from outside
 

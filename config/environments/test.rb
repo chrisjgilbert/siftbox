@@ -20,9 +20,10 @@ Rails.application.configure do
 
   # Show full error reports.
   config.consider_all_requests_local = true
-  # A memory store rather than :null_store, so the waitlist rate limit is
-  # real under test instead of quietly doing nothing. Nothing else in this
-  # app caches.
+  # A memory store rather than :null_store, so the rate limits are real under
+  # test instead of quietly doing nothing — sign-in and password reset are
+  # unauthenticated write paths, and their limits are the only thing standing
+  # in front of them. Nothing else in this app caches.
   config.cache_store = :memory_store
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.

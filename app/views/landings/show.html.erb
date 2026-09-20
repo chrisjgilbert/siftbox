@@ -1,0 +1,60 @@
+<%# The public page. It has one state, because it asks a visitor for nothing:
+    what siftbox is, what a morning looks like, and where the source lives. %>
+<% content_for :indexable, true %>
+<% content_for :title, t("landings.show.page_title") %>
+
+<div class="landing">
+  <div class="landing__nav">
+    <div class="landing__frame landing__nav-inner">
+      <%= render "application/lockup", size: 24 %>
+      <div class="landing__nav-links">
+        <%= link_to t("landings.nav.source"), source_url,
+              class: "landing__nav-link" %>
+      </div>
+    </div>
+  </div>
+
+  <section class="landing__frame landing__hero">
+    <p class="landing__eyebrow"><%= t("landings.show.eyebrow") %></p>
+    <h1 class="landing__title"><%= t("landings.show.title") %></h1>
+    <p class="landing__standfirst"><%= t("landings.show.standfirst") %></p>
+  </section>
+
+  <%= render "landings/shot" %>
+
+  <section class="landing__frame landing__points">
+    <% [ "address", "edition" ].each do |point| %>
+      <div class="point">
+        <p class="point__kicker"><%= t("landings.points.#{point}.kicker") %></p>
+        <h2 class="point__title"><%= t("landings.points.#{point}.title") %></h2>
+        <p class="point__body"><%= t("landings.points.#{point}.body") %></p>
+      </div>
+    <% end %>
+  </section>
+
+  <%# One way in, so one subject: the band is a heading, its paragraph and the
+      link, stacked at the hero's measures. The page closes on the shape it
+      opened with, and there is no second column left half empty. %>
+  <div class="closing">
+    <div class="landing__frame closing__inner">
+      <h2 class="closing__title"><%= t("landings.closing.title") %></h2>
+      <p class="closing__body"><%= t("landings.closing.body") %></p>
+
+      <p class="closing__action">
+        <%= link_to t("landings.closing.link"), source_url,
+              class: "landing__nav-link" %>
+      </p>
+    </div>
+  </div>
+
+  <footer class="landing__frame landing__footer">
+    <span class="landing__footer-brand">
+      <%= render "application/mark", size: 16 %>
+      <span><%= t("landings.footer.wordmark") %></span>
+    </span>
+    <span>
+      <%= link_to t("landings.footer.source"), source_url %>
+      <span class="landing__footer-built"><%= t("landings.footer.built") %></span>
+    </span>
+  </footer>
+</div>

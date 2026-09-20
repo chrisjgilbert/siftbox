@@ -10,6 +10,10 @@ Rails.application.routes.draw do
   # Adding one here would be a second answer to the same question.
   resources :blogs, only: [ :create, :destroy ]
   resources :editions, only: [ :index, :show ]
+  # Singular: there is one public page, and what it shows is fixed. It is the
+  # root as well, which is the only address it is reached at in practice —
+  # named here so the page is a resource rather than a bare root.
+  resource :landing, only: :show
   resources :newsletters, only: :index do
     # The two ways out of the pen, as nouns: creating a dismissal is the
     # reader saying the confirmation is dealt with, creating a release is them
@@ -31,16 +35,14 @@ Rails.application.routes.draw do
   # releasing a hold are nested resources under a newsletter rather than verbs
   # here — the pen is a view of the mail, not a place mail lives.
   resources :subscriptions, only: :index
-  resource :waitlist_signup, only: [ :new, :create ]
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  # The landing page is the new-signup form, so the public root and the
-  # waitlist are one resource rather than a pages controller with a verb for
-  # a name. A signed-in reader is sent on to the latest edition — the edition
-  # is the app — or to the editions archive on a morning before the first one
-  # has been composed.
-  root "waitlist_signups#new"
+  # A signed-out visitor always gets the project page: what siftbox is, a
+  # morning's edition and where the source lives. A signed-in reader is sent
+  # on to the latest edition — the edition is the app — or to the editions
+  # archive on a morning before the first one has been composed.
+  root "landings#show"
 end

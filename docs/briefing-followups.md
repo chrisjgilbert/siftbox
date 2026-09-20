@@ -188,7 +188,7 @@ states in its own caption. What is left:
   says the first edition is written at 07:00. The alternatives were an empty
   edition page (a masthead over nothing, and no number to put on it) and the
   originals feed (the surface the edition is meant to demote). Cheap to
-  overrule; it is one method, `WaitlistSignupsController#reader_home_url`.
+  overrule; it is one method, `LandingsController#reader_home_url`.
 
 - **The archive is unpaginated**, knowingly against
   `.claude/rules/database.md`, with the reason on `Edition::Archive`: one row
@@ -245,7 +245,9 @@ offset that assumes more room than a tablet has, so it is correct at 719px and
 at 1280px and broken in the middle. That one is pre-existing, untouched by
 Milestones 1–5, and left alone deliberately — the dark closing band is a
 deliberate part of the landing design per `docs/siftbox-redesign.md` §9, so the
-fix wants whoever owns that page rather than a guess from here.
+fix wants whoever owns that page rather than a guess from here. **Closed.**
+Removing the waitlist took the fixed 620px column out of the band with the
+form that filled it; nothing on the page sets a width in pixels now.
 
 Neither was catchable by the specs as they stand: Capybara runs under
 `rack_test`, which renders no CSS, so no system spec in this repo can see a

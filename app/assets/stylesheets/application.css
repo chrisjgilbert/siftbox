@@ -622,9 +622,9 @@ a {
   color: var(--mute);
 }
 
-/* Stacked below 720px for the reason the waitlist's are: "Follow" in mono
-   beside an input is wider than a 390px screen leaves room for, and squeezing
-   both onto one line pushes the button off the page. */
+/* Stacked below 720px: "Follow" in mono beside an input is wider than a 390px
+   screen leaves room for, and squeezing both onto one line pushes the button
+   off the page. */
 .sources__controls {
   display: grid;
   grid-template-columns: 1fr;
@@ -862,9 +862,8 @@ a {
     padding: 18px 0;
   }
 
-  /* Input and button on one line, as the waitlist's are above this width and
-     for the same reason: below it, "Follow" set in mono beside a field is
-     wider than a 390px screen leaves room for. */
+  /* Input and button on one line: the width below this breakpoint is the only
+     reason they stack, and "Follow" set in mono beside a field fits here. */
   .sources__controls {
     grid-template-columns: 1fr auto;
     align-items: end;
@@ -1604,11 +1603,10 @@ a {
   border-bottom: 2px solid var(--ink);
 }
 
-/* It wraps for the reason .masthead__bar does: the nav grew a second link, and
-   the nameplate with "Source" and "Join the waitlist" beside it comes to more
-   than a 320px screen has once the gutters are paid for. Without this the
-   links shrink instead of dropping, and "Join the waitlist" breaks across two
-   lines mid-phrase. The gap does double duty as the row gap when they drop. */
+/* A nameplate and one link, pushed apart. It wraps for the reason
+   .masthead__bar does: a label longer than "Source" on a 320px screen would
+   otherwise shrink the two into each other or scroll the page sideways. The
+   gap does double duty as the row gap if the link ever drops. */
 .landing__nav-inner {
   display: flex;
   flex-wrap: wrap;
@@ -1619,13 +1617,7 @@ a {
   padding-bottom: 22px;
 }
 
-.landing__nav-links {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-/* Each link stays one phrase, so the row above wraps rather than a label
+/* The link stays one phrase, so the row above wraps rather than a label
    breaking inside itself. */
 .landing__nav-link {
   font-family: var(--mono);
@@ -1669,11 +1661,6 @@ a {
   line-height: 1.5;
   color: var(--body);
   text-wrap: pretty;
-}
-
-.landing__hero .waitlist,
-.landing__hero .joined {
-  margin-top: 40px;
 }
 
 .landing__shot {
@@ -1736,11 +1723,6 @@ a {
     font-size: 23px;
   }
 
-  .landing__hero .waitlist,
-  .landing__hero .joined {
-    margin-top: 56px;
-  }
-
   .landing__shot {
     padding-top: 96px;
   }
@@ -1754,188 +1736,6 @@ a {
   .landing__footer {
     padding-bottom: 56px;
   }
-}
-
-/* Waitlist form ----------------------------------------------------------- */
-
-.waitlist {
-  max-width: 620px;
-}
-
-.waitlist__label {
-  display: block;
-  margin-bottom: 14px;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--mute);
-}
-
-/* Stacked below 720px: "Join the waitlist" set in mono at 10px is wider than
-   the room a 390px screen leaves beside an input, and squeezing both onto one
-   line pushed the button off the page. */
-.waitlist__controls {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-.waitlist__input {
-  border: 0;
-  border-bottom: 2px solid var(--ink);
-  border-radius: 0;
-  background: transparent;
-  padding: 14px 0;
-  font-family: var(--sans);
-  font-size: 19px;
-  color: var(--ink);
-}
-
-.waitlist__input::placeholder {
-  color: var(--read);
-}
-
-.waitlist__input:focus {
-  outline: 0;
-}
-
-.waitlist__submit {
-  border: 0;
-  border-radius: 0;
-  background: var(--ink);
-  color: var(--paper);
-  padding: 16px 24px;
-  margin-top: 20px;
-  justify-self: start;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.waitlist__submit:hover {
-  background: var(--blue);
-}
-
-/* Off-screen rather than display:none or type="hidden", both of which a bot
-   filling the form knows to skip. aria-hidden and tabindex keep it away from
-   anyone using the page properly. */
-.waitlist__honeypot {
-  position: absolute;
-  left: -9999px;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-}
-
-.waitlist__error {
-  margin: 16px 0 0;
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--ink);
-}
-
-.waitlist__note {
-  margin: 16px 0 0;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--mute);
-}
-
-.waitlist--inverted .waitlist__label {
-  color: var(--read);
-}
-
-.waitlist--inverted .waitlist__input {
-  border-bottom-color: var(--paper);
-  color: var(--paper);
-}
-
-.waitlist--inverted .waitlist__submit {
-  background: var(--paper);
-  color: var(--ink);
-}
-
-.waitlist--inverted .waitlist__submit:hover {
-  background: var(--blue);
-  color: var(--paper);
-}
-
-.waitlist--inverted .waitlist__error {
-  color: var(--paper);
-}
-
-/* The handoff keeps this note at --mute in the dark band, which is 2.5:1 on
-   ink and fails AA. --read is the grey the band already uses for its own
-   paragraph, and clears 5:1. */
-.waitlist--inverted .waitlist__note {
-  color: var(--read);
-}
-
-@media (min-width: 720px) {
-  .waitlist__controls {
-    grid-template-columns: 1fr auto;
-    align-items: stretch;
-  }
-
-  .waitlist__submit {
-    padding: 0 32px;
-    margin-top: 0;
-    margin-left: 20px;
-    font-size: 11px;
-  }
-
-  .waitlist__note {
-    font-size: 11px;
-  }
-}
-
-/* Waitlist success -------------------------------------------------------- */
-
-.joined {
-  max-width: 620px;
-  border-top: 2px solid var(--ink);
-  padding-top: 24px;
-}
-
-.joined__label {
-  margin: 0 0 14px;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--blue);
-}
-
-.joined__email {
-  margin: 0;
-  font-size: 23px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  overflow-wrap: anywhere;
-}
-
-.joined__note {
-  margin: 12px 0 0;
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--mute);
-  text-wrap: pretty;
-}
-
-.joined--inverted {
-  border-top-color: var(--paper);
-}
-
-.joined--inverted .joined__label {
-  color: var(--paper);
-}
-
-.joined--inverted .joined__note {
-  color: var(--read);
 }
 
 /* Two points -------------------------------------------------------------- */
@@ -1985,17 +1785,20 @@ a {
   margin-top: 72px;
 }
 
+/* One subject, so one column: a heading, its paragraph and the link, at the
+   hero's measures. The band used to be a grid of 1fr and 620px, which the
+   second row could not fill once the form beside it went — and dividing a
+   heading from its own paragraph across an 80px gutter to occupy the width
+   would be arranging the page around the grid rather than around what is on
+   it. The page now closes on the shape it opens with. */
 .closing__inner {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 48px;
-  align-items: start;
   padding-top: 64px;
   padding-bottom: 64px;
 }
 
 .closing__title {
   margin: 0;
+  max-width: 1000px;
   font-size: 36px;
   font-weight: 800;
   line-height: 1.02;
@@ -2004,26 +1807,15 @@ a {
 
 .closing__body {
   margin: 20px 0 0;
-  max-width: 420px;
+  max-width: var(--measure);
   font-size: 17px;
   line-height: 1.6;
   color: var(--read);
   text-wrap: pretty;
 }
 
-/* The break between the two ways in, spanning both columns. --read is the grey
-   the band already sets its own paragraphs in, and the thin rule's --rule is
-   for light surfaces: on ink it is all but invisible. No opacity — the landing
-   lattice is the only translucent colour in the system and stays the only one. */
-.closing__rule {
-  grid-column: 1 / -1;
-  margin: 0;
-  border: 0;
-  border-top: 1px solid var(--read);
-}
-
 .closing__action {
-  margin: 0;
+  margin: 32px 0 0;
 }
 
 /* The nav link's treatment on the dark band, where --blue is 1.6:1 on ink. */
@@ -2037,14 +1829,16 @@ a {
   }
 
   .closing__inner {
-    grid-template-columns: 1fr 620px;
-    column-gap: 80px;
     padding-top: 96px;
     padding-bottom: 96px;
   }
 
   .closing__title {
     font-size: 52px;
+  }
+
+  .closing__action {
+    margin-top: 40px;
   }
 }
 
