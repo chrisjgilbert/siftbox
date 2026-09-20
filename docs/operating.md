@@ -114,7 +114,7 @@ loudly, except the first, which stops the app dead:
 | `SIFTBOX_TIME_ZONE` | Defaults to London; decides where the archive's day breaks |
 | `SIFTBOX_WAITLIST` | Defaults to off: `/` sends a signed-out visitor to sign in and a signup answers 404. siftbox.co sets it to `true`; so does a development environment that wants the landing page (`SIFTBOX_WAITLIST=true bin/dev`) |
 | `ANTHROPIC_API_KEY` | One `KeyError` in the worker log at 07:00 and no edition that morning. Everything else — the archive, subscriptions, blogs — is unaffected, and the editions page keeps saying the first one is written at 07:00 |
-| `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` | One `KeyError` in the worker log when a reader presses "Play edition", and that edition offers to try again rather than a player. Nothing else is affected: no recording is made until somebody asks, so a missing key costs nothing until it is wanted |
+| `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` | Absent, a `KeyError` in the worker log the first time a reader presses "Play edition"; set but empty or wrong, a 401 or a 404 from the vendor instead. Either way the log says `no recording for edition N` and that edition offers to try again rather than a player. Nothing else is affected — no recording is made until somebody asks, so this costs nothing until it is wanted |
 | `HONEYBADGER_API_KEY` | The gem logs `API key is missing` once per report and the error reaches the container log and nowhere else |
 
 Every secret goes in `.kamal/secrets-common`, which is gitignored and which

@@ -110,6 +110,7 @@ container as an environment variable, named in `env.secret` in
 | `POSTMARK_SMTP_TOKEN` | The Postmark server token, which sends password-reset mail |
 | `SIFTBOX_READER_EMAIL`, `SIFTBOX_READER_PASSWORD` | The only account, created at first boot — step 6 |
 | `ANTHROPIC_API_KEY` | What the morning edition is written with — step 9 |
+| `ELEVENLABS_API_KEY` | What reads an edition aloud when the reader asks — step 9 |
 | `HONEYBADGER_API_KEY` | Where errors are reported |
 
 Two of them are worth a sentence each.
@@ -161,6 +162,7 @@ env:
     SIFTBOX_HOST: siftbox.co
     SIFTBOX_MAIL_FROM: siftbox@siftbox.co
     SIFTBOX_WAITLIST: "true"
+    ELEVENLABS_VOICE_ID: <a voice id from the vendor's library>
 
 builder:
   arch: amd64
@@ -192,6 +194,15 @@ the sender signature verified in step 2, or every password reset is rejected.
 off is the default, so dropping it makes the landing page disappear on the
 next deploy.
 
+`ELEVENLABS_VOICE_ID` is in `env.clear` rather than with the secrets because it
+is a public identifier from the vendor's voice library, not a credential. The
+same merge rule applies to it as to the `SIFTBOX_*` names above: left out here
+it keeps the template's placeholder, which is not a voice, and the first "Play
+edition" is a 404 from the vendor recorded as a failure on the page. Which
+voice reads the edition is a matter of taste and this is where to change your
+mind — the voice that made each recording is stored beside it, so a change can
+be heard against what came before it.
+
 `builder.remote` builds the image on the target host rather than through
 emulation, and belongs here rather than in the template because it is a fact
 about the machine deploying, not about the app: drop it if the deploy machine
@@ -219,6 +230,7 @@ POSTMARK_SMTP_TOKEN=...
 SIFTBOX_READER_EMAIL=...
 SIFTBOX_READER_PASSWORD=...
 ANTHROPIC_API_KEY=...
+ELEVENLABS_API_KEY=...
 HONEYBADGER_API_KEY=...
 ```
 
@@ -253,6 +265,21 @@ request goes out, the API refuses it, and `Edition::CompositionJob` discards
 in the worker log — once a morning, and there is no edition. Leaving the name
 out of `.kamal/secrets-common` altogether is the loud version, and it stops the
 deploy rather than the morning.
+
+`ELEVENLABS_API_KEY` fails the same way and costs less, because nothing spends
+it on a schedule: no edition is recorded until the reader presses "Play
+edition", so an empty value is a 401 the first time somebody does. The job
+discards `Edition::Voice::Rejected`, writes `no recording for edition N` to the
+worker log, and the page offers to try again instead of a player. Every other
+edition is unaffected and the reading itself never was.
+
+Running without a voice is fine, and an empty value is how — the same trade
+`HONEYBADGER_API_KEY` takes above. The name is present, so Kamal deploys, and
+the only thing that does not work is the button:
+
+```bash
+ELEVENLABS_API_KEY=
+```
 
 `.kamal/secrets-common` is the only secrets file this deployment needs, and the
 only one it should have. Which file Kamal reads after it depends on the
@@ -522,6 +549,37 @@ the scheduler, or two of them fire at 07:00. Solid Queue's unique index on
 indexes on `editions.number` and `editions.published_on` are the backstop
 under it, but neither is a reason to run two.
 
+### Listening to an edition
+
+Nothing here is scheduled, and that is the design rather than an omission:
+composition costs the same whether the edition gets read or not, but a
+recording nobody plays is money for nothing. So no audio exists until the
+reader opens an edition and presses **Play edition**, which writes a row, hands
+the work to `Edition::RecordingJob`, and shows a line saying the audio is being
+prepared. A few seconds later a Turbo Stream broadcast replaces that line with
+a player. If the connection dropped, reloading the page shows the same thing,
+which is what the line says — this is the only part of any page that depends on
+a live cable, and it fails by doing nothing.
+
+So there is no recurring task to confirm here and no deploy step beyond
+`ELEVENLABS_API_KEY` in step 3 and `ELEVENLABS_VOICE_ID` in step 4. What is
+worth doing once, after the deploy that carries them, is pressing the button on
+any edition and watching the worker log. Success is silent; a failure writes
+`no recording for edition N` with the reason on the end, and the page says so
+too rather than leaving the reader on a line that never changes.
+
+Expect to press play twice on an edition you have never heard: once to ask for
+the audio, and once on the player when it appears. A browser only starts audio
+inside a user gesture, and the gesture that asked for it is several seconds
+gone by the time there is anything to play. Every listen after that is one
+press, because recordings are kept.
+
+Two things follow for the volume. Recordings are a few megabytes each and
+accumulate for the editions actually played, beside the SQLite databases and
+the stored newsletter images — see Backups. But unlike an original, a recording
+is derived: the edition's words are still in the database, so one lost with the
+volume can be made again.
+
 ## Moving a running deployment onto a destination
 
 A deployment that was set up before `config/deploy.yml` became a template runs
@@ -584,14 +642,24 @@ the composition job runs.
 
 ## Backups
 
-Everything is one path. The four SQLite databases and every stored image sit
-under `storage/` on the `siftbox_storage` volume, so backing that up backs up
-the whole app, and nothing outside it needs backing up at all.
+Everything is one path. The four SQLite databases, every stored image and
+every recording sit under `storage/` on the `siftbox_storage` volume, so
+backing that up backs up the whole app, and nothing outside it needs backing
+up at all.
 
-Worth knowing that it now grows: self-hosting images means a heavily
-illustrated newsletter costs real disk, bounded per newsletter by
-`RemoteImages::MAX_IMAGES` and
-`Newsletter::ImageDownload::MAX_BYTES`.
+Worth knowing that it now grows, in two ways with different shapes.
+Self-hosting images means a heavily illustrated newsletter costs real disk,
+bounded per newsletter by `RemoteImages::MAX_IMAGES` and
+`Newsletter::ImageDownload::MAX_BYTES`. Recordings are larger per item — a few
+megabytes each — but they arrive only when an edition is actually listened to,
+so that line follows a habit rather than the inbox, and it has no cap on it at
+all.
+
+Recordings are also the one thing here that is cheap to lose. An original is
+irreplaceable and a recording is derived: the edition's words stay in the
+database, so anything lost with the volume can be read aloud again for the
+price of a fresh request. If a backup ever needs to be smaller, this is what
+to leave out of it.
 
 ### Take one before the read-state migration
 

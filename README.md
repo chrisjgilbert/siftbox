@@ -65,6 +65,14 @@ to the sign-in form.
   first one is written at 07:00. Budget roughly $0.45 a day at the assumed
   volume — arithmetic over an assumed input size rather than a measurement,
   as `docs/briefing-followups.md` says.
+- **An ElevenLabs API key and voice id**, for listening to an edition —
+  optional. The Claude API has no text-to-speech, so reading an edition aloud
+  is a second vendor rather than another call through the key above. Without
+  it every edition still reads normally and the "Play edition" button reports
+  that the audio could not be made. Nothing is recorded until you press it, so
+  the cost follows what you listen to rather than what gets composed: roughly
+  $0.20 an edition played, arithmetic over an assumed script length rather
+  than a measurement.
 - **Honeybadger**, for error reporting — optional. Without a key the gem logs
   that it is missing and errors reach the container log only.
 
