@@ -2,7 +2,7 @@
 
 Receives newsletter emails at one dedicated address via Action Mailbox and
 Postmark, and presents them as a clean reading feed for a single reader.
-A public landing page captures waitlist signups.
+A public landing page says what it is and links to the source.
 
 The visual system is documented in `docs/siftbox-redesign.md`: two typefaces,
 where Archivo is never uppercase and JetBrains Mono always is; two rule

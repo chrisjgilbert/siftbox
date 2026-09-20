@@ -93,6 +93,78 @@ en:
       this_week: This week
       today: Today
       yesterday: Yesterday
+  landings:
+    closing:
+      body: >-
+        There is no hosted siftbox to join: this is one person's reader, open
+        source under the MIT licence. One Rails app, one container, one SQLite
+        file on one volume — point a Postmark inbound stream at it and you have
+        an address by the evening.
+      link: Read the source
+      title: Run your own
+    footer:
+      built: MIT · built on Rails and Action Mailbox
+      source: Open source
+      wordmark: siftbox
+    nav:
+      source: Source
+    points:
+      address:
+        body: Every list gets pointed at one dedicated address. Nothing new lands in
+          your work inbox, and there are no forwarding rules to maintain.
+        kicker: 01 / One address
+        title: Subscribe with siftbox, not with you
+      edition:
+        body: An editor reads everything that arrived overnight and writes the stories
+          up, with the sources under each one. The originals stay in the archive for
+          when you want the whole thing.
+        kicker: 02 / An edition, not an inbox
+        title: Read the morning, not the mail
+    shot:
+      caption: No. 31 · Friday 18 September
+      # Fixed sample content, and invented. The design handoff asks for a live
+      # edition here, but this page is unauthenticated — a live one would
+      # publish the reader's own stories and sources to anyone who loads it,
+      # and a landing page has no business reporting the news either.
+      sections:
+        - heading: Lead stories
+          stories:
+            - body: >-
+                Two newsletters carry the release and disagree on one point:
+                whether the rewritten parser is faster in ordinary code or only
+                on the benchmark the core team published. Both link the same
+                changelog.
+              headline: Ruby 3.5 preview ships with the new parser on by default
+              sources: [ Ruby Weekly, This Week in Rails ]
+        - heading: Briefly
+          stories:
+            - body: >-
+                Postgres 18 beta 2 adds skip scan to multi-column indexes, which
+                makes a query that skips the leading column use the index at all.
+              sources: [ Postgres Weekly ]
+            - body: A short argument for media that has no idea whether you finished it.
+              sources: [ Offscreen ]
+        - heading: The reading list
+          stories:
+            - body: >-
+                A long, careful walk through consistent hashing, with the diagrams
+                drawn properly for once. Worth an evening.
+              headline: Consistent hashing, drawn out properly
+              sources: [ The Whiteboard ]
+      sources:
+        one: Source
+        other: Sources
+      subcaption: Written at 07:00 from everything that arrived
+    show:
+      eyebrow: Open source · A personal project
+      page_title: siftbox — one edition, every morning
+      standfirst: >-
+        Siftbox is the reader I built for my own subscriptions. Newsletters and
+        blogs go to one dedicated address, and an editor reads everything that
+        arrived overnight into one edition each morning: what the stories were,
+        who covered them, and where they disagree. Every line links to the
+        original.
+      title: One edition, every morning
   layouts:
     application:
       title: siftbox
@@ -167,92 +239,3 @@ en:
       row_date: "%-d %b"
       row_day: "%a"
       row_time: "%H:%M"
-
-  waitlist_signups:
-    closing:
-      address:
-        body: siftbox.co is one person's instance for now. The waitlist tells me
-          whether to open it up, and you get one message if it does.
-        title: Want an address?
-      source:
-        body: >-
-          The whole app is open source under the MIT licence: one Rails app, one
-          container, one SQLite file on one volume. Point a Postmark inbound
-          stream at it and you have an address by the evening.
-        link: Read the source
-        title: Or run your own
-    errors:
-      email: That does not look like an email address.
-    footer:
-      built: MIT · built on Rails and Action Mailbox
-      source: Open source
-      wordmark: siftbox
-    form:
-      honeypot: Leave this field empty
-      label: Email
-      note: One message when the hosted version opens. Nothing else.
-      placeholder: you@example.com
-      submit: Join the waitlist
-    joined:
-      label: On the list
-      note: You'll get one message when the hosted version opens.
-      reply: If you want to say what you read, reply to it.
-    nav:
-      source: Source
-      waitlist: Join the waitlist
-    new:
-      eyebrow: Open source · Early access
-      page_title: siftbox — your morning edition
-      standfirst: >-
-        Siftbox gives your subscriptions a dedicated address and reads everything
-        that arrives, newsletters and blogs alike, into one edition each morning:
-        what the stories were, who covered them, and where they disagree. Every
-        line links to the original.
-      title: Your morning edition
-    points:
-      address:
-        body: Every list gets pointed at one dedicated address. Nothing new lands in
-          your work inbox, and there are no forwarding rules to maintain.
-        kicker: 01 / One address
-        title: Subscribe with siftbox, not with you
-      edition:
-        body: An editor reads everything that arrived overnight and writes the stories
-          up, with the sources under each one. The originals stay in the archive for
-          when you want the whole thing.
-        kicker: 02 / An edition, not an inbox
-        title: Read the morning, not the mail
-    shot:
-      caption: No. 31 · Friday 18 September
-      # Fixed sample content, and invented. The design handoff asks for a live
-      # edition here, but this page is unauthenticated — a live one would
-      # publish the reader's own stories and sources to anyone who loads it,
-      # and a landing page has no business reporting the news either.
-      sections:
-        - heading: Lead stories
-          stories:
-            - body: >-
-                Two newsletters carry the release and disagree on one point:
-                whether the rewritten parser is faster in ordinary code or only
-                on the benchmark the core team published. Both link the same
-                changelog.
-              headline: Ruby 3.5 preview ships with the new parser on by default
-              sources: [ Ruby Weekly, This Week in Rails ]
-        - heading: Briefly
-          stories:
-            - body: >-
-                Postgres 18 beta 2 adds skip scan to multi-column indexes, which
-                makes a query that skips the leading column use the index at all.
-              sources: [ Postgres Weekly ]
-            - body: A short argument for media that has no idea whether you finished it.
-              sources: [ Offscreen ]
-        - heading: The reading list
-          stories:
-            - body: >-
-                A long, careful walk through consistent hashing, with the diagrams
-                drawn properly for once. Worth an evening.
-              headline: Consistent hashing, drawn out properly
-              sources: [ The Whiteboard ]
-      sources:
-        one: Source
-        other: Sources
-      subcaption: Written at 07:00 from everything that arrived

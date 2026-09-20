@@ -36,6 +36,13 @@ below it is the plan as written before any of it ran.
 | B, the deploy template | Merged, #52. One deployment's values live in a gitignored `config/deploy.production.yml`. |
 | D, README and docs | In progress, and the last of the nine. |
 
+**The waitlist was removed after all nine packages merged**, and before any of
+it deployed: the owner decided siftbox is a personal, single-reader app that
+happens to be open source, so there is no hosted product to collect signups
+for. `/` is a project page with no form, `waitlist_signups` is dropped and
+`SIFTBOX_WAITLIST` is gone with it. Everything below about the switch, the two
+ways in and the waitlist copy is the plan as it was written, and stays.
+
 Two decisions the plan left to the owner have been taken. Package B goes
 ahead: the host address and registry username move to a gitignored
 destination file, and the cutover is accepted. Security reports go through
@@ -48,7 +55,9 @@ follow-up rather than for a package still to come:
   one flexible column and one of 620px, which the waitlist row fills with a
   form. The source row puts a short link in that column and leaves the rest
   of it empty. It is a layout question rather than a bug, and the page is
-  not deployed yet.
+  not deployed yet. Settled by the removal above: with the waitlist row gone
+  there is one subject left, and the band is a single column at the hero's
+  measures.
 - **`docs/briefing-followups.md` holds a parked item about
   `.shot__row--read`**, which C3 deleted. The item is closed and the file
   should say so.

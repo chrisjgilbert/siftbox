@@ -160,7 +160,6 @@ env:
     SIFTBOX_TIME_ZONE: London
     SIFTBOX_HOST: siftbox.co
     SIFTBOX_MAIL_FROM: siftbox@siftbox.co
-    SIFTBOX_WAITLIST: "true"
 
 builder:
   arch: amd64
@@ -188,9 +187,6 @@ bin/kamal app exec -d production --reuse "printenv SIFTBOX_MAIL_FROM"
 
 `SIFTBOX_MAIL_FROM` is the value to check against reality — it has to match
 the sender signature verified in step 2, or every password reset is rejected.
-`SIFTBOX_WAITLIST` is what puts the landing page and the waitlist on `/`, and
-off is the default, so dropping it makes the landing page disappear on the
-next deploy.
 
 `builder.remote` builds the image on the target host rather than through
 emulation, and belongs here rather than in the template because it is a fact
@@ -598,6 +594,16 @@ Worth knowing that it now grows: self-hosting images means a heavily
 illustrated newsletter costs real disk, bounded per newsletter by
 `RemoteImages::MAX_IMAGES` and
 `Newsletter::ImageDownload::MAX_BYTES`.
+
+### Take one before the waitlist table is dropped
+
+`DropWaitlistSignups` drops `waitlist_signups`. It reverses in shape —
+rolling back recreates the table and its unique index — but not in content:
+every address collected is gone, and nothing in this repository holds a copy.
+No export was wanted, so the backup is the only copy there will be. Back the
+volume up before the staging deploy and again before the production one, and
+expect the rollback plan for this release to be "restore", not "roll back the
+migration".
 
 ### Take one before the read-state migration
 

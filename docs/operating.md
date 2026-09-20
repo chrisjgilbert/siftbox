@@ -8,8 +8,9 @@ it locally; `docs/deploying.md` is the runbook.
 
 ## The screens
 
-`/` sends a signed-out visitor to the sign-in page, or serves the landing page
-and its waitlist where `SIFTBOX_WAITLIST` is on. Signed in, `/` is the morning
+`/` serves a signed-out visitor the landing page: what siftbox is, a morning's
+edition drawn as markup, and a link to the source. There is no switch and
+nothing to fill in. Signed in, `/` is the morning
 edition — the app's home — with the editions archive behind it on a morning
 before the first one has been composed. Every story there names the
 newsletters and posts it was written from and links to them.
@@ -112,7 +113,6 @@ loudly, except the first, which stops the app dead:
 | `SIFTBOX_MAIL_FROM` | Reset mail is rejected unless it is a Postmark sender signature |
 | `SIFTBOX_HOST` | Reset links point at localhost |
 | `SIFTBOX_TIME_ZONE` | Defaults to London; decides where the archive's day breaks |
-| `SIFTBOX_WAITLIST` | Defaults to off: `/` sends a signed-out visitor to sign in and a signup answers 404. siftbox.co sets it to `true`; so does a development environment that wants the landing page (`SIFTBOX_WAITLIST=true bin/dev`) |
 | `ANTHROPIC_API_KEY` | One `KeyError` in the worker log at 07:00 and no edition that morning. Everything else — the archive, subscriptions, blogs — is unaffected, and the editions page keeps saying the first one is written at 07:00 |
 | `HONEYBADGER_API_KEY` | The gem logs `API key is missing` once per report and the error reaches the container log and nowhere else |
 
@@ -271,20 +271,21 @@ the one thing `Newsletter::Body` feeds that is cached rather than read on
 demand, so a change moving which image a body leads with reaches rows already
 ingested only after `bin/rails lead_images:backfill`.
 
-**The landing page is the only public write path the app advertises**, and
-only where `SIFTBOX_WAITLIST` is on. It is guarded four ways: an off-screen
-honeypot answered exactly like a real signup, a rate limit counting in
-`Rails.cache`, strong parameters, and treating a duplicate address as
-success — the unique index raises and `WaitlistSignup#join` rescues, rather
-than a uniqueness validation reporting a clash and answering a question about
-someone else's address. Nothing is emailed: the copy promises exactly one
-message, and a confirmation would break that on day one.
-
-It is not the only unauthenticated one, whatever the switch says. Sign-in and
-password reset are open by necessity and both write — a session, and a reset
-mail through the same Postmark account the newsletters arrive on. That is why
-both carry a `rate_limit`, and why `SessionsController` and
+**Sign-in and password reset are the only public write paths.** They are open
+by necessity and both write — a session, and a reset mail through the same
+Postmark account the newsletters arrive on. That is why both carry a
+`rate_limit` counting in `Rails.cache`, and why `SessionsController` and
 `PasswordsController` are the two to read before widening anything public.
+
+The landing page is public too and writes nothing at all: `LandingsController`
+serves fixed copy, a picture of an edition made of markup and three links to
+the repository, and it takes no parameters. It used to carry a waitlist, which
+was the third public write path and had four guards — an off-screen honeypot
+answered exactly like a real signup, a rate limit, strong parameters, and
+treating a duplicate address as success rather than reporting a clash and
+answering a question about someone else's address. That is the shape to copy
+if a public write path is ever added back; `docs/open-source-plan.md` records
+why it was removed.
 
 **`noindex, nofollow` is not site-wide.** The layout emits it unless a
 template sets `content_for :indexable`, which only the landing page does.

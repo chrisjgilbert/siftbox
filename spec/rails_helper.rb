@@ -35,9 +35,10 @@ RSpec.configure do |config|
   # exactly as a browser would and costs no driver, no server and no wait.
   config.before(:each, type: :system) { driven_by :rack_test }
 
-  # The waitlist's rate limit counts in Rails.cache, which the test
-  # environment keeps in memory for the whole run. Without this, one example
-  # exhausting the limit answers 429 to every example after it.
+  # The rate limits on sign-in, password reset and adding a blog count in
+  # Rails.cache, which the test environment keeps in memory for the whole run.
+  # Without this, one example exhausting a limit answers 429 to every example
+  # after it.
   config.before { Rails.cache.clear }
 end
 

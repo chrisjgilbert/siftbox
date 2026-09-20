@@ -9,12 +9,12 @@
 <section class="landing__frame landing__shot">
   <div class="shot">
     <div class="shot__caption">
-      <span><%= t("waitlist_signups.shot.caption") %></span>
-      <span class="shot__subcaption"><%= t("waitlist_signups.shot.subcaption") %></span>
+      <span><%= t("landings.shot.caption") %></span>
+      <span class="shot__subcaption"><%= t("landings.shot.subcaption") %></span>
     </div>
 
     <div class="shot__body">
-      <% t("waitlist_signups.shot.sections").each do |section| %>
+      <% t("landings.shot.sections").each do |section| %>
         <p class="shot__group"><%= section[:heading] %></p>
 
         <% section[:stories].each do |story| %>
@@ -27,7 +27,7 @@
 
             <p class="shot__sources">
               <span class="shot__sources-label">
-                <%= t("waitlist_signups.shot.sources",
+                <%= t("landings.shot.sources",
                       count: story[:sources].length) %>
               </span>
 
