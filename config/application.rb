@@ -49,6 +49,13 @@ module Siftbox
     # accurate.
     config.x.source_url = "https://github.com/chrisjgilbert/siftbox"
 
+    # No image is ever transformed, and with the default of :vips Rails keeps
+    # ImageAnalyzer::Vips in the analyser list: it logs an error per stored
+    # image asking for a gem this app dropped on purpose, and the day ruby-vips
+    # arrives as some other gem's dependency it would silently start handing
+    # sender-supplied bytes to libvips again. :disabled is what says no.
+    config.active_storage.variant_processor = :disabled
+
     config.action_mailer.preview_paths << Rails.root.join("spec/mailers/previews")
 
     # Don't generate system test files.

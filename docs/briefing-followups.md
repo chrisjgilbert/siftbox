@@ -440,7 +440,12 @@ were covering the removed code rather than passing vacuously over it.
   a security change rather than a tidy-up — every stored newsletter image was
   being handed to libvips for analysis, and the bytes come from anyone who can
   email the inbound address — so it led with that rather than with the dead
-  code. The app parses no image content at all now. Two things are left
+  code. The app parses no image content at all now, and
+  `config.active_storage.variant_processor = :disabled` is what keeps it that
+  way: the Rails 8 default of `:vips` leaves `ImageAnalyzer::Vips` in the
+  analyser list, which logged an error per stored image asking for the gem
+  that had just gone and would have started parsing again the day ruby-vips
+  arrived as some other gem's dependency. Two things are left
   deliberately: `active_storage_variant_records`, an unused table whose
   removal is a data-losing migration and a decision of its own, and
   `Newsletter::IssueNumber` and `Newsletter::LeadImage#alt`/`#caption`, which
