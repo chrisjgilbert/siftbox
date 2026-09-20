@@ -1,6 +1,7 @@
 #!/bin/bash
 # Brings a fresh Claude Code on the web container to the point where bin/ci
-# can run: system libraries, gems, and a test database.
+# can run: gems, a PATH the binstubs' executables are on, and a test database.
+# No system library to install — nothing this app bundles needs one.
 set -euo pipefail
 
 # A local checkout has bin/setup and a developer driving it. This only fixes
@@ -10,17 +11,6 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
 fi
 
 cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}"
-
-# libvips backs image_processing, which ActiveStorage uses to analyse a blob.
-# Without it the specs asserting stored image dimensions fail for a reason
-# that has nothing to do with the code under test — and a red suite on a
-# clean checkout invites a hunt for a bug that is not there. The index needs
-# refreshing first: the image ships with stale package lists and the pinned
-# versions 404.
-if ! ldconfig -p | grep -q libvips; then
-  sudo apt-get update -qq
-  sudo apt-get install -y -qq libvips42
-fi
 
 bundle check >/dev/null 2>&1 || bundle install
 
