@@ -1,7 +1,6 @@
 #!/bin/bash
 # Brings a fresh Claude Code on the web container to the point where bin/ci
-# can run: gems, a PATH the binstubs' executables are on, and a test database.
-# No system library to install — nothing this app bundles needs one.
+# can run: gems, and a test database.
 set -euo pipefail
 
 # A local checkout has bin/setup and a developer driving it. This only fixes
