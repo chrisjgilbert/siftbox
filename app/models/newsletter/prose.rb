@@ -4,8 +4,9 @@
 # Built on Newsletter::Body rather than on body_html, the same way
 # Newsletter::LeadImage is, so the editor pays for one Loofah pass over a body
 # that runs to hundreds of kilobytes — and so the tracking pixels are already
-# gone when this reads it. Nothing here mutates the tree; Body#document is
-# shared, and LeadImage detaches nodes from it.
+# gone when this reads it. Nothing here mutates the tree, and nothing else
+# does either: Body#document is memoised and shared, so a reader that took a
+# node out of it would change what every other reader of that body sees.
 class Newsletter::Prose
   # Everything not named here starts a new line. An allowlist of block
   # elements would read better, but it fails in the wrong direction: an
