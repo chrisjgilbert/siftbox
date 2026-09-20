@@ -49,6 +49,14 @@ module Siftbox
     # accurate.
     config.x.source_url = "https://github.com/chrisjgilbert/siftbox"
 
+    # No image is transformed and none is analysed: this app stores image bytes
+    # and serves them back. Left at the Rails default of :vips,
+    # ImageAnalyzer::Vips stays in the analyser list, and the only thing keeping
+    # sender-supplied bytes out of libvips would be ruby-vips' absence from the
+    # lockfile — which ends the day any gem depends on it. This is the line that
+    # says no; it also stops the boot warning asking for image_processing back.
+    config.active_storage.variant_processor = :disabled
+
     config.action_mailer.preview_paths << Rails.root.join("spec/mailers/previews")
 
     # Don't generate system test files.

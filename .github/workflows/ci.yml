@@ -75,13 +75,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Active Storage measures an image with libvips, which the runner image
-      # does not carry. Without it ruby-vips fails to load, the analyser
-      # silently records no width or height, and the image sizing specs fail.
-      # The Dockerfile installs the same package.
-      - name: Install libvips
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libvips
-
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:

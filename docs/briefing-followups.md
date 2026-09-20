@@ -431,13 +431,22 @@ were covering the removed code rather than passing vacuously over it.
   `Newsletter::Body`'s `dimensions:` argument, `#scrubbed`, `#sized`,
   `#apply_stored_sizes`, `#strip_sender_sizes`, `SIZED_ATTRIBUTES`,
   `TAGS`/`ATTRIBUTES`, and `Newsletter::LeadImage#remainder` — each
-  re-checked by grep before it went. What is left is the second teardown this
-  entry warns about, because it drops a system dependency rather than code:
+  re-checked by grep before it went.
+
+  **Closed.** The second teardown this entry warned about is done too:
   `lib/tasks/images.rake`, the `image_processing` gem, the libvips install in
-  the `Dockerfile`, in CI and in the session hook, and step 6 of
-  `docs/deploying.md`. `Newsletter::IssueNumber` and
-  `Newsletter::LeadImage#alt`/`#caption` are still here too; they are dead for
-  the same reason but are not sizing, so they were left with it.
+  the `Dockerfile`, in CI and in the session hook, and step 6's
+  `images:analyze` in `docs/deploying.md` have all gone. It was worth doing for
+  a better reason than dead code: every stored newsletter image was being
+  handed to libvips, and those bytes come from anyone who can email the inbound
+  address. The app parses no image content at all now, and
+  `config.active_storage.variant_processor = :disabled` is what holds it there
+  rather than the lockfile happening not to carry ruby-vips.
+
+  Two things are deliberately left. `active_storage_variant_records` is unused,
+  but dropping a table is a data-losing migration and a decision of its own.
+  `Newsletter::IssueNumber` and `Newsletter::LeadImage#alt`/`#caption` are dead
+  for the same reason as the sizing was, but they are not sizing.
 
 ## Undecided design
 
