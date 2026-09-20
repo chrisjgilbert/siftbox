@@ -64,7 +64,7 @@ group :test do
   # Driven by rack_test — nothing on these pages needs JavaScript, so no
   # browser and no driver gem.
   gem "capybara", "~> 3.40"
-  gem "shoulda-matchers", "~> 6.4"
+  gem "shoulda-matchers", "~> 8.0"
   gem "webmock", "~> 3.24"
 end
 
