@@ -187,12 +187,39 @@ class EditionTranscript
       .flat_map { |story| story.newsletters + story.blog_posts }.tally
   end
 
-  # One line of copy, wrapped to the measure. A word longer than the measure
-  # is left to run past it rather than broken: this is the editor's copy
-  # quoted for judgement, and half a word is a word it did not write.
-  # Ordinary prose never reaches that case.
+  # One line of copy, wrapped to the measure and indented to the page.
   def folded(line)
-    line.gsub(/(.{1,#{WIDTH - INDENT.length}})(\s+|\z)/, "\\1\n")
-      .lines.map { |folded| "#{INDENT}#{folded.chomp}".rstrip }
+    laid_out(line, hanging(line))
+  end
+
+  # How far a wrapped line's continuation hangs. A list item's hangs under
+  # its own first word rather than under its marker: folded flush, the second
+  # line of a long item is a line of prose with nothing marking it as part of
+  # the item above, and telling those apart is what this transcript is for.
+  def hanging(line)
+    marker = Edition::Story::Body::BULLET
+    return 0 unless line.start_with?(marker)
+
+    marker.length
+  end
+
+  def laid_out(line, hang)
+    first, *rest = wrapped(line, hang)
+
+    [ indented(first, 0) ] + rest.map { |part| indented(part, hang) }
+  end
+
+  def indented(part, hang)
+    "#{INDENT}#{" " * hang}#{part}".rstrip
+  end
+
+  # Wrapped at the hung measure throughout, so the widest line an item can
+  # produce still sits inside the page. A word longer than the measure is
+  # left to run past it rather than broken: this is the editor's copy quoted
+  # for judgement, and half a word is a word it did not write. Ordinary prose
+  # never reaches that case.
+  def wrapped(line, hang)
+    line.gsub(/(.{1,#{WIDTH - INDENT.length - hang}})(\s+|\z)/, "\\1\n")
+      .lines.map(&:chomp)
   end
 end

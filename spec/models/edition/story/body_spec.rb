@@ -34,6 +34,30 @@ RSpec.describe Edition::Story::Body do
     expect(body.blocks.map(&:name)).to eq([ "paragraph", "bullets", "paragraph" ])
   end
 
+  # A blank line between two items is how markdown writes a "loose" list, and
+  # a model that has read a lot of markdown writes one. It is still one list:
+  # taken as several, each restarts the page's counter at 01.
+  it "reads a list written with a blank line between its items as one list" do
+    body = Edition::Story::Body.new("- Sharding\n\n- Retries\n\n- Backpressure")
+
+    expect(body.blocks.sole.items).to eq([ "Sharding", "Retries", "Backpressure" ])
+  end
+
+  it "keeps two lists apart when a paragraph stands between them" do
+    body = Edition::Story::Body.new("- Sharding\n\nThen the second half.\n\n- Retries")
+
+    expect(body.blocks.map(&:name)).to eq([ "bullets", "paragraph", "bullets" ])
+  end
+
+  # Nothing in this app writes CRLF, but the copy is a JSON string from
+  # somewhere else and a body that carried it used to lose every paragraph
+  # break silently — which is the wall of text this class exists to undo.
+  it "reads a break written with Windows line endings as a break" do
+    body = Edition::Story::Body.new("Levine reads it.\r\n\r\nSo does The Diff.")
+
+    expect(body.blocks.map(&:text)).to eq([ "Levine reads it.", "So does The Diff." ])
+  end
+
   # An asterisk and a bullet character are what a model reaches for when it
   # has been asked for a list and not told what to mark it with.
   it "reads an asterisk as a list marker" do

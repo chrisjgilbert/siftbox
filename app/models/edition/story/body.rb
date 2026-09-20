@@ -19,7 +19,7 @@ class Edition::Story::Body
   # hard-wraps its prose would otherwise arrive as a column of one-line
   # paragraphs, where a model that separates paragraphs with a single newline
   # arrives as one paragraph, which is what the page drew before this.
-  BREAK = /\n[ \t]*\n/
+  BREAK = /\r?\n[ \t]*\r?\n/
 
   # What opens a list item: the hyphen the instructions ask for, and the two
   # characters a model reaches for instead. The space after it is part of the
@@ -31,10 +31,17 @@ class Edition::Story::Body
   # wrote.
   MARKER = /\A[-*•]\s+/
 
-  # How a list item is written back out in plain text. The page never uses
-  # it: the marker there is drawn in CSS, as a mono counter, so the copy on
-  # screen carries no punctuation the editor did not write.
-  BULLET = "-".freeze
+  # How a list item is written back out in plain text, marker and space
+  # together, so that whatever writes one and whatever measures it cannot
+  # drift apart. The page never uses it: the marker there is drawn in CSS, as
+  # a mono counter, so the copy on screen carries no punctuation the editor
+  # did not write.
+  BULLET = "- ".freeze
+
+  # What each shape is called: the partial the page draws it with, and the
+  # word this class tells two adjacent blocks apart by.
+  PARAGRAPH = "paragraph".freeze
+  BULLETS = "bullets".freeze
 
   # The two shapes, as two classes rather than one class with a flag, so that
   # nothing that draws a block has to ask what kind it is holding. Both answer
@@ -42,7 +49,7 @@ class Edition::Story::Body
   # is the plain text the terminal transcript folds.
   Paragraph = Struct.new(:text) do
     def name
-      "paragraph"
+      PARAGRAPH
     end
 
     def lines
@@ -52,11 +59,11 @@ class Edition::Story::Body
 
   Bullets = Struct.new(:items) do
     def name
-      "bullets"
+      BULLETS
     end
 
     def lines
-      items.map { |item| "#{BULLET} #{item}" }
+      items.map { |item| "#{BULLET}#{item}" }
     end
   end
 
@@ -67,7 +74,7 @@ class Edition::Story::Body
   # Memoised because the page asks once per story and the transcript asks
   # again for the same rows.
   def blocks
-    @_blocks ||= groups.flat_map { |group| blocks_in(group) }
+    @_blocks ||= fused(groups.flat_map { |group| blocks_in(group) })
   end
 
   private
@@ -98,6 +105,26 @@ class Edition::Story::Body
     return Bullets.new(run.map { |line| item(line) }) if marked
 
     Paragraph.new(run.join(" "))
+  end
+
+  # Two lists with nothing between them are one list. A blank line between
+  # items is how markdown writes a loose list and so how a model that has
+  # read a lot of markdown writes one — and taken as several lists, each
+  # restarts the page's counter at 01. A list the editor genuinely broke in
+  # two has a paragraph between the halves, and that survives this.
+  def fused(blocks)
+    blocks.chunk_while { |before, after| listed?(before) && listed?(after) }
+      .map { |run| joined(run) }
+  end
+
+  def joined(run)
+    return run.sole if run.one?
+
+    Bullets.new(run.flat_map(&:items))
+  end
+
+  def listed?(block)
+    block.name == BULLETS
   end
 
   def marked?(line)

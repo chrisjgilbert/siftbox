@@ -147,6 +147,19 @@ RSpec.describe EditionTranscript do
     expect(printed).to match(/- Sharding\n\s+- Retries/)
   end
 
+  # Folded flush with the marker, a long item's second line is a line of
+  # prose with nothing marking it as part of the item above — which is the
+  # one thing this transcript exists to let somebody judge.
+  it "hangs a wrapped list item under its own first word" do
+    edition = create(:edition)
+    story_in(edition, Edition::Story::LEAD, body: "- #{"consistent hashing " * 8}")
+
+    printed = transcript(edition, [])
+    item = printed.lines.map(&:chomp).select { |line| line.match?(/consistent|hashing/) }
+
+    expect(item.drop(1)).to be_present.and all(start_with("#{EditionTranscript::INDENT}  "))
+  end
+
   # Read in a terminal, so the prose is folded rather than left to the window
   # to wrap wherever it happens to end.
   it "folds a long story to the width of the page" do
