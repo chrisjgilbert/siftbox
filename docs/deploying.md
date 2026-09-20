@@ -326,9 +326,15 @@ bin/kamal app exec -d production --reuse "bin/rails images:analyze"
 Active Storage measures an image with libvips, which the app had no gem for
 until now, so every blob stored before this deploy is flagged analysed and
 carries no width or height. Rails will not look at an analysed blob again, so
-nothing re-measures them on its own and the reader keeps the shifting text the
-sizes exist to stop. Anything attached after this deploy is measured by its
-own `AnalyzeJob` and needs no task.
+nothing re-measures them on its own. Anything attached after this deploy is
+measured by its own `AnalyzeJob` and needs no task.
+
+Nothing in the app reads those measurements today: the image sizing they were
+added for went with the reading view, and `Newsletter::ImageDimensions` with
+it. This step, the `image_processing` gem behind it and the libvips install
+in the `Dockerfile` are all waiting on one decision, which is whether to drop
+the dependency. Until that is taken, running this costs a single pass over the
+blobs and leaves the archive measured.
 
 Safe to run more than once: a blob that already has a width is skipped, and a
 blob libvips cannot read is reported and left as it is.
