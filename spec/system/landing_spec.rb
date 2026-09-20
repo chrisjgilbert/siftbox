@@ -23,7 +23,7 @@ RSpec.describe "The landing page" do
   it "names the one way in" do
     visit root_path
 
-    expect(page).to have_text("Run your own")
+    expect(page).to have_text("Run a copy")
   end
 
   # There is no hosted instance, so the page asks for nothing and stores

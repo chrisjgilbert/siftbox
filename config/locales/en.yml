@@ -98,10 +98,10 @@ en:
       body: >-
         There is no hosted siftbox to join: this is one person's reader, open
         source under the MIT licence. One Rails app, one container, one SQLite
-        file on one volume — point a Postmark inbound stream at it and you have
-        an address by the evening.
+        file on one volume — point a Postmark inbound stream at it and an
+        address is live by the evening.
       link: Read the source
-      title: Run your own
+      title: Run a copy
     footer:
       built: MIT · built on Rails and Action Mailbox
       source: Open source
@@ -111,13 +111,13 @@ en:
     points:
       address:
         body: Every list gets pointed at one dedicated address. Nothing new lands in
-          your work inbox, and there are no forwarding rules to maintain.
+          my work inbox, and there are no forwarding rules to maintain.
         kicker: 01 / One address
-        title: Subscribe with siftbox, not with you
+        title: The address is siftbox's, not mine
       edition:
         body: An editor reads everything that arrived overnight and writes the stories
           up, with the sources under each one. The originals stay in the archive for
-          when you want the whole thing.
+          when I want the whole thing.
         kicker: 02 / An edition, not an inbox
         title: Read the morning, not the mail
     shot:
