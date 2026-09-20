@@ -23,6 +23,15 @@ What that leaves unproven, in the order it will be found out:
   was not in the window; it cannot catch a section word that is not a section,
   which surfaces as a validation failure on the story.
 
+- **That the copy comes back in the shape version 3 asks for.** Paragraph
+  breaks and the `- ` that opens a list item are instructions, not schema:
+  the structured-output validator can enforce neither. `Edition::Story::Body`
+  degrades to one paragraph when neither appears, which is exactly what
+  version 2 produced, so nothing breaks if the model ignores the request —
+  but whether leads actually arrive in two or three paragraphs, and whether
+  a list is ever the honest shape for one, is judged by reading
+  `edition:backtest` output.
+
 - **Everything Milestone 0 is for.** Clustering, attribution, selection and
   classification are judged by a person reading `edition:backtest` output.
   The corpus states what a good answer looks like — one story off three
@@ -430,6 +439,13 @@ were covering the removed code rather than passing vacuously over it.
   there is any way to delete a newsletter from the app.
 
 ## Smaller, no particular milestone
+
+- **The landing page's product shot still sets each story as one paragraph.**
+  `app/views/waitlist_signups/_shot.html.erb` draws fixed locale copy rather
+  than the reader's edition, and its stories are two sentences each, so
+  nothing in it reads as the wall of text the edition page had. It does mean
+  the shot no longer shows every shape the real page draws. Worth revisiting
+  if the shot ever grows a full-length lead.
 
 - **`Newsletter.content` scans when unbounded.** Verified with
   `EXPLAIN QUERY PLAN`: as the archive actually calls it, the `received_at`

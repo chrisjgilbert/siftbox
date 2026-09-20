@@ -4,7 +4,9 @@
 # The words go through untouched and unescaped-by-nothing — the template
 # renders them with ordinary ERB escaping, and there is no html_safe path
 # anywhere on this class. An edition is written by a model out of mail written
-# by strangers; see .claude/rules/security.md.
+# by strangers; see .claude/rules/security.md. Breaking the copy into blocks
+# does not change that: Edition::Story::Body hands back the editor's own
+# strings, and the elements around them are the page's, not the model's.
 class Edition::Story::Presenter
   # One citation as the page draws it: who said it, where the reader goes to
   # read what they actually said, and how that link opens. The attributes are
@@ -13,10 +15,21 @@ class Edition::Story::Presenter
   # somebody else's site.
   Source = Struct.new(:sender, :path, :attributes)
 
-  delegate :body, :headline, to: :story
+  delegate :headline, to: :story
 
   def initialize(story)
     @story = story
+  end
+
+  # The copy, as the page sets it: a paragraph per paragraph, and a list
+  # where the editor wrote one. Each block names the partial that draws it,
+  # so no template asks which kind it has.
+  #
+  # Memoised on the presenter rather than left to the body object, which is
+  # built here and thrown away: without it a second reader of the same story
+  # splits the same string again.
+  def blocks
+    @_blocks ||= Edition::Story::Body.new(story.body).blocks
   end
 
   # The headline column defaults to "", and a Briefly line is short enough

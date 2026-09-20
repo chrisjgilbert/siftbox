@@ -1,14 +1,19 @@
 <%# The editor's words render through ordinary escaping and nothing on this
-    page may ever change that: no html_safe, no raw, no simple_format. A body
-    written in more than one paragraph keeps its breaks through
-    `white-space: pre-line`, which is CSS reading the text rather than markup
-    built out of it. See .claude/rules/security.md. %>
+    page may ever change that: no html_safe, no raw, no simple_format. The
+    copy arrives as plain text and Edition::Story::Body says where one block
+    stops and the next begins — so the paragraphs and lists below are markup
+    the page built around the editor's strings, never markup parsed out of
+    them. See .claude/rules/security.md. %>
 <article class="story">
   <% if story.headline? %>
     <h3 class="story__headline"><%= story.headline %></h3>
   <% end %>
 
-  <p class="story__body"><%= story.body %></p>
+  <div class="story__body">
+    <% story.blocks.each do |block| %>
+      <%= render "editions/#{block.name}", block: block %>
+    <% end %>
+  </div>
 
   <% if story.cited? %>
     <footer class="story__sources">
