@@ -136,7 +136,11 @@ env:
     - HONEYBADGER_API_KEY
   clear:
     # Every SIFTBOX_* value below is a placeholder, overridden name by name in
-    # config/deploy.production.yml.
+    # config/deploy.production.yml — every one but SIFTBOX_TIME_ZONE, which is
+    # a real zone. It is the one name in this block where a wrong value fails
+    # loudly: an unknown zone raises at boot instead of quietly deciding
+    # something, and a placeholder here would mean a deploy that never comes
+    # up. A deployment elsewhere overrides it like the rest.
 
     # The address subscriptions are pointed at, shown in the feed header and
     # the empty state. Without it, a deployed siftbox tells the reader to
@@ -148,9 +152,10 @@ env:
     # told to subscribe with, and it should be what they actually use.
     SIFTBOX_INBOUND_ADDRESS: news@news.siftbox.example.com
 
-    # The feed groups by calendar day, so this decides where the day breaks. A
-    # real zone rather than a placeholder, because an unknown one raises at
-    # boot: a deployment that reads somewhere else overrides it.
+    # The feed groups by calendar day, so this decides where the day breaks.
+    # The exception named at the top of this block: a real zone, because an
+    # unknown one raises at boot. A deployment that reads somewhere else
+    # overrides it.
     SIFTBOX_TIME_ZONE: London
 
     # The host password-reset links are built against. The app's own host, not
