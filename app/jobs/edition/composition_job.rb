@@ -31,18 +31,28 @@ class Edition::CompositionJob < ApplicationJob
 
   # The one failure that waiting fixes. Everything else below is discarded,
   # because a second attempt would ask the same question of the same window
-  # and get the same answer back. Once the attempts are spent this raises, the
-  # job is recorded as failed, and that is deliberate — a morning with no
-  # edition and no failed job would be indistinguishable from a quiet inbox.
-  retry_on Edition::Draft::Unavailable, wait: WAIT, attempts: ATTEMPTS
+  # and get the same answer back. Once the attempts are spent the block runs
+  # and the morning is written down as a gap — three quarters of an hour of
+  # retrying is the app having tried sufficiently, and what is owed after that
+  # is an explanation rather than another attempt.
+  retry_on Edition::Draft::Unavailable, wait: WAIT, attempts: ATTEMPTS do |job, error|
+    job.abandon(error)
+  end
 
   # Three full-price requests have already been spent on this window against
-  # an unchanged prompt, and the editor has already logged which newsletters
-  # went uncited. A fourth, fifth and sixth would fail the same way. The mail
-  # is not lost: no edition today means today's newsletters sit above the
-  # watermark and are covered by tomorrow's, bigger, window.
-  discard_on(Edition::Editor::Incomplete) do |_job, error|
-    Rails.logger.error("no edition composed, and not retried: #{error.message}")
+  # an unchanged prompt, and the editor has already logged what went uncited.
+  # A fourth, fifth and sixth would fail the same way.
+  #
+  # This morning's sources are not lost, but they will not be reported either:
+  # the gap closes the window, so tomorrow covers a day rather than two. That
+  # is deliberate. A window that grows with every failure aims a multi-day
+  # prompt at a ceiling it cannot clear — at the PRD's own envelope of ~60k
+  # input tokens a day, three days is past a 200k context — so the old promise
+  # of a bigger window tomorrow degraded into a truncation and no edition at
+  # all, silently. The archive lists the gap instead, and the originals are
+  # still there to read.
+  discard_on(Edition::Editor::Incomplete) do |job, error|
+    job.abandon(error, "no edition composed, and not retried")
   end
 
   # Three different owners, one response. A refusal is a classifier's decision
@@ -62,8 +72,8 @@ class Edition::CompositionJob < ApplicationJob
   # rule written before it existed.
   discard_on(
     Edition::Draft::Refused, Edition::Draft::Truncated, Edition::Draft::Rejected
-  ) do |_job, error|
-    Rails.logger.error("no edition composed: #{error.message}")
+  ) do |job, error|
+    job.abandon(error)
   end
 
   # Two runs at once both read Edition.next_number before either writes, and
@@ -83,20 +93,45 @@ class Edition::CompositionJob < ApplicationJob
   end
 
   def perform
-    window = Edition::Window.new(Time.current)
     return skipped if window.empty?
 
     Edition::Editor.new(window.edition, window.sources).compose
   end
 
+  # Write the morning down as a failure. Public because the retry_on and
+  # discard_on blocks are what call it, and they are handed the job rather
+  # than executed inside it.
+  #
+  # The window is the one this attempt built, so a run that spent three
+  # quarters of an hour retrying records the window as it stood at the last
+  # attempt rather than the first — which is right: everything up to then has
+  # now been considered and found unanswerable.
+  def abandon(error, complaint = "no edition composed")
+    Rails.logger.error("#{complaint}: #{error.message}")
+    Edition::Gap.failed(window, error.message)
+  end
+
   private
 
-  # An empty window skips silently, per the PRD — no edition, no error, the
+  # Memoised so the failure handlers close the same window #perform opened.
+  # Reading the clock a second time inside a discard_on block would record a
+  # gap whose window had drifted past the one composition actually tried.
+  def window
+    @_window ||= Edition::Window.new(Time.current)
+  end
+
+  # An empty window publishes nothing, per the PRD — no edition, no error, the
   # home page keeps showing the last one and its timestamp does the honesty
-  # work. Silently to the reader, that is: a morning with no mail and a
-  # morning where the scheduler never fired look identical in the log without
-  # this line, and they want different fixing.
+  # work. It is still written down: the window has been considered, and the
+  # watermark has to move or tomorrow reconsiders it. Not drawn in the archive
+  # either, which is the difference between this and a failure — a morning
+  # nothing arrived on needs no explanation.
+  #
+  # Logged as well, because a morning with nothing in the window and a morning
+  # where the scheduler never fired look identical in the log without this
+  # line, and they want different fixing.
   def skipped
     Rails.logger.info("nothing has arrived since the last edition closed; nothing to compose")
+    Edition::Gap.empty(window)
   end
 end
