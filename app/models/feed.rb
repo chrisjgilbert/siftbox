@@ -4,8 +4,8 @@
 #
 # Not scoped to a user. With one inbound address and one account, the
 # authentication gate is the scope; a user_id nothing filters on would be
-# theatre. See .claude/rules/security.md, and the note in README.md on what
-# multiple users would take.
+# theatre. See .claude/rules/security.md, and the note in docs/operating.md on
+# what multiple users would take.
 class Feed
   Group = Struct.new(:label, :sublabel, :items)
 

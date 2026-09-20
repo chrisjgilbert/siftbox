@@ -6,7 +6,7 @@
 #
 # It cannot catch a tracker that declares no size at all — nothing can tell
 # that apart from an ordinary image — so this narrows the gap rather than
-# closing it. Only re-hosting images would close it. See README.md.
+# closing it. Only re-hosting images would close it. See docs/operating.md.
 class Newsletter::TrackingPixelScrubber < Loofah::Scrubber
   LARGEST_TRACKING_PIXEL = 2
   SIZE_ATTRIBUTES = %w[width height].freeze

@@ -2,8 +2,8 @@
 # arrived in one window, in the order it wants them read.
 #
 # Not scoped to a user, for the same reason Feed isn't — one inbound address,
-# one account, and the authentication gate is the scope. See README.md on what
-# multiple users would take.
+# one account, and the authentication gate is the scope. See docs/operating.md
+# on what multiple users would take.
 class Edition < ApplicationRecord
   # What a line of the archive renders. raw_response holds the model's whole
   # answer — the stories, their citations and the prose, as JSON — so a year

@@ -1,8 +1,10 @@
-# The sender's HTML, reduced to what the reader view will render.
+# The sender's HTML, reduced to what this app reads off it.
 #
-# Sanitizing happens at render through Action View's `sanitize`, which returns
-# an already-safe string. Nothing here calls `html_safe`, so tuning the
-# allowlist below applies to the whole archive with no reprocessing.
+# The reduction happens here, when the body is read, and not at render time:
+# nothing this produces is rendered as markup anywhere. What it feeds is the
+# snippet, the prose the editor is shown and the lead image. The one surface
+# that shows a newsletter as it arrived is the sandboxed frame, which serves
+# Newsletter::Source and reduces nothing at all.
 class Newsletter::Body
   TAGS = %w[
     a b blockquote br code em figcaption figure h1 h2 h3 h4 hr i img li ol p
@@ -45,10 +47,10 @@ class Newsletter::Body
     @dimensions = dimensions
   end
 
-  # Scrubbed, not sanitized: the allowlist above is applied later, by
-  # `sanitize` in NewslettersHelper. Pruning matters because `sanitize`
-  # unwraps a <script> or <style> tag but keeps the text inside it, which
-  # would otherwise land in the reading view as prose.
+  # Pruning is what makes #text safe to read: :prune takes a <script> or
+  # <style> element away with the text inside it, and #text reads every text
+  # node there is. Left alone, a stylesheet would read back as prose into the
+  # snippet and into what the editor is shown.
   def scrubbed
     sized.to_html
   end
@@ -82,9 +84,9 @@ class Newsletter::Body
   # The order is load-bearing. TrackingPixelScrubber is the only pass that
   # reads a style attribute, so it runs first; the styles are then dropped
   # before :prune, whose html5lib sanitizer CSS-parses every one of them —
-  # several hundred on a real newsletter, all of which `sanitize` deletes a
-  # moment later anyway. Pruning last over a style-free tree is roughly half
-  # the work of pruning first.
+  # several hundred on a real newsletter, and not one of them survives the
+  # prune anyway. Pruning last over a style-free tree is roughly half the
+  # work of pruning first.
   def document
     @_document ||= Loofah.html5_fragment(html.to_s)
       .scrub!(Newsletter::TrackingPixelScrubber.new)
