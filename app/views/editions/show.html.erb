@@ -12,6 +12,12 @@
 <% end %>
 
 <main class="edition">
+  <%# Above the first section, because a reader who came to listen rather than
+      to read should not have to scroll past the lead to find the button. Inside
+      the edition rather than in the band above it, because it is the edition
+      and not chrome about it. %>
+  <%= render "editions/recording", recording: @edition.recording %>
+
   <% @edition.sections.each do |section| %>
     <%= render "editions/section", section: section %>
   <% end %>

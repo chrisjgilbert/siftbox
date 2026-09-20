@@ -160,6 +160,60 @@ RSpec.describe "Editions" do
     expect(counted.last).to eq(counted.first)
   end
 
+  # Nothing is recorded at 07:00, so the ordinary state of every edition is an
+  # offer rather than a player.
+  it "offers to read aloud an edition nobody has asked to hear" do
+    sign_in
+    edition = create(:edition)
+
+    get edition_path(edition)
+
+    expect(response.body).to include("Play edition")
+  end
+
+  it "draws a player for an edition that has been recorded" do
+    sign_in
+    edition = create(:edition)
+    create(:edition_recording, edition: edition).store("audio", voice: "a-voice")
+
+    get edition_path(edition)
+
+    expect(response.body).to include(edition_recording_path(edition))
+  end
+
+  it "offers no player while the recording is still being made" do
+    sign_in
+    edition = create(:edition)
+    create(:edition_recording, edition: edition)
+
+    get edition_path(edition)
+
+    expect(response.body).to include("Preparing the audio")
+  end
+
+  # A recording costs two statements on top of the edition — the has_one, and
+  # the attachment behind #ready? — and that is the whole of it however big the
+  # edition is. Held the same way the spec above holds the stories: the cost
+  # must not move with the size, and the absolute number belongs to Rails.
+  #
+  # Deliberately not held as "with a recording costs the same as without": it
+  # does not, it costs two more, and preloading does not close that — measured,
+  # it opens it to three. See the note on Edition.for_reading.
+  it "reads a recorded edition of any size in the same number of queries" do
+    sign_in
+    quiet_day = edition_of(1)
+    busy_day = edition_of(6)
+    [ quiet_day, busy_day ].each do |edition|
+      create(:edition_recording, edition: edition).store("audio", voice: "a-voice")
+    end
+    get edition_path(quiet_day)
+
+    counted = [ count_queries { get edition_path(quiet_day) },
+                count_queries { get edition_path(busy_day) } ]
+
+    expect(counted.last).to eq(counted.first)
+  end
+
   # The notice is app chrome and has to be unmistakably that: it sits outside
   # the edition, above everything the editor wrote, where the masthead and the
   # nav are. Nothing the model produced reaches it — it is a count and a

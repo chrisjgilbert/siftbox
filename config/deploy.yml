@@ -127,6 +127,15 @@ env:
     # in whichever file Kamal merges over that one, for the reason given there.
     - ANTHROPIC_API_KEY
 
+    # What reads an edition aloud. The Claude API has no text-to-speech, so
+    # this is a second vendor rather than another call through the key above.
+    # Read by Edition::Voice and by nothing else, and only when a reader
+    # presses "Play edition" — nothing is recorded at 07:00. Missing, it is
+    # not a boot failure or a broken page: it is one KeyError in the worker
+    # log and a recording the page reports as unavailable. The raw value goes
+    # in .kamal/secrets-common beside the Anthropic key.
+    - ELEVENLABS_API_KEY
+
     # The Honeybadger project key, which config/honeybadger.yml no longer
     # carries, so the gem reads it from here. Missing, it is not a boot failure
     # or a broken page: the gem logs "API key is missing" once per report, and
@@ -167,6 +176,18 @@ env:
     # visitor is sent to sign in and a signup answers 404. The deployment that
     # collects signups turns it on in its destination file.
     SIFTBOX_WAITLIST: "false"
+
+    # Which voice reads the edition. Not a secret — it is a public identifier
+    # from the vendor's voice library — and it lives here rather than in Ruby
+    # because which voice to listen to every morning is a matter of taste, so
+    # changing it should be a variable rather than a deploy of new code. The
+    # voice that made each recording is stored on the row beside it, so a
+    # change can be heard against what came before it.
+    #
+    # A placeholder, like every SIFTBOX_* value above: a deployment names its
+    # own in config/deploy.production.yml. Missing, it is a KeyError in the
+    # worker log and no recording.
+    ELEVENLABS_VOICE_ID: replace-with-a-voice-id
 
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.

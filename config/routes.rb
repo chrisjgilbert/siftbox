@@ -9,7 +9,14 @@ Rails.application.routes.draw do
   # where the reader already goes to see what reaches them and what does not.
   # Adding one here would be a second answer to the same question.
   resources :blogs, only: [ :create, :destroy ]
-  resources :editions, only: [ :index, :show ]
+  # The recording is a singular nested resource rather than a verb on the
+  # edition: creating one is the reader asking to hear the edition, and showing
+  # one is the audio itself. Served from here rather than from Active Storage's
+  # own blob routes, which sit outside the authentication gate — the same reason
+  # the images under a newsletter are.
+  resources :editions, only: [ :index, :show ] do
+    resource :recording, only: [ :create, :show ], module: :editions
+  end
   resources :newsletters, only: :index do
     # The two ways out of the pen, as nouns: creating a dismissal is the
     # reader saying the confirmation is dealt with, creating a release is them

@@ -272,6 +272,72 @@ a {
   }
 }
 
+/* Listen ------------------------------------------------------------------ */
+
+/* The one control on the page, at the reading measure so it lines up with the
+   sections under it. No rule of its own: the first section heading's 2px rule
+   is immediately below, and a second would read as a band. */
+.listen {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding-top: 32px;
+}
+
+/* The browser's own audio chrome, which carries a radius and a shading the
+   system does not have anywhere else. It is here on purpose and it is
+   temporary: what it buys is playback that survives a phone locking, Control
+   Centre, and keyboard and screen-reader support, none of it built here. Full
+   width so the scrubber is long enough to seek in on a phone. See
+   app/views/editions/_recording.html.erb. */
+.listen__player {
+  display: block;
+  width: 100%;
+}
+
+/* The app's third button treatment would be one too many, so this is the
+   waitlist's: solid ink, no radius, mono uppercase. button_to puts the button
+   inside a form, so the appearance goes on the button and the form is left as
+   the block it wraps. */
+.listen form {
+  margin: 0;
+}
+
+.listen__button {
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 14px 22px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.listen__button:hover {
+  background: var(--blue);
+}
+
+/* Mono mute, the same treatment the archive's caption takes: this is the page
+   telling the reader what it is doing, not something the editor wrote. */
+.listen__preparing {
+  margin: 0;
+  color: var(--mute);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+@media (min-width: 720px) {
+  .listen {
+    padding-top: 56px;
+  }
+}
+
 /* Story ------------------------------------------------------------------- */
 
 /* A lead story, a Briefly line and a reading list entry are one shape at

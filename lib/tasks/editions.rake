@@ -19,6 +19,13 @@ namespace :edition do
 
     Regeneration.rewrite(arguments[:date])
   end
+
+  desc "Read the edition published on DATE (default: the latest) aloud and write the MP3 out"
+  task :record, [ :date ] => :environment do |_task, arguments|
+    raise "Development only" unless Rails.env.development?
+
+    Reading.aloud(arguments[:date])
+  end
 end
 
 # Judging what the editor writes, which is done by reading it: compose an
@@ -174,5 +181,55 @@ module Regeneration
       "#{reading(sources)}. " \
       "It was written by #{edition.editor_model} on prompt " \
       "#{edition.prompt_version}, and that row goes with it. Expect a minute or two."
+  end
+end
+
+# Hearing an edition before deciding anything about how it sounds.
+#
+# The judgement this exists for cannot be made by reading: EditionTranscript
+# prints what the editor wrote and tells you nothing about whether a synthesiser
+# runs two sentences together, says "S-1" as a word, or makes a five-minute
+# listen worth having. So this writes the MP3 out and leaves the path, and the
+# rest is a pair of headphones.
+#
+# It goes through the same Edition::Script and Edition::Voice the app does, so
+# what comes out is what a reader would hear. What it does not do is store a
+# recording: the row and the blob belong to a reader pressing play, and a task
+# that wrote one would leave the page offering a player nobody asked for.
+#
+# Needs ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID in the environment, and costs
+# real money — a few pence a run.
+module Reading
+  # Under tmp rather than storage, which is where the app's own state lives and
+  # what a deployment backs up. Nothing reads this again.
+  DIRECTORY = "tmp/readings".freeze
+
+  def self.aloud(date)
+    edition = chosen(date)
+    return puts "No edition to read." if edition.nil?
+
+    voice = Edition::Voice.new(Edition::Script.new(edition).text)
+    puts "Reading no. #{edition.number} of #{edition.published_on} in #{voice.name}."
+
+    puts "Written to #{written(edition, voice.speak)}. Listen to it before deciding anything."
+  end
+
+  # The latest by default, which is the one a voice change is normally being
+  # judged against. A date picks any other, the way regenerate's does.
+  def self.chosen(date)
+    return Edition.latest if date.blank?
+
+    Edition.find_by(published_on: Date.parse(date))
+  end
+
+  # Named by the edition and the voice, so two voices over one edition sit side
+  # by side rather than one overwriting the other — which is the comparison this
+  # task exists to make.
+  def self.written(edition, bytes)
+    FileUtils.mkdir_p(DIRECTORY)
+    path = File.join(DIRECTORY, "edition-#{edition.number}-#{Edition::Voice::MODEL}.mp3")
+    File.binwrite(path, bytes)
+
+    path
   end
 end

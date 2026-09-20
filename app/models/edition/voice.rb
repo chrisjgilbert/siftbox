@@ -1,0 +1,144 @@
+require "net/http"
+
+# The voice that reads an edition: hand it words, get back audio.
+#
+# It owns one thing — one request to the vendor — and knows nothing about
+# editions, recordings or where the audio is going to be stored, for the same
+# reason Edition::Draft knows nothing about Edition rows. What it does know is
+# which failures are worth a second attempt and which are this app's to fix,
+# because the status code is the only place that can be told apart.
+#
+# The Claude API has no text-to-speech, so this is a second vendor and a second
+# key rather than another call through the one already in the Gemfile. There is
+# no gem: the request is a POST with a JSON body and audio bytes coming back,
+# which Net::HTTP does without a dependency to keep current.
+#
+# Whether one request can hold a whole edition is the reason this vendor and
+# this model: eleven_flash_v2_5 takes 40,000 characters, and an edition is a
+# few thousand. Google's synchronous endpoint caps at 5,000 bytes and cannot be
+# raised, which would mean splitting the edition and stitching the pieces back
+# together — an ffmpeg dependency in the image for nothing the reader hears.
+class Edition::Voice
+  ENDPOINT = "https://api.elevenlabs.io/v1/text-to-speech".freeze
+
+  VENDOR = "elevenlabs".freeze
+
+  # Flash rather than the multilingual default. An edition is read once a
+  # morning in one language, and this is a third of the price. Changing it is
+  # one line, and the voice it was made with is recorded on every recording, so
+  # a change can be heard against what came before it.
+  MODEL = "eleven_flash_v2_5".freeze
+
+  # codec_samplerate_bitrate, as this vendor spells it. 64 kbps halves the file
+  # against their 128 default and is indistinguishable for speech on a phone;
+  # 192 is the first format that needs a paid tier, and this is not it.
+  FORMAT = "mp3_44100_64".freeze
+
+  # What the vendor sends and what this app stores. Checked on the way in
+  # rather than trusted, because a 200 carrying JSON is this vendor's way of
+  # explaining a bad request, and stored unchecked it reaches the reader as a
+  # player that plays nothing.
+  CONTENT_TYPE = "audio/mpeg".freeze
+
+  OPEN_TIMEOUT = 5
+
+  # Generous, and deliberately: a job can wait, and an edition cut off halfway
+  # through synthesis costs the whole request rather than part of it.
+  READ_TIMEOUT = 120
+
+  # The ordinary ways a request to somebody else's server dies. None is
+  # recoverable here and all of them mean the same thing to the caller, so they
+  # are gathered rather than rescued one at a time.
+  FAILURES = [
+    EOFError, IOError, Net::HTTPBadResponse, Net::ProtocolError,
+    OpenSSL::SSL::SSLError, SocketError, SystemCallError, Timeout::Error
+  ].freeze
+
+  # One family, so a caller with nothing to do about either can say so once.
+  Error = Class.new(StandardError)
+
+  # Waiting might fix it: a rate limit, a server error, an unreachable host, or
+  # a 200 with no audio in it.
+  Unavailable = Class.new(Error)
+
+  # Waiting will not fix it: a wrong key, a voice that does not exist, a model
+  # that has been retired, a body the API refuses. This is ours, and it is
+  # fixed by a deploy or a variable rather than by asking again.
+  Rejected = Class.new(Error)
+
+  def initialize(words)
+    @words = words
+  end
+
+  # What made this recording, for the row beside the audio. Vendor, model and
+  # voice, because all three can change under a reader who only knows that
+  # last month's editions sounded different.
+  def name
+    "#{VENDOR}/#{MODEL}/#{voice_id}"
+  end
+
+  def speak
+    audio_from(answered)
+  end
+
+  private
+
+  attr_reader :words
+
+  def answered
+    Net::HTTP.start(uri.hostname, uri.port, use_ssl: true,
+      open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT) do |http|
+      http.request(request)
+    end
+  rescue *FAILURES => error
+    raise Unavailable, "the voice could not be reached: #{error.message}"
+  end
+
+  # Most specific first, and the split is the whole point of reading the status
+  # here: a 429 today is audio tomorrow, and a 401 today is a 401 forever.
+  def audio_from(response)
+    raise Unavailable, "the voice could not answer: #{response.code}" if waiting_helps?(response)
+    raise Rejected, "the voice refused the request: #{response.code}" unless response.is_a?(Net::HTTPOK)
+    raise Rejected, "the voice answered #{content_type(response)} rather than audio" unless audio?(response)
+    raise Unavailable, "the voice answered no audio at all" if response.body.blank?
+
+    response.body
+  end
+
+  def waiting_helps?(response)
+    response.is_a?(Net::HTTPTooManyRequests) || response.is_a?(Net::HTTPServerError)
+  end
+
+  def audio?(response)
+    content_type(response) == CONTENT_TYPE
+  end
+
+  def content_type(response)
+    response["Content-Type"].to_s.split(";").first.to_s.strip.downcase
+  end
+
+  def request
+    Net::HTTP::Post.new(uri).tap do |post|
+      post["xi-api-key"] = ENV.fetch("ELEVENLABS_API_KEY")
+      post["Content-Type"] = "application/json"
+      post["Accept"] = CONTENT_TYPE
+      post.body = { text: words, model_id: MODEL }.to_json
+    end
+  end
+
+  def uri
+    @_uri ||= URI("#{ENDPOINT}/#{voice_id}?output_format=#{FORMAT}")
+  end
+
+  # Both variables are read here rather than at class load, for the reason
+  # Edition::Draft gives about its own key: a constant would be evaluated when
+  # Rails eager-loads this file, so a deploy with the variable missing would
+  # fail at boot — every page, every job — rather than failing where it is used
+  # with the name of the thing missing.
+  #
+  # Which voice reads the edition is a matter of taste, so it lives in the
+  # environment: changing it is a deploy variable rather than a deploy.
+  def voice_id
+    ENV.fetch("ELEVENLABS_VOICE_ID")
+  end
+end

@@ -18,6 +18,13 @@ class Edition < ApplicationRecord
   # own destroy callbacks on the way out.
   has_many :stories, -> { in_position_order }, dependent: :destroy, inverse_of: :edition
 
+  # Absent until a reader asks to hear the edition, which is most editions:
+  # nothing is recorded at 07:00, because a recording nobody plays costs money
+  # for nothing. Declared dependent for the reason stories are — the foreign key
+  # cascades, and this is what gives the row its own destroy callbacks on the way
+  # out, which is how the attached audio gets purged rather than orphaned.
+  has_one :recording, dependent: :destroy, inverse_of: :edition
+
   validate :stories_hold_distinct_positions
 
   validates :number, presence: true, uniqueness: true
@@ -52,6 +59,13 @@ class Edition < ApplicationRecord
   # Both kinds of citation, and a post's blog with them: the page prints the
   # blog's name under every post it cited, so without the innermost preload an
   # edition citing six posts reads six blogs one at a time.
+  # The recording is deliberately not preloaded here, which was measured rather
+  # than assumed: adding `recording: { audio_attachment: :blob }` took a
+  # recorded edition from six statements to seven. A has_one has no N+1 to
+  # avoid — there is one row, read once — and eager-loading the blob buys
+  # nothing, because the page never touches it. Edition::Recording#ready? asks
+  # only whether the attachment exists, and the player's src is this app's own
+  # route rather than anything Active Storage signs.
   def self.for_reading
     includes(stories: [ { blog_posts: :blog }, :newsletters ])
   end

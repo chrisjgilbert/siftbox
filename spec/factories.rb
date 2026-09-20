@@ -45,6 +45,14 @@ FactoryBot.define do
     story factory: :edition_story
   end
 
+  # requested_at only: a fresh recording is one the reader has just asked for
+  # and nothing has come back for yet, which is the state every other one is
+  # reached from. A spec that wants a finished or failed one says so.
+  factory :edition_recording, class: "Edition::Recording" do
+    edition
+    requested_at { Time.current }
+  end
+
   factory :edition_story, class: "Edition::Story" do
     edition
     sequence(:position)

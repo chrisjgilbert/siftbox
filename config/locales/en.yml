@@ -79,6 +79,13 @@ en:
       order: By the day covered
     masthead: "%{number} · %{date}"
     number: No. %{number}
+    recording:
+      label: Listen to this edition
+      play: Play edition
+      preparing: Preparing the audio. It appears here when ready, or reload.
+      retry: Try preparing the audio again
+    script:
+      masthead: Edition %{number}, %{date}.
     sections:
       briefly: Briefly
       lead: Lead stories

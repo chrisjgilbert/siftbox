@@ -1,0 +1,27 @@
+<%# The edition in the other medium: a button that asks for the audio, a line
+    while it is being made, and the player once there is something to play.
+
+    The element is the browser's own <audio controls> and not a player of this
+    app's making, which is a deliberate and temporary departure from
+    docs/siftbox-redesign.md §2 — its chrome is a rounded, shaded pill and will
+    be the only one on the site. What it buys is the whole point of the feature:
+    a single source played by the browser's own media pipeline keeps playing when
+    a phone locks, appears in Control Centre, and is reachable by keyboard and
+    screen reader without any of that being built here. A player matching the
+    design system can replace it once there is an opinion about how the editions
+    sound, which is the question this first version exists to answer.
+
+    preload="none" so an edition nobody plays costs no bytes, and so the range
+    request that starts playback happens when the reader asks for it. %>
+<div class="listen" id="<%= recording.frame %>">
+  <%= turbo_stream_from recording.channel %>
+
+  <% if recording.ready? %>
+    <audio class="listen__player" controls preload="none"
+      src="<%= recording.path %>" aria-label="<%= recording.label %>"></audio>
+  <% elsif recording.preparing? %>
+    <p class="listen__preparing"><%= recording.preparing_line %></p>
+  <% else %>
+    <%= button_to recording.invitation, recording.path, class: "listen__button" %>
+  <% end %>
+</div>

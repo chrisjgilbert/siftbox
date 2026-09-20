@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_194829) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_20_123258) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "message_checksum", null: false
@@ -89,6 +89,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_194829) do
     t.index ["edition_story_id", "newsletter_id"], name: "index_edition_citations_on_edition_story_id_and_newsletter_id", unique: true
     t.index ["newsletter_id"], name: "index_edition_citations_on_newsletter_id"
     t.check_constraint "(newsletter_id IS NOT NULL) + (blog_post_id IS NOT NULL) = 1", name: "edition_citations_name_one_source"
+  end
+
+  create_table "edition_recordings", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.integer "edition_id", null: false
+    t.datetime "failed_at"
+    t.datetime "requested_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "voice", default: "", null: false
+    t.index ["edition_id"], name: "index_edition_recordings_on_edition_id", unique: true
   end
 
   create_table "edition_stories", force: :cascade do |t|
@@ -171,6 +182,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_194829) do
   add_foreign_key "edition_citations", "blog_posts", on_delete: :cascade
   add_foreign_key "edition_citations", "edition_stories", on_delete: :cascade
   add_foreign_key "edition_citations", "newsletters", on_delete: :cascade
+  add_foreign_key "edition_recordings", "editions", on_delete: :cascade
   add_foreign_key "edition_stories", "editions", on_delete: :cascade
   add_foreign_key "sessions", "users", on_delete: :cascade
 end

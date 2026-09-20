@@ -47,6 +47,15 @@ class Edition::Presenter
     @_sections ||= [ lead, briefly, reading_list ].compact
   end
 
+  # The same edition in another medium, so it hangs off the edition's own
+  # presenter — unlike the pen's badge, which is about the reader's
+  # subscriptions and is deliberately kept off this class. Always present, even
+  # for the many editions nobody has asked to hear, because the control it draws
+  # is what asking is done through.
+  def recording
+    @_recording ||= Edition::Recording::Presenter.new(edition)
+  end
+
   private
 
   attr_reader :edition
