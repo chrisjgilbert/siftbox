@@ -247,7 +247,8 @@ Milestones 1–5, and left alone deliberately — the dark closing band is a
 deliberate part of the landing design per `docs/siftbox-redesign.md` §9, so the
 fix wants whoever owns that page rather than a guess from here. **Closed.**
 Removing the waitlist took the fixed 620px column out of the band with the
-form that filled it; nothing on the page sets a width in pixels now.
+form that filled it; the band is one column now, and its heading and paragraph
+sit at the hero's measures rather than in a grid track of their own.
 
 Neither was catchable by the specs as they stand: Capybara runs under
 `rack_test`, which renders no CSS, so no system spec in this repo can see a

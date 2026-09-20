@@ -1,6 +1,7 @@
 # The project page — the only part of this app a signed-out visitor can
-# reach. It reads and writes nothing: there is no hosted siftbox to sign up
-# for, so the page says what this is and points at the source.
+# reach. It writes nothing and asks a visitor for nothing: there is no hosted
+# siftbox to sign up for, so the page says what this is and points at the
+# source. The only read is the one that sends a signed-in reader onwards.
 class LandingsController < ApplicationController
   allow_unauthenticated_access only: :show
 
