@@ -202,11 +202,10 @@ RSpec.describe Edition::Draft do
   # suite included. Read where it is used, a missing key is one job failing
   # with the name of the variable it wanted.
   it "looks the API key up where it uses it, not when it is built" do
-    key = ENV.delete("ANTHROPIC_API_KEY")
     draft = Edition::Draft.new(Edition::Prompt.new(newsletters))
 
-    expect { draft.write }.to raise_error(KeyError, /ANTHROPIC_API_KEY/)
-
-    ENV["ANTHROPIC_API_KEY"] = key
+    with_environment("ANTHROPIC_API_KEY" => nil) do
+      expect { draft.write }.to raise_error(KeyError, /ANTHROPIC_API_KEY/)
+    end
   end
 end

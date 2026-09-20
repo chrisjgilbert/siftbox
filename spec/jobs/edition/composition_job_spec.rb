@@ -47,14 +47,10 @@ RSpec.describe Edition::CompositionJob do
   # back because Edition::Draft reads it on the way to building the client it
   # is about to be given instead, and it fetches rather than reads: absent, as
   # it is here, the example fails on a KeyError about the variable.
-  def through(client)
-    key = ENV["ANTHROPIC_API_KEY"]
-    ENV["ANTHROPIC_API_KEY"] = "not-a-key"
+  def through(client, &composing)
     allow(Anthropic::Client).to receive(:new).and_return(client)
 
-    yield
-  ensure
-    ENV["ANTHROPIC_API_KEY"] = key
+    with_environment("ANTHROPIC_API_KEY" => "not-a-key", &composing)
   end
 
   it "publishes an edition covering the newsletters that have arrived" do
