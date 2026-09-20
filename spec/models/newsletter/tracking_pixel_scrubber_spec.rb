@@ -101,15 +101,11 @@ RSpec.describe Newsletter::TrackingPixelScrubber do
     expect(result).to include("cdn.example/hero.png")
   end
 
-  it "keeps the images beside one it removed" do
-    html = %(<img src="https://track.example/o.gif" width="1"><img src="https://cdn.example/hero.png">)
+  it "keeps everything beside the image it removed" do
+    html = %(<p>Morning</p><img src="https://track.example/o.gif" width="1"><img src="https://cdn.example/hero.png">)
 
-    expect(scrubbed_markup(html)).to include("cdn.example/hero.png")
-  end
+    result = scrubbed_markup(html)
 
-  it "keeps the markup beside an image it removed" do
-    html = %(<p>Morning</p><img src="https://track.example/o.gif" width="1">)
-
-    expect(scrubbed_markup(html)).to include("<p>Morning</p>")
+    expect(result).to include("<p>Morning</p>").and include("cdn.example/hero.png")
   end
 end
