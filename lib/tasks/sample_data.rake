@@ -60,14 +60,24 @@ module SampleData
     if you run more than a handful of workers.</p>
   HTML
 
+  OPENING = <<~HTML.freeze
+    <p>The parser rewrite landed this week, and it is the largest change to
+    the language's front end in a decade. Here is what actually changed, and
+    what it means for the gems you depend on.</p>
+
+    <h2>What changed</h2>
+  HTML
+
+  PLAIN_BODY = (OPENING + ARTICLE).freeze
+
   # The same release from the Rails side, which is the second half of the
   # story the sample edition's lead collapses into one paragraph. The two
   # newsletters the lead cites have to carry one release between them or the
   # README's screenshot is a picture of an edition citing a source that says
   # something else — the one thing this app promises it never does. They agree
   # on what changed and part on what it means, and that is where each half of
-  # the parting is: the migration note is above, "most gems will never notice"
-  # is here.
+  # the parting is: the migration note is in ARTICLE, "most gems will never
+  # notice" is here.
   RAILS_ARTICLE = <<~HTML.freeze
     <p>Rails itself needed three lines changed, all of them in generators that
     write Ruby rather than read it. For an application the upgrade is quieter
@@ -91,16 +101,6 @@ module SampleData
     <p>A fix for eager loading through a polymorphic association, and the
     usual half-dozen documentation improvements.</p>
   HTML
-
-  OPENING = <<~HTML.freeze
-    <p>The parser rewrite landed this week, and it is the largest change to
-    the language's front end in a decade. Here is what actually changed, and
-    what it means for the gems you depend on.</p>
-
-    <h2>What changed</h2>
-  HTML
-
-  PLAIN_BODY = (OPENING + ARTICLE).freeze
 
   # The article is passed in because two of these newsletters cover the same
   # release from different sides, and the opening is what they share.

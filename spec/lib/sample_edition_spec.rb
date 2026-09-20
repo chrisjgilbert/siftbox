@@ -42,12 +42,9 @@ RSpec.describe SampleEdition do
       .to match_array(Edition::Story::SECTIONS)
   end
 
-  # config.autoload_lib puts lib/ on the eager-load path, so this class is
-  # resident in every production process and a console there is one line away
-  # from filing a fabricated edition in the live archive — taking the next
-  # real edition number and the day's unique published_on with it. The rake
-  # task that calls it guards itself; this is the guard the class carries
-  # wherever it is called from.
+  # The class is eager-loaded in production whatever calls it, so the refusal
+  # is the only thing between a console there and a fabricated edition in the
+  # live archive. SampleEdition::OutsideDevelopment says what that costs.
   it "refuses to write anywhere but a local environment" do
     newsletters = sample_newsletters(5)
     allow(Rails).to receive(:env)
