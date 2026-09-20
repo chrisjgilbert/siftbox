@@ -415,6 +415,18 @@ were covering the removed code rather than passing vacuously over it.
   ingest side, which feeds the original frame and is untouched. What died is
   only the sizing the reader needed to stop images shifting the article.
 
+  **Partly closed.** The sizing is gone: `Newsletter::ImageDimensions`,
+  `Newsletter::Body`'s `dimensions:` argument, `#scrubbed`, `#sized`,
+  `#apply_stored_sizes`, `#strip_sender_sizes`, `SIZED_ATTRIBUTES`,
+  `TAGS`/`ATTRIBUTES`, and `Newsletter::LeadImage#remainder` — each
+  re-checked by grep before it went. What is left is the second teardown this
+  entry warns about, because it drops a system dependency rather than code:
+  `lib/tasks/images.rake`, the `image_processing` gem, the libvips install in
+  the `Dockerfile`, in CI and in the session hook, and step 6 of
+  `docs/deploying.md`. `Newsletter::IssueNumber` and
+  `Newsletter::LeadImage#alt`/`#caption` are still here too; they are dead for
+  the same reason but are not sizing, so they were left with it.
+
 ## Undecided design
 
 - **Deleting a newsletter guts the editions that cite it.**

@@ -208,10 +208,11 @@ would not apply.
 Nothing is sanitized at ingest either: `Newsletter::Body` walks the stored
 HTML through Loofah on demand, which is what the lead-image capture and the
 prose the editor reads are both built on, so a change to it applies to the
-whole archive's prose immediately with no cached column to reprocess. Its
-`TAGS` and `ATTRIBUTES` allowlist is a leftover from the retired reading
-view — see `docs/briefing-followups.md`, Milestone 6, which lists it with the
-rest of the measure-and-size chain that died with the reader.
+whole archive's prose immediately with no cached column to reprocess. What
+survives that walk is a pruned tree rather than an allowlisted one — the
+tracking pixels, the style attributes and the elements Loofah prunes are
+taken out, and nothing else is. There is no allowlist, because nothing
+downstream renders markup.
 
 **Images are self-hosted.** Everything a newsletter carries inside the
 message (`cid:` references) is stored with Active Storage during ingest, and

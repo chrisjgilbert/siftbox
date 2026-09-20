@@ -6,19 +6,6 @@
 # that shows a newsletter as it arrived is the sandboxed frame, which serves
 # Newsletter::Source and reduces nothing at all.
 class Newsletter::Body
-  TAGS = %w[
-    a b blockquote br code em figcaption figure h1 h2 h3 h4 hr i img li ol p
-    pre s strong table tbody td th thead tr u ul
-  ].freeze
-
-  # width and height are here for images this app hosts and has measured,
-  # which #apply_stored_sizes sets from the stored blob. Every size the sender
-  # wrote is stripped first, so nothing reaches the allowlist that this app
-  # did not put there itself.
-  ATTRIBUTES = %w[alt height href src title width].freeze
-
-  SIZED_ATTRIBUTES = %w[height width].freeze
-
   # How much of a body a feed row shows. Here rather than on the mail reader,
   # because a blog post has a snippet and has never been near MIME — this is
   # the pipeline the two ingest paths genuinely share.
@@ -42,17 +29,8 @@ class Newsletter::Body
     Newsletter::Prose.new(new(html)).text
   end
 
-  def initialize(html, dimensions: {})
+  def initialize(html)
     @html = html
-    @dimensions = dimensions
-  end
-
-  # Pruning is what makes #text safe to read: :prune takes a <script> or
-  # <style> element away with the text inside it, and #text reads every text
-  # node there is. Left alone, a stylesheet would read back as prose into the
-  # snippet and into what the editor is shown.
-  def scrubbed
-    sized.to_html
   end
 
   # Joined on the text nodes rather than read off the tree in one go, because
@@ -75,11 +53,14 @@ class Newsletter::Body
       .map(&:text).join(" ").squish
   end
 
-  # Public so Newsletter::LeadImage can find and remove the lead image in the
-  # same tree #sized then walks. The reader promotes that image above the
-  # article, so it has to leave the body before the sizes go on — and
-  # re-parsing #scrubbed's output to do it would cost a second Loofah pass
-  # over a body that runs to hundreds of kilobytes.
+  # Public so Newsletter::LeadImage can pick the lead out of the tree this has
+  # already reduced. Handing it the HTML instead would cost a second Loofah
+  # pass over a body that runs to hundreds of kilobytes.
+  #
+  # Pruning is what makes #text safe to read: :prune takes a <script> or
+  # <style> element away with the text inside it, and #text reads every text
+  # node there is. Left alone, a stylesheet would read back as prose into the
+  # snippet and into what the editor is shown.
   #
   # The order is load-bearing. TrackingPixelScrubber is the only pass that
   # reads a style attribute, so it runs first; the styles are then dropped
@@ -96,39 +77,5 @@ class Newsletter::Body
 
   private
 
-  attr_reader :html, :dimensions
-
-  # A separate step from #document, because #text is the other caller and a
-  # size attribute cannot change what the text says — so a snippet does not
-  # pay for a walk over every node in the body.
-  #
-  # After the scrubber, never before: it reads width and height to recognise
-  # a tracking pixel, and stripping them first would blind it to every
-  # tracker that declares its size in an attribute rather than in CSS.
-  def sized
-    @_sized ||= document
-      .tap { |fragment| strip_sender_sizes(fragment) }
-      .tap { |fragment| apply_stored_sizes(fragment) }
-  end
-
-  # Every sender-written size goes, including on images this app hosts. The
-  # sender's numbers describe some other client's column, and on a table they
-  # fight the reading column, which CSS has already unwrapped to block.
-  def strip_sender_sizes(fragment)
-    fragment.css("*").each do |node|
-      SIZED_ATTRIBUTES.each { |name| node.remove_attribute(name) }
-    end
-  end
-
-  # Both or neither: a browser reserves space from the ratio of the two, so a
-  # width on its own buys nothing and an empty height is markup for no one.
-  def apply_stored_sizes(fragment)
-    fragment.css("img").each do |node|
-      width, height = dimensions[node["src"]]
-      next if width.blank? || height.blank?
-
-      node["width"] = width.to_s
-      node["height"] = height.to_s
-    end
-  end
+  attr_reader :html
 end

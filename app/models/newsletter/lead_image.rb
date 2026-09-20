@@ -1,8 +1,6 @@
-# The first image a newsletter shows, and the body that is left without it.
-#
-# The feed renders it as a thumbnail and the reader promotes it above the
-# article, wider than the text column — so the reader also needs the body
-# with that one image taken out, or it appears twice.
+# The first image a newsletter shows. Captured at ingest into
+# newsletters.lead_image_url, so the feed can render a thumbnail per row
+# without loading a body to find one.
 #
 # Reads Newsletter::Body's document, which means the tracking-pixel scrubber
 # has already run: a 1x1 beacon is gone before the first image is picked, and
@@ -42,10 +40,9 @@ class Newsletter::LeadImage
     new(Newsletter::Body.new(html)).url
   end
 
-  # Takes a Newsletter::Body rather than a string, so the caller decides what
-  # that body knows — the reader hands one built with the stored image sizes,
-  # and the ingest-time capture hands a bare one, because a size cannot change
-  # which image comes first.
+  # Takes a Newsletter::Body rather than a string, so a caller that is already
+  # holding one pays for a single Loofah pass — Blog::Poll reads the snippet
+  # off the same body it takes the lead from.
   def initialize(body)
     @body = body
   end
@@ -79,39 +76,21 @@ class Newsletter::LeadImage
     figure_caption.presence || node["alt"].to_s
   end
 
-  # #scrubbed rather than the document's own html: the body applies the stored
-  # image sizes on its way out, and it does that over the tree this has just
-  # taken the lead image out of.
-  #
-  # The whole figure goes, not just the image inside it: a <figure> exists to
-  # tie an image to its caption, so lifting the image above the article and
-  # leaving the figure behind strands the caption mid-body, describing a
-  # picture that is no longer beside it.
-  # The figure is found before the image is detached, because it is found
-  # through the image's own parent. Removing the figure takes the image with
-  # it; without one, the image goes on its own.
-  def remainder
-    (enclosing_figure || node)&.remove
-    body.scrubbed
-  end
-
   private
 
   attr_reader :body
 
-  # Memoised before #remainder detaches it, so #url answers the same either
-  # side of the removal and no caller has to know the order. `defined?` rather
-  # than `||=`, because a body with no hosted image is a legitimate nil and
-  # `||=` would walk the whole tree again on every one of the three calls a
-  # single reader render makes.
+  # `defined?` rather than `||=`, because a body with no hosted image is a
+  # legitimate nil and `||=` would walk the whole tree again on every one of
+  # the three readers that ask for it.
   def node
     return @_node if defined?(@_node)
 
     @_node = document.css("img").detect { |image| hosted?(image) }
   end
 
-  # Memoised the same way as #node, and for the same reason: #remainder
-  # detaches it, and #caption still has to answer afterwards.
+  # Memoised the same way as #node, and for the same reason: both #caption and
+  # the helpers behind it ask for it.
   #
   # Found through the ancestors rather than the image's own parent, because a
   # CMS links the image to its full-size version — `<figure><a><img></a>
@@ -125,12 +104,12 @@ class Newsletter::LeadImage
   end
 
   # A figure holding anything besides the lead image and a caption is the
-  # sender using it as a layout box. Taking that out would delete the rest of
-  # its contents from the article — not promoted, not captioned, just gone.
+  # sender using it as a layout box, so its caption describes the box rather
+  # than the picture and the image's own alt text is the better answer.
   #
   # Asked of the text rather than the element children, which skip text nodes:
-  # a sentence sitting loose beside the image is exactly the content worth
-  # keeping, and counting only elements would read it as an empty figure.
+  # a sentence sitting loose beside the image is exactly what makes it a box,
+  # and counting only elements would read it as an empty figure.
   def holds_only_the_lead?(figure)
     figure.css("img").length == 1 && prose_outside_caption(figure).blank?
   end
