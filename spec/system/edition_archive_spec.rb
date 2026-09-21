@@ -86,4 +86,51 @@ RSpec.describe "The archive of editions" do
 
     expect(page).to have_text("No editions yet")
   end
+
+  # The honesty the archive owes a reader: a morning that should have had an
+  # edition says so where the number goes, permanently, rather than leaving a
+  # hole that reads as a day nothing arrived on.
+  it "names a morning composition failed on" do
+    Edition::Gap.failed(Edition::Window.new(Time.zone.local(2026, 8, 15, 7)),
+      "the model declined")
+    sign_in_through_the_form
+
+    visit editions_path
+
+    expect(page).to have_text("No edition").and have_text("Saturday 15 August")
+  end
+
+  # Two kinds of row in one list, each drawn through its own template. Rails
+  # names the local after the partial, so a mixed collection is the only way
+  # to find out that both templates read the local they are actually handed.
+  it "files a failed morning among the editions by the day it covered" do
+    create(:edition, number: 1, published_on: Date.new(2026, 8, 14))
+    Edition::Gap.failed(Edition::Window.new(Time.zone.local(2026, 8, 15, 7)),
+      "the model declined")
+    create(:edition, number: 2, published_on: Date.new(2026, 8, 16))
+    sign_in_through_the_form
+
+    visit editions_path
+
+    expect(page.text).to match(/No\. 2.*No edition.*No\. 1/m)
+  end
+
+  it "does not offer a failed morning as something to open" do
+    Edition::Gap.failed(Edition::Window.new(Time.zone.local(2026, 8, 15, 7)),
+      "the model declined")
+    sign_in_through_the_form
+
+    visit editions_path
+
+    expect(page).to have_no_link("No edition")
+  end
+
+  it "leaves a morning nothing arrived on off the archive" do
+    Edition::Gap.empty(Edition::Window.new(Time.zone.local(2026, 8, 15, 7)))
+    sign_in_through_the_form
+
+    visit editions_path
+
+    expect(page).to have_text("No editions yet")
+  end
 end

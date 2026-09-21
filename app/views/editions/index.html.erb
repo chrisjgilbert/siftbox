@@ -19,16 +19,10 @@
       <span class="archive__order"><%= t(".order") %></span>
     </div>
 
-    <ol class="archive__list">
-      <% @archive.editions.each do |edition| %>
-        <li class="archive__row">
-          <%= link_to edition_path(edition), class: "archive__link" do %>
-            <span class="archive__number"><%= edition.number %></span>
-            <span class="archive__date"><%= edition.date %></span>
-          <% end %>
-        </li>
-      <% end %>
-    </ol>
+    <%# Editions and the mornings composition failed on, in one list. Each row
+        picks its own template, so no template asks which kind it is holding —
+        the same way the Subscriptions page draws its three. %>
+    <ol class="archive__list"><%= render @archive.rows %></ol>
   <% else %>
     <p class="archive__empty"><%= t(".empty") %></p>
   <% end %>

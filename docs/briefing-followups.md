@@ -500,6 +500,20 @@ were covering the removed code rather than passing vacuously over it.
   drift. Storage rationale belongs in the migration, behaviour rationale in
   the model.
 
+- **`Edition::Gap.record` reads before it writes.** `find_by` then `create!`
+  is check-then-act: two runs closing the same morning at the same instant
+  both find nothing and the second insert raises `RecordNotUnique` — out of a
+  `discard_on` handler, which takes the job down without recording the
+  failure it was called to record. That is the one thing the method's
+  idempotency exists to prevent. Not fixed because the only cure is a rescue
+  around the insert and there is no seam to test it through: the row has to
+  appear between the two statements, which needs either a second connection
+  or stubbing the object under test. Reachable only if two composition runs
+  overlap, which Solid Queue's unique index on `recurring_executions` already
+  makes unlikely — `Edition::CompositionJob` guards the *edition* insert
+  against the same race, so the asymmetry is deliberate rather than
+  overlooked.
+
 ## Considered and rejected
 
 - **Extracting `Newsletter::Confirmation`.** Two review agents disagreed on

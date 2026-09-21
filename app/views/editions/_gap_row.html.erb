@@ -1,0 +1,14 @@
+<%# One morning composition failed on. It keeps its place in the list
+    permanently and says so where the number goes — an edition missing with
+    nothing in its place is indistinguishable from a morning nothing arrived
+    on, and the reader has no way to tell those apart.
+
+    Not a link, and it wears the same shape as a row that is: the list reads
+    as one column of days either way, and the date drops to the body ink so a
+    reader scanning down can see there is nothing behind it. %>
+<li class="archive__row">
+  <div class="archive__link archive__link--absent">
+    <span class="archive__number"><%= gap_row.number %></span>
+    <span class="archive__date"><%= gap_row.date %></span>
+  </div>
+</li>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_20_064028) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_20_123356) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "message_checksum", null: false
@@ -89,6 +89,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_064028) do
     t.index ["edition_story_id", "newsletter_id"], name: "index_edition_citations_on_edition_story_id_and_newsletter_id", unique: true
     t.index ["newsletter_id"], name: "index_edition_citations_on_newsletter_id"
     t.check_constraint "(newsletter_id IS NOT NULL) + (blog_post_id IS NOT NULL) = 1", name: "edition_citations_name_one_source"
+  end
+
+  create_table "edition_gaps", force: :cascade do |t|
+    t.date "covered_on", null: false
+    t.datetime "created_at", null: false
+    t.text "detail", default: "", null: false
+    t.string "reason", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "window_ended_at", null: false
+    t.datetime "window_started_at", null: false
+    t.index ["covered_on"], name: "index_edition_gaps_on_covered_on", unique: true
+    t.index ["window_ended_at"], name: "index_edition_gaps_on_window_ended_at"
   end
 
   create_table "edition_stories", force: :cascade do |t|

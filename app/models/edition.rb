@@ -56,9 +56,15 @@ class Edition < ApplicationRecord
     includes(stories: [ { blog_posts: :blog }, :newsletters ])
   end
 
-  # The high-water mark the next window starts from, and nil before the first
-  # edition — the floor for that one is Edition::Window's to choose, because
-  # it is the thing that knows when composition started.
+  # The high-water mark the next window starts from, and nil before anything
+  # has been covered — the floor for that one is Edition::Window's to choose,
+  # because it is the thing that knows when composition started.
+  #
+  # Read across editions *and* gaps, because what it marks is the newest
+  # window that has been considered rather than the newest one that produced
+  # something. A morning that found nothing, or that failed, has been
+  # accounted for, and reconsidering it is what aims a multi-day window at a
+  # token ceiling it cannot clear. See Edition::Gap.
   #
   # maximum rather than latest.window_ended_at: newest_first sorts by the day
   # covered, so an edition backfilled for an earlier day would sit at the top
@@ -66,7 +72,7 @@ class Edition < ApplicationRecord
   # re-compose everything since. This is what index_editions_on_window_ended_at
   # is for.
   def self.watermark
-    maximum(:window_ended_at)
+    [ maximum(:window_ended_at), Edition::Gap.watermark ].compact.max
   end
 
   # Numbering follows composition order rather than the day covered. Under a

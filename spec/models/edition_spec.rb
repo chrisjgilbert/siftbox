@@ -61,7 +61,9 @@ RSpec.describe Edition do
     expect(Edition.next_number).to eq(10)
   end
 
-  it "has no watermark before the first edition" do
+  # Before any window has been covered at all — by an edition or by a gap.
+  # Edition::Window picks the floor for that one.
+  it "has no watermark before the first window closes" do
     expect(Edition.watermark).to be_nil
   end
 
@@ -70,6 +72,27 @@ RSpec.describe Edition do
     create(:edition, published_on: Date.new(2026, 8, 12), window_ended_at: Time.utc(2026, 8, 12, 6))
 
     expect(Edition.watermark).to eq(Time.utc(2026, 8, 12, 6))
+  end
+
+  # The watermark moves whenever a window has been *considered* rather than
+  # whenever one was published. A morning that found nothing, or that failed,
+  # has still been accounted for, and reconsidering it is what makes the next
+  # window bigger — which is how a quiet spell aims a multi-day window at a
+  # token ceiling it cannot clear.
+  it "takes the watermark from a gap when no edition covered a later window" do
+    morning = Time.zone.local(2026, 8, 15, 7)
+    create(:edition, window_started_at: morning - 2.days, window_ended_at: morning - 1.day)
+    Edition::Gap.empty(Edition::Window.new(morning))
+
+    expect(Edition.watermark).to eq(morning)
+  end
+
+  it "takes the watermark from an edition when no gap covered a later window" do
+    morning = Time.zone.local(2026, 8, 15, 7)
+    Edition::Gap.empty(Edition::Window.new(morning - 1.day))
+    create(:edition, window_started_at: morning - 1.day, window_ended_at: morning)
+
+    expect(Edition.watermark).to eq(morning)
   end
 
   it "orders newest first" do

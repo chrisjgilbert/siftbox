@@ -73,4 +73,19 @@ RSpec.describe Edition::Presenter do
 
     expect(Edition::Presenter.new(edition).to_param).to eq(edition.to_param)
   end
+
+  # What the archive sorts by, and which template draws the row. Both are
+  # answered by Edition::Gap::Presenter too, so one list can hold published
+  # mornings and the mornings composition failed on.
+  it "files the edition under the day it covered" do
+    edition = build_stubbed(:edition, published_on: Date.new(2026, 8, 11))
+
+    expect(Edition::Presenter.new(edition).covered_on).to eq(Date.new(2026, 8, 11))
+  end
+
+  it "draws through the template for a morning that produced an edition" do
+    edition = build_stubbed(:edition)
+
+    expect(Edition::Presenter.new(edition).to_partial_path).to eq("editions/row")
+  end
 end
