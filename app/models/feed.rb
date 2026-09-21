@@ -31,8 +31,15 @@ class Feed
     @_groups ||= numbered(grouped)
   end
 
+  # Everything the archive holds, not everything this page drew. The line it
+  # is printed in marks the end of the archive, and a last page of twelve
+  # under "12 items" would put a number on the archive that is off by every
+  # page before it.
+  #
+  # Two counts rather than one, because the archive is two tables. Asked for
+  # only when the end line is drawn, which is only on the last page.
   def item_count
-    items.length
+    @_item_count ||= Newsletter.content.count + Blog::Post.count
   end
 
   private

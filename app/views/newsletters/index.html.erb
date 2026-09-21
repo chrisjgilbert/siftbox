@@ -14,7 +14,19 @@
     </section>
   <% end %>
 
-  <% if @feed.groups.any? %>
+  <%# The way on, or the end. One slot, because they are the same thing said
+      at two points in the archive: what is below this row. The end note waits
+      until there is nothing below it — on a first page of many it would be a
+      full stop in the middle of a sentence — and the subscribe line goes with
+      it, since that is the note's other job and it only needs saying once. %>
+  <% if @feed.more? %>
+    <div class="feed__end">
+      <p class="feed__end-line">
+        <%= link_to t("newsletters.index.older"),
+              newsletters_path(@feed.last.to_query), class: "feed__older" %>
+      </p>
+    </div>
+  <% elsif @feed.groups.any? %>
     <div class="feed__end">
       <p class="feed__end-line">
         <%= t("newsletters.index.end_of_feed", count: @feed.item_count) %>

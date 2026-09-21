@@ -1075,6 +1075,19 @@ a {
   margin: 0;
 }
 
+/* The way down, standing in the slot the end-of-feed line takes once there is
+   nothing below. It inherits that block's mono furniture and takes only the
+   ink a link needs — the end note is something read, this is something
+   pressed, and that is the whole difference between them. */
+.feed__older {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.feed__older:hover {
+  text-decoration: underline;
+}
+
 .feed__empty {
   padding: 48px 0;
   font-size: 17px;

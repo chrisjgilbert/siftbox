@@ -25,7 +25,7 @@ class Feed::Cursor
   # a position that is not there is the first page. A 404 on an archive the
   # reader reached from their own history would be worse, and a page bounded
   # by a row that has gone would be worse still.
-  def self.from(kind, id)
+  def self.naming(kind, id)
     model = KINDS[kind.to_s]
     return unless model && id.to_s.match?(/\A\d+\z/)
 
