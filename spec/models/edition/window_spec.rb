@@ -330,6 +330,77 @@ RSpec.describe Edition::Window do
   # puts one post into two editions, exclusive at the top drops a post that
   # arrived while the model was writing out of every edition there will ever
   # be. Separate SQL from the mail clauses, so it needs its own examples.
+  # What silencing is for, at the one place it applies. Both kinds of source
+  # are filtered here and nowhere else: the originals archive and the pen
+  # keep showing muted mail, because a silence stops a source being reported
+  # on rather than arriving.
+  it "leaves out mail from a muted sender" do
+    published_through(yesterday_morning)
+    create(:newsletter_sender, sender_email: "peter@rubyweekly.com",
+      silenced_at: yesterday_morning)
+    create(:newsletter, sender_email: "peter@rubyweekly.com",
+      received_at: yesterday_morning + 2.hours)
+
+    expect(window.newsletters).to be_empty
+  end
+
+  it "covers mail from a sender nobody has muted" do
+    published_through(yesterday_morning)
+    create(:newsletter_sender, sender_email: "peter@rubyweekly.com",
+      silenced_at: yesterday_morning)
+    heard = create(:newsletter, sender_email: "matt@stratechery.com",
+      received_at: yesterday_morning + 2.hours)
+
+    expect(window.newsletters).to eq([ heard ])
+  end
+
+  # The released clause is a second query unioned with the first, so a
+  # silence has to be applied to both or a muted sender's confirmation walks
+  # in through the pen.
+  it "leaves out a muted sender's mail released out of the pen" do
+    published_through(yesterday_morning)
+    create(:newsletter_sender, sender_email: "peter@rubyweekly.com",
+      silenced_at: yesterday_morning)
+    create(:newsletter, sender_email: "peter@rubyweekly.com",
+      received_at: yesterday_morning - 3.days, held_at: yesterday_morning - 3.days,
+      released_at: yesterday_morning + 1.hour)
+
+    expect(window.newsletters).to be_empty
+  end
+
+  it "leaves out a post from a muted blog" do
+    published_through(yesterday_morning)
+    create(:blog_post, blog: create(:blog, silenced_at: yesterday_morning),
+      received_at: yesterday_morning + 2.hours)
+
+    expect(window.posts).to be_empty
+  end
+
+  it "covers a post from a blog nobody has muted" do
+    published_through(yesterday_morning)
+    create(:blog_post, blog: create(:blog, silenced_at: yesterday_morning),
+      received_at: yesterday_morning + 2.hours)
+    heard = create(:blog_post, received_at: yesterday_morning + 3.hours)
+
+    expect(window.posts).to eq([ heard ])
+  end
+
+  # A morning where the only sources that published are muted ones. The
+  # window has to read as empty, so the job records a gap and the watermark
+  # moves — without that the unmute sweeps the whole silence into one
+  # edition, which is the failure the gap work was written for.
+  it "is empty when everything that arrived came from a muted source" do
+    published_through(yesterday_morning)
+    create(:newsletter_sender, sender_email: "peter@rubyweekly.com",
+      silenced_at: yesterday_morning)
+    create(:newsletter, sender_email: "peter@rubyweekly.com",
+      received_at: yesterday_morning + 2.hours)
+    create(:blog_post, blog: create(:blog, silenced_at: yesterday_morning),
+      received_at: yesterday_morning + 2.hours)
+
+    expect(window).to be_empty
+  end
+
   it "leaves out a post first seen at the instant the last window closed" do
     published_through(yesterday_morning)
     create(:blog_post, received_at: yesterday_morning)

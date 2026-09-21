@@ -37,6 +37,31 @@ class Newsletter < ApplicationRecord
     )
   SQL
 
+  # Mail from an address the reader has muted. NOT EXISTS rather than a
+  # NOT IN subselect, and the difference is not stylistic: NOT IN against a
+  # set holding one NULL is never true, so a single roster row with no
+  # address would empty the window and the reader would get an edition about
+  # nothing. newsletter_senders.sender_email is NOT NULL, so that state
+  # cannot arise today — this is the form that does not depend on a
+  # constraint one migration away from being relaxed.
+  #
+  # A correlated subquery rather than a LEFT JOIN because the window's mail
+  # clause is already an .or of two conditions, and a join would have to
+  # survive both branches of it.
+  #
+  # COLLATE NOCASE said out loud rather than left to newsletter_senders'
+  # column. SQLite takes the collation from the left operand when neither
+  # side says, so the comparison works either way today — and silently stops
+  # working the day somebody writes the two sides the other way round. A
+  # silence a sender walks past by changing their own From header is not one.
+  NOT_FROM_A_SILENCED_SENDER = <<~SQL.squish
+    NOT EXISTS (
+      SELECT 1 FROM newsletter_senders
+      WHERE newsletter_senders.silenced_at IS NOT NULL
+      AND newsletter_senders.sender_email = newsletters.sender_email COLLATE NOCASE
+    )
+  SQL
+
   has_many_attached :inline_images
 
   # SQLite stops reading a string literal at a NUL, so one stray byte fails
@@ -83,6 +108,14 @@ class Newsletter < ApplicationRecord
 
   def self.first_from_sender
     where(EARLIEST_FROM_SENDER)
+  end
+
+  # Not applied inside .content, deliberately. The originals archive and the
+  # pen both read .content and both should keep showing muted mail: a silence
+  # stops a sender being reported on, not arriving. Only Edition::Window
+  # narrows to this.
+  def self.unsilenced
+    where(NOT_FROM_A_SILENCED_SENDER)
   end
 
   def self.without_lead_image

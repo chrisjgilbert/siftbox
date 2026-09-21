@@ -5,6 +5,18 @@ RSpec.describe Newsletter::Sender do
     expect(build(:newsletter_sender)).to validate_presence_of(:sender_email)
   end
 
+  # The column, not the validation, and the difference matters to the window.
+  # Newsletter.unsilenced asks whether a muted row matches the mail's address;
+  # written as a NOT IN, one row with no address would make that never true
+  # and empty the window — an edition about nothing. It is written as a NOT
+  # EXISTS, which has no such failure mode, and this constraint is why the
+  # state cannot arise in the first place.
+  it "refuses a row with no address even when validations are skipped" do
+    expect { Newsletter::Sender.insert({ sender_email: nil,
+      created_at: Time.current, updated_at: Time.current }) }
+      .to raise_error(ActiveRecord::NotNullViolation)
+  end
+
   it "is not silenced when it has never been muted" do
     sender = build_stubbed(:newsletter_sender, silenced_at: nil)
 

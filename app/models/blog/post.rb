@@ -74,6 +74,18 @@ class Blog::Post < ApplicationRecord
     select(CITATION_COLUMNS)
   end
 
+  # Posts from a blog the reader has not muted. A join rather than the
+  # correlated subquery Newsletter uses, because a post already belongs to
+  # its blog and the foreign key is right there — the mail side has no row to
+  # join to, which is the whole reason the two are written differently.
+  #
+  # Not folded into .oldest_first or into the association. The originals
+  # archive keeps showing a muted blog's posts: a silence stops a source
+  # being reported on, not arriving. Only Edition::Window narrows to this.
+  def self.unsilenced
+    joins(:blog).where(blogs: { silenced_at: nil })
+  end
+
   def self.for_feed
     select(FEED_COLUMNS)
   end

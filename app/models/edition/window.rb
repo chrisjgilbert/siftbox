@@ -7,6 +7,18 @@
 # never covered by anything; under a watermark a missed day leaves no gap
 # behind, it makes the next window bigger, and every newsletter belongs to
 # exactly one edition.
+#
+# This is also the one place a silence applies, for both kinds of source. The
+# originals archive and the pen keep showing a muted sender's mail and a muted
+# blog's posts, because muting stops a source being reported on rather than
+# arriving — so the narrowing belongs here and not in Newsletter.content or in
+# the blog's posts association.
+#
+# The watermark is what keeps an unmute from sweeping a backlog into one
+# edition: a morning whose only arrivals were muted reads as empty, the job
+# records an Edition::Gap, and the mark moves past it. Without that the mark
+# would sit still for the length of the silence and the unmute would hand the
+# editor everything since.
 class Edition::Window
   # How far the first window reaches when there is no edition to take a
   # watermark from. The archive holds weeks of mail from before editions
@@ -78,7 +90,7 @@ class Edition::Window
   # quotes each post under its blog's name, so without the preload a window of
   # six posts reads six blogs one at a time.
   def arrived_posts
-    Blog::Post
+    Blog::Post.unsilenced
       .where("received_at > :after AND received_at <= :through",
         after: started_at, through: ended_at)
       .includes(:blog).oldest_first.to_a
@@ -107,7 +119,7 @@ class Edition::Window
   # window's top, which is the next edition's watermark, so it is covered
   # tomorrow instead of twice.
   def arrived
-    Newsletter.content.where(
+    Newsletter.content.unsilenced.where(
       "received_at > :after AND received_at <= :through",
       after: started_at, through: ended_at
     )
@@ -126,7 +138,7 @@ class Edition::Window
   # already infers NOT NULL from the comparison and reaches the partial
   # index_newsletters_on_released_at without being told.
   def released
-    Newsletter.content.released.where(
+    Newsletter.content.unsilenced.released.where(
       "released_at > :after AND released_at <= :through",
       after: started_at, through: ended_at
     )
