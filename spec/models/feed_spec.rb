@@ -89,12 +89,65 @@ RSpec.describe Feed do
     expect(Feed.new.item_count).to eq(1)
   end
 
-  it "excludes newsletters older than the window the end-of-list copy claims" do
+  # The archive used to stop at seven days with no way past them, which is
+  # the one job the PRD gives it that it could not do. Past this week the
+  # groups are months, because "Earlier / This week" over mail from June is a
+  # heading that lies.
+  it "keeps a newsletter older than this week, under the month it arrived in" do
     travel_to Time.zone.parse("2026-08-06 18:00")
 
-    create(:newsletter, received_at: 8.days.ago)
+    create(:newsletter, received_at: Time.zone.parse("2026-06-14 09:00"))
 
-    expect(Feed.new.groups).to be_empty
+    expect(Feed.new.groups.map(&:label)).to eq([ "June" ])
+  end
+
+  it "puts the year under a month heading" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: Time.zone.parse("2026-06-14 09:00"))
+
+    expect(Feed.new.groups.first.sublabel).to eq("2026")
+  end
+
+  it "keeps the named groups above the months" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 2.hours.ago)
+    create(:newsletter, received_at: 3.days.ago)
+    create(:newsletter, received_at: Time.zone.parse("2026-06-14 09:00"))
+
+    expect(Feed.new.groups.map(&:label)).to eq([ "Today", "Earlier", "June" ])
+  end
+
+  it "runs the months newest first" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: Time.zone.parse("2026-05-14 09:00"))
+    create(:newsletter, received_at: Time.zone.parse("2026-07-14 09:00"))
+
+    expect(Feed.new.groups.map(&:label)).to eq([ "July", "May" ])
+  end
+
+  # Two Junes are two groups, or a year of archive collapses into twelve
+  # headings that each hold several.
+  it "keeps the same month in different years apart" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: Time.zone.parse("2025-06-14 09:00"))
+    create(:newsletter, received_at: Time.zone.parse("2026-06-14 09:00"))
+
+    expect(Feed.new.groups.map(&:sublabel)).to eq([ "2026", "2025" ])
+  end
+
+  it "numbers rows continuously across a month group" do
+    travel_to Time.zone.parse("2026-08-06 18:00")
+
+    create(:newsletter, received_at: 2.hours.ago)
+    create(:newsletter, received_at: Time.zone.parse("2026-06-14 09:00"))
+
+    numbers = Feed.new.groups.flat_map { |group| group.items.map(&:number) }
+
+    expect(numbers).to eq([ "01", "02" ])
   end
 
   it "puts a newsletter received at exactly midnight in one group only" do

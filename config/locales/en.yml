@@ -68,6 +68,8 @@ en:
     formats:
       edition_masthead: "%A %-d %B"
       feed_group: "%A %-d %B"
+      feed_month: "%B"
+      feed_year: "%Y"
   editions:
     index:
       count:
