@@ -14,14 +14,32 @@
     </section>
   <% end %>
 
-  <% if @feed.groups.any? %>
+  <%# The way on, or the end. One slot, because they are the same thing said
+      at two points in the archive: what is below this row. The end note waits
+      until there is nothing below it — on a first page of many it would be a
+      full stop in the middle of a sentence — and the subscribe line goes with
+      it, since that is the note's other job and it only needs saying once.
+
+      One wrapper, chosen contents. The count decides between the two and the
+      empty state, because it counts the archive rather than this page: a
+      cursor naming the last row draws no rows and is still the end of
+      something, and the empty state answers a different question to a reader
+      who has plainly pointed a subscription here already. %>
+  <% if @feed.item_count.positive? %>
     <div class="feed__end">
-      <p class="feed__end-line">
-        <%= t("newsletters.index.end_of_feed", count: @feed.item_count) %>
-      </p>
-      <p class="feed__end-line">
-        <%= t("newsletters.index.subscribe", address: inbound_address) %>
-      </p>
+      <% if @feed.more? %>
+        <p class="feed__end-line">
+          <%= link_to t("newsletters.index.older"),
+                newsletters_path(@feed.last.to_query), class: "feed__older" %>
+        </p>
+      <% else %>
+        <p class="feed__end-line">
+          <%= t("newsletters.index.end_of_feed", count: @feed.item_count) %>
+        </p>
+        <p class="feed__end-line">
+          <%= t("newsletters.index.subscribe", address: inbound_address) %>
+        </p>
+      <% end %>
     </div>
   <% else %>
     <p class="feed__empty">
