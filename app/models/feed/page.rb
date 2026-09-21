@@ -31,6 +31,9 @@ class Feed::Page
   # rows below this one in the order above.
   AFTER = "WHERE (received_at, kind, id) < (:received_at, :kind, :id)".freeze
 
+  # The other side of the same line, for counting what has already been shown.
+  ABOVE = "(received_at, kind, id) >= (:received_at, :kind, :id)".freeze
+
   def initialize(after: nil)
     @after = after
   end
@@ -38,8 +41,29 @@ class Feed::Page
   # Hydrated in one query per table off the ids the ordering came back with,
   # then put back in the order it gave. Two queries and a preload, whatever
   # the archive holds.
+  #
+  # filter_map rather than a lookup that insists: removing a blog takes its
+  # posts with it, and one doing so between the ordering and the hydration
+  # would otherwise be a 500 on the archive. A page one row short is the
+  # graceful answer to a row that stopped existing while it was being read.
   def items
-    @_items ||= ordering.map { |row| loaded.fetch([ row["kind"], row["id"] ]) }
+    @_items ||= ordering.filter_map { |row| loaded[[ row["kind"], row["id"] ]] }
+  end
+
+  # How many rows sit above this page, so the feed can go on numbering where
+  # the page above it stopped. Counted rather than carried in the address: a
+  # cursor names a row instead of a position precisely so that mail arriving
+  # mid-read cannot shift it, and an offset travelling beside it would bring
+  # back the problem the cursor exists to avoid.
+  #
+  # At or above, because the cursor is the last row of the page above — so
+  # the count includes it, which is exactly how many rows have been shown.
+  def preceding
+    return 0 unless after
+
+    ActiveRecord::Base.connection.select_value(
+      ActiveRecord::Base.sanitize_sql_array([ tally, bindings ])
+    )
   end
 
   # Asked for one row more than a page holds, so this is answered by what the
@@ -74,6 +98,10 @@ class Feed::Page
       SELECT kind, id, received_at FROM (#{arms}) #{bound}
       ORDER BY #{ORDER} LIMIT #{SIZE + 1}
     SQL
+  end
+
+  def tally
+    "SELECT COUNT(*) FROM (#{arms}) WHERE #{ABOVE}"
   end
 
   def bound

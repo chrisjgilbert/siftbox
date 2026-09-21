@@ -73,8 +73,13 @@ class Feed
   # Rows are numbered continuously across the whole feed rather than
   # restarting per group, so the feed reads as an index. The groups are
   # disjoint and already in order, which makes a running offset enough.
+  # Starting where the page above stopped rather than at zero, because the
+  # numbers are an index of the archive rather than of the page. Restarted per
+  # page, page two repeats page one's numbering line for line — and Feed::Row
+  # reads position 1 as the newest item there is, so every page opened with a
+  # full-width hero.
   def numbered(found)
-    offset = 0
+    offset = page.preceding
 
     found.map do |name, items|
       group(name, items, offset).tap { offset += items.length }

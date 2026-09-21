@@ -145,6 +145,19 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("End of feed — #{Feed::Page::SIZE + 1} items")
   end
 
+  # Below the last row of a non-empty archive. "Nothing yet. Point a
+  # subscription at…" is the answer to a different question, and a reader who
+  # has just paged to the end has plainly pointed one already.
+  it "says where the archive ends rather than that it is empty, below its last row" do
+    sign_in
+    newsletter = create(:newsletter, subject: "Only one")
+
+    get newsletters_path(after_kind: "Newsletter", after_id: newsletter.id)
+
+    expect(response.body).to include("End of feed")
+    expect(response.body).not_to include("Nothing yet")
+  end
+
   # An address the reader edited, or a link to a row since removed. The first
   # page is the honest answer, rather than a 404 on an archive.
   it "answers with the first page for a cursor naming a row that has gone" do

@@ -102,6 +102,34 @@ RSpec.describe Feed::Page do
     expect(Feed::Page.new.last).to be_nil
   end
 
+  # What the feed numbers from. A cursor names a row rather than a position,
+  # so the count of what is above it is the one thing paging cannot carry in
+  # the address and has to ask the database for.
+  it "counts nothing above the first page" do
+    fill(3)
+
+    expect(Feed::Page.new.preceding).to be_zero
+  end
+
+  it "counts the rows above the page below" do
+    fill(Feed::Page::SIZE + 5)
+
+    expect(Feed::Page.new(after: Feed::Page.new.last).preceding).to eq(Feed::Page::SIZE)
+  end
+
+  # A blog removed between the ordering and the hydration takes its posts
+  # with it. A short page is the graceful answer; looking the row up by a key
+  # that has gone would be a 500 on an archive.
+  it "skips a row removed while the page was being read" do
+    create_list(:blog_post, 3)
+    page = Feed::Page.new
+    page.more?
+
+    Blog::Post.last.destroy
+
+    expect(page.items.length).to eq(2)
+  end
+
   # Mail landing while the reader is paging belongs above the cursor, so it
   # cannot push a row they have already seen onto the next page. That is the
   # difference between a cursor and an offset.

@@ -26,7 +26,11 @@
               newsletters_path(@feed.last.to_query), class: "feed__older" %>
       </p>
     </div>
-  <% elsif @feed.groups.any? %>
+  <%# On what the archive holds rather than on what this page drew. A cursor
+      naming the last row of the archive draws no rows and is still the end of
+      something — "Nothing yet. Point a subscription at…" answers a different
+      question, and a reader who has paged this far has plainly pointed one. %>
+  <% elsif @feed.item_count.positive? %>
     <div class="feed__end">
       <p class="feed__end-line">
         <%= t("newsletters.index.end_of_feed", count: @feed.item_count) %>

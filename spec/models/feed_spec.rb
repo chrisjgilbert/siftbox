@@ -213,6 +213,36 @@ RSpec.describe Feed do
     expect(first).to have_attributes(number: "01", subject: "Later one")
   end
 
+  def fill(count)
+    Array.new(count) do |n|
+      create(:newsletter, subject: "Issue #{n}", received_at: n.hours.ago,
+        lead_image_url: "https://cdn.example/hero.png")
+    end
+  end
+
+  # Continuously across the whole archive, not merely across the page. The
+  # numbers are an index, and an index that restarts at 01 on every page is
+  # not one — page two would repeat page one's numbering line for line.
+  it "numbers the page below where the one above it stopped" do
+    fill(Feed::Page::SIZE + 5)
+
+    second = Feed.new(after: Feed.new.last)
+
+    expect(second.groups.flat_map { |group| group.items.map(&:number) }.first)
+      .to eq((Feed::Page::SIZE + 1).to_s)
+  end
+
+  # The hero is the newest item in the archive, which is a fact about the
+  # archive rather than about a page. Numbered per page, every page opened
+  # with one.
+  it "leads only the first page with a hero" do
+    fill(Feed::Page::SIZE + 5)
+
+    second = Feed.new(after: Feed.new.last)
+
+    expect(second.groups.first.items.first.to_partial_path).to eq("newsletters/row")
+  end
+
   it "counts the items in the feed for the end-of-feed line" do
     travel_to Time.zone.parse("2026-08-06 18:00")
 

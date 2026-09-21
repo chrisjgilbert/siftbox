@@ -6,7 +6,8 @@
 # two tables and a batch send lands several rows on one instant — newsletter 5
 # and post 5 are not comparable, so without it tied rows swap places between
 # page loads and a reader paging back sees one twice and another not at all.
-# Feed#ordering keeps the same three keys for the same reason.
+# Feed::Page::ORDER sorts on the same three keys for the same reason, and its
+# specs page through a batch that landed on one instant to prove it.
 #
 # An offset would have been simpler and is wrong here: mail arriving while the
 # reader is paging shifts every row down by one, so page two re-shows the
@@ -29,7 +30,11 @@ class Feed::Cursor
     model = KINDS[kind.to_s]
     return unless model && id.to_s.match?(/\A\d+\z/)
 
-    row = model.find_by(id: id)
+    # The two ordering keys and nothing else. Read whole, this loads a
+    # body_html running to hundreds of kilobytes on every paged request, to
+    # take three fields off it — the same discipline Newsletter::FEED_COLUMNS
+    # keeps for the rows the page actually prints.
+    row = model.select(:id, :received_at).find_by(id: id)
     return unless row
 
     new(row)
