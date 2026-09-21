@@ -89,6 +89,97 @@ RSpec.describe "Newsletters" do
     expect(response.body).to include("End of feed — 2 items")
   end
 
+  def fill(count)
+    Array.new(count) { |n| create(:newsletter, subject: "Issue #{n}", received_at: n.hours.ago) }
+  end
+
+  it "offers a way back when the archive holds more than a page" do
+    sign_in
+    fill(Feed::Page::SIZE + 1)
+
+    get newsletters_path
+
+    expect(response.body).to include("Older")
+  end
+
+  it "offers no way back when the archive fits on one page" do
+    sign_in
+    fill(Feed::Page::SIZE)
+
+    get newsletters_path
+
+    expect(response.body).not_to include("Older")
+  end
+
+  it "carries on below the row the way back names" do
+    sign_in
+    issues = fill(Feed::Page::SIZE + 1)
+
+    get newsletters_path(after_kind: "Newsletter", after_id: issues[Feed::Page::SIZE - 1].id)
+
+    expect(response.body).to include(issues.last.subject)
+    expect(response.body).not_to include(issues.first.subject)
+  end
+
+  # The end note marks the end of the archive, so it waits until there is
+  # nothing below. On a first page of many it would be a full stop in the
+  # middle of a sentence.
+  it "holds the end note back while there is another page" do
+    sign_in
+    fill(Feed::Page::SIZE + 1)
+
+    get newsletters_path
+
+    expect(response.body).not_to include("End of feed")
+  end
+
+  # Everything the archive holds, not everything this page drew. A last page
+  # of twelve under a line reading "12 items" would put a number on the
+  # archive that is off by every page before it.
+  it "counts the whole archive at the end of the last page" do
+    sign_in
+    issues = fill(Feed::Page::SIZE + 1)
+
+    get newsletters_path(after_kind: "Newsletter", after_id: issues[Feed::Page::SIZE - 1].id)
+
+    expect(response.body).to include("End of feed — #{Feed::Page::SIZE + 1} items")
+  end
+
+  # Below the last row of a non-empty archive. "Nothing yet. Point a
+  # subscription at…" is the answer to a different question, and a reader who
+  # has just paged to the end has plainly pointed one already.
+  it "says where the archive ends rather than that it is empty, below its last row" do
+    sign_in
+    newsletter = create(:newsletter, subject: "Only one")
+
+    get newsletters_path(after_kind: "Newsletter", after_id: newsletter.id)
+
+    expect(response.body).to include("End of feed")
+    expect(response.body).not_to include("Nothing yet")
+  end
+
+  # An address the reader edited, or a link to a row since removed. The first
+  # page is the honest answer, rather than a 404 on an archive.
+  it "answers with the first page for a cursor naming a row that has gone" do
+    sign_in
+    create(:newsletter, subject: "Still here")
+
+    get newsletters_path(after_kind: "Newsletter", after_id: 0)
+
+    expect(response.body).to include("Still here")
+  end
+
+  # The kind names a class the cursor then loads from, so it is matched
+  # against the two the archive holds and nothing else.
+  it "ignores a cursor naming a kind the archive does not hold" do
+    sign_in
+    create(:newsletter, subject: "Still here")
+
+    get newsletters_path(after_kind: "User", after_id: 1)
+
+    expect(response.body).to include("Still here")
+  end
+
   # With nothing to show there is no end-of-feed note, so this is the only
   # place left that says where to point a subscription.
   it "tells a reader with an empty feed where to point a subscription" do
