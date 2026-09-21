@@ -96,13 +96,21 @@ class Edition::Voice
 
   # Most specific first, and the split is the whole point of reading the status
   # here: a 429 today is audio tomorrow, and a 401 today is a 401 forever.
+  # #empty? rather than #blank?, which looks like the same question and is not
+  # at this size. Active Support's is `empty? || BLANK_RE.match?(self)`, and
+  # matching an ASCII regex against a megabytes-long ASCII-8BIT body full of
+  # high bytes raises Encoding::CompatibilityError, gets rescued inside Active
+  # Support, and scans the whole body a second time — twice over every
+  # successful edition, to answer a question #empty? answers in constant time.
   def audio_from(response)
     raise Unavailable, "the voice could not answer: #{response.code}" if waiting_helps?(response)
     raise Rejected, "the voice refused the request: #{response.code}" unless response.is_a?(Net::HTTPOK)
     raise Rejected, "the voice answered #{content_type(response)} rather than audio" unless audio?(response)
-    raise Unavailable, "the voice answered no audio at all" if response.body.blank?
 
-    response.body
+    audio = response.body.to_s
+    raise Unavailable, "the voice answered no audio at all" if audio.empty?
+
+    audio
   end
 
   def waiting_helps?(response)
@@ -126,8 +134,17 @@ class Edition::Voice
     end
   end
 
+  # The voice id is escaped rather than interpolated raw. It comes from the
+  # environment and gets pasted in by hand, so it arrives with a trailing space
+  # often enough to matter — and a space makes URI() raise
+  # URI::InvalidURIError, which is not one of FAILURES and is neither
+  # Unavailable nor Rejected, so it would leave the request breaking off
+  # somewhere nothing here describes. A value carrying a slash or a question
+  # mark is worse than that: it does not raise, it quietly rewrites the path or
+  # the query and posts to an endpoint nobody meant. Escaped, both become an
+  # ordinary 404 from the vendor, which is a Rejected that says so.
   def uri
-    @_uri ||= URI("#{ENDPOINT}/#{voice_id}?output_format=#{FORMAT}")
+    @_uri ||= URI("#{ENDPOINT}/#{ERB::Util.url_encode(voice_id)}?output_format=#{FORMAT}")
   end
 
   # Both variables are read here rather than at class load, for the reason

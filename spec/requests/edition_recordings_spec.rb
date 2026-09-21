@@ -67,6 +67,47 @@ RSpec.describe "Edition recordings" do
 
       expect(response).to redirect_to(edition_url(edition))
     end
+
+    it "spends nothing on a second ask for the same edition" do
+      sign_in
+      edition = create(:edition)
+      post edition_recording_path(edition)
+
+      expect { post edition_recording_path(edition) }
+        .not_to have_enqueued_job(Edition::RecordingJob)
+    end
+
+    # Edition.find typecasts, so "7abc" finds edition 7 and would otherwise be
+    # echoed straight back into the Location header.
+    it "sends the reader to the edition's canonical address" do
+      sign_in
+      edition = create(:edition)
+
+      post "/editions/#{edition.id}abc/recording"
+
+      expect(response).to redirect_to(edition_url(edition))
+    end
+
+    # The one create in this app that spends money per request. Every other one
+    # is limited, and until this it was not.
+    it "turns away a reader recording one edition after another" do
+      sign_in
+      editions = Array.new(6) { create(:edition) }
+
+      editions.each { |edition| post edition_recording_path(edition) }
+
+      expect(Edition::Recording.count).to eq(5)
+    end
+
+    it "says why it turned them away" do
+      sign_in
+      editions = Array.new(6) { create(:edition) }
+
+      editions.each { |edition| post edition_recording_path(edition) }
+
+      expect(flash[:alert])
+        .to eq("That is a lot of editions to record at once. Try again in a minute.")
+    end
   end
 
   describe "playing a recording" do
@@ -178,6 +219,38 @@ RSpec.describe "Edition recordings" do
         headers: { "Range" => "bytes=99-200" }
 
       expect(response).to have_http_status(:range_not_satisfiable)
+    end
+
+    # Without the real length on the refusal a player holding a stale duration
+    # has nothing to correct itself with, and gives up rather than re-asking.
+    it "says how long the file really is when it refuses a range" do
+      sign_in
+
+      get edition_recording_path(edition_holding_audio(bytes: "0123456789")),
+        headers: { "Range" => "bytes=99-200" }
+
+      expect(response.headers["Content-Range"]).to eq("bytes */10")
+    end
+
+    # Answering 416 to a range that could be satisfied leaves a player with no
+    # audio at all. Ignoring the header and sending the whole file is what the
+    # spec allows and what every client accepts.
+    it "sends the whole file for a multipart range no player asks for" do
+      sign_in
+
+      get edition_recording_path(edition_holding_audio(bytes: "0123456789")),
+        headers: { "Range" => "bytes=0-1,4-5" }
+
+      expect(response.body).to eq("0123456789")
+    end
+
+    it "sends the whole file for a header that is not a byte range at all" do
+      sign_in
+
+      get edition_recording_path(edition_holding_audio(bytes: "0123456789")),
+        headers: { "Range" => "items=0-1" }
+
+      expect(response.body).to eq("0123456789")
     end
   end
 end

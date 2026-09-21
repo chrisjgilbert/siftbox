@@ -133,15 +133,35 @@ RSpec.describe Edition::Voice do
     end
   end
 
+  # A voice id is pasted in by hand, so it arrives with a trailing space often
+  # enough to matter. Unescaped it makes URI() raise, which is none of this
+  # class's errors; escaped it is an ordinary 404 that says what is wrong.
+  it "escapes a voice id rather than letting it rewrite the address" do
+    with_a_voice do
+      ENV["ELEVENLABS_VOICE_ID"] = "a voice"
+      stub_request(:post, %r{/v1/text-to-speech/a%20voice})
+        .to_return(status: 404, headers: { "Content-Type" => "application/json" })
+
+      expect { Edition::Voice.new("Anything.").speak }
+        .to raise_error(Edition::Voice::Rejected)
+    end
+  end
+
   # Read where it is used rather than at class load, so a deploy without it
   # fails on the name of the thing missing rather than at boot.
+  #
+  # The key is deleted rather than assumed absent: developers are told to keep
+  # it in the environment for bin/rails "edition:record", so without this the
+  # example passes on CI and fails for exactly the people working on this.
   it "fails on the name of the missing variable when the key is not set" do
+    key = ENV.delete("ELEVENLABS_API_KEY")
     voice = ENV["ELEVENLABS_VOICE_ID"]
     ENV["ELEVENLABS_VOICE_ID"] = VoiceServing::VOICE_ID
 
     expect { Edition::Voice.new("Anything.").speak }
       .to raise_error(KeyError, /ELEVENLABS_API_KEY/)
   ensure
+    ENV["ELEVENLABS_API_KEY"] = key
     ENV["ELEVENLABS_VOICE_ID"] = voice
   end
 end

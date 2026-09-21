@@ -10,11 +10,27 @@
 # They are read as three questions the page asks in order: is it ready, did it
 # fail, or is it still being made.
 class Edition::Recording < ApplicationRecord
-  # What the vendor sends and what the controller serves. Held here rather than
-  # on Edition::Voice because it is a property of the stored blob: the thing
-  # that writes it and the thing that serves it have to agree, and only one of
-  # them talks to a vendor.
-  AUDIO_TYPE = "audio/mpeg".freeze
+  # What the vendor sends and what the controller serves, read off the voice
+  # rather than spelled again here. The two have to agree — the voice checks
+  # what came back and this stamps what is stored — and two literals that must
+  # match is a pair that can drift: changing FORMAT to an Opus variant and
+  # only the voice's own constant would leave a blob labelled as MP3, served
+  # inline as MP3, and decodable by nothing.
+  AUDIO_TYPE = Edition::Voice::CONTENT_TYPE
+
+  # How long a recording may sit unfinished before the page stops calling it
+  # pending and offers the button again.
+  #
+  # Without a bound this state has no way out. #pending? is "neither ready nor
+  # failed", which is every state nothing stamped: a worker killed mid-job, a
+  # queue that is not running, a purged blob leaving completed_at behind. The
+  # job now stamps a failure whatever goes wrong, but it cannot stamp one if it
+  # never runs, so the clock is what makes the page recover on its own.
+  #
+  # Three attempts thirty seconds apart plus synthesis and the queue's own
+  # polling is under two minutes, so five leaves room for a slow morning
+  # without leaving a reader in front of a line that will never change.
+  STALE_AFTER = 5.minutes
 
   # Deliberately not touched, for the reason Edition::Story gives: an edition
   # is written once at composition and immutable after, and a recording made
@@ -37,29 +53,54 @@ class Edition::Recording < ApplicationRecord
   # the request, and what asking for a recording involves is this class's to
   # know.
   #
-  # Two taps in the same second — which a button with no JavaScript disabling it
-  # invites, especially on a phone — both read an empty table, both pass the
-  # uniqueness validation against it, and the second insert fails on the index.
-  # The loser has nothing left to do: a recording is already being made and a
-  # job is already going to make it, so it answers with the row that won rather
-  # than with a 500. Recovered rather than discarded — the caller still gets a
-  # recording, which is what it asked for.
+  # A reader has asked to hear this edition, which is not the same as a reader
+  # having tapped a button: a double tap on a phone, a back button, a retried
+  # Turbo submission and a stale tab all arrive here, and each synthesis is a
+  # paid request. So anything already in hand is answered with rather than
+  # asked for again — a recording being made will arrive on its own, and one
+  # already made is what the reader wanted.
+  #
+  # What does start a job: no recording at all, one that failed, and one that
+  # has been pending longer than STALE_AFTER, which is the worker having died
+  # with the row still saying it was working.
+  #
+  # The rescue is the backstop under the index for two callers arriving in the
+  # same instant, where both find no row and both pass the uniqueness
+  # validation before either inserts. The loser sees RecordInvalid if the
+  # winner committed before its own validation read the table and
+  # RecordNotUnique if it did not, so both are caught — and re-raised unless a
+  # row really is there now, because a validation failing for any other reason
+  # is a bug rather than a race.
   def self.start(edition)
     recording = find_or_initialize_by(edition: edition)
+    return recording if recording.ready? || recording.pending?
+
     recording.update!(requested_at: Time.current, failed_at: nil)
     Edition::RecordingJob.perform_later(recording)
 
     recording
-  rescue ActiveRecord::RecordNotUnique
-    find_by!(edition: edition)
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+    won = find_by(edition: edition)
+    raise if won.nil?
+
+    won
   end
 
-  # Both stamps written in one update: a retry that works has to clear the
-  # failure as well as record the success, or the page would draw a player and
-  # offer to make it again underneath.
+  # One transaction over the two writes, per .claude/rules/database.md. They
+  # are two commits otherwise — Active Storage saves the attachment against an
+  # already-persisted record the moment it is attached — so a failure between
+  # them would leave audio stored and paid for behind a row that never says it
+  # is ready, which is the stuck state STALE_AFTER exists to end and no reason
+  # to enter one.
+  #
+  # Both stamps in one update: a retry that works has to clear the failure as
+  # well as record the success, or the page would draw a player and offer to
+  # make it again underneath.
   def store(bytes, voice:)
-    audio.attach(io: StringIO.new(bytes), filename: filename, content_type: AUDIO_TYPE)
-    update!(voice: voice, completed_at: Time.current, failed_at: nil)
+    transaction do
+      audio.attach(io: StringIO.new(bytes), filename: filename, content_type: AUDIO_TYPE)
+      update!(voice: voice, completed_at: Time.current, failed_at: nil)
+    end
   end
 
   def abandon
@@ -77,8 +118,18 @@ class Edition::Recording < ApplicationRecord
     failed_at.present?
   end
 
+  # Bounded by the clock rather than defined as whatever is left over. A
+  # recording is pending while it was asked for recently and nothing has come
+  # back; past STALE_AFTER the page stops waiting and offers the button again,
+  # which is the only way out of a job that died before it could stamp
+  # anything. requested_at is what the migration comment said it was for.
+  #
+  # Nil-safe on requested_at because .start asks this of a record it has only
+  # just built, before there is a moment to compare.
   def pending?
-    !ready? && !failed?
+    return false if ready? || failed?
+
+    requested_at.present? && requested_at > STALE_AFTER.ago
   end
 
   private

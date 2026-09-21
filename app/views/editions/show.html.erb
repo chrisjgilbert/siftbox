@@ -15,8 +15,17 @@
   <%# Above the first section, because a reader who came to listen rather than
       to read should not have to scroll past the lead to find the button. Inside
       the edition rather than in the band above it, because it is the edition
-      and not chrome about it. %>
-  <%= render "editions/recording", recording: @edition.recording %>
+      and not chrome about it.
+
+      The wrapper is here rather than in the partial because it has to outlive
+      what it holds: the recording job writes into it with a Turbo update, so
+      this element stays put while the button becomes a line and the line
+      becomes a player. aria-live is what makes that change reach somebody who
+      is not watching the screen, and it only works on a region that is not
+      itself being replaced. %>
+  <div class="listen" id="<%= @edition.recording.frame %>" aria-live="polite">
+    <%= render "editions/recording", recording: @edition.recording %>
+  </div>
 
   <% @edition.sections.each do |section| %>
     <%= render "editions/section", section: section %>

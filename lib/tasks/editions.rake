@@ -211,7 +211,8 @@ module Reading
     voice = Edition::Voice.new(Edition::Script.new(edition).text)
     puts "Reading no. #{edition.number} of #{edition.published_on} in #{voice.name}."
 
-    puts "Written to #{written(edition, voice.speak)}. Listen to it before deciding anything."
+    written = written(edition, voice.speak, voice.name)
+    puts "Written to #{written}. Listen to it before deciding anything."
   end
 
   # The latest by default, which is the one a voice change is normally being
@@ -222,12 +223,15 @@ module Reading
     Edition.find_by(published_on: Date.parse(date))
   end
 
-  # Named by the edition and the voice, so two voices over one edition sit side
-  # by side rather than one overwriting the other — which is the comparison this
-  # task exists to make.
-  def self.written(edition, bytes)
+  # Named by the edition and the voice that read it, so two voices over one
+  # edition sit side by side rather than one overwriting the other — which is
+  # the comparison this task exists to make. The voice's own name and not
+  # Edition::Voice::MODEL: the model is a frozen constant that cannot differ
+  # between two runs, and the voice id, which is read from the environment, is
+  # the thing that does.
+  def self.written(edition, bytes, voice)
     FileUtils.mkdir_p(DIRECTORY)
-    path = File.join(DIRECTORY, "edition-#{edition.number}-#{Edition::Voice::MODEL}.mp3")
+    path = File.join(DIRECTORY, "edition-#{edition.number}-#{voice.parameterize}.mp3")
     File.binwrite(path, bytes)
 
     path

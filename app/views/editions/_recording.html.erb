@@ -1,5 +1,16 @@
-<%# The edition in the other medium: a button that asks for the audio, a line
-    while it is being made, and the player once there is something to play.
+<%# What the listen region holds: a button that asks for the audio, a line
+    while it is being made, or the player once there is something to play.
+
+    The region itself is in editions/show, not here, and that is deliberate.
+    The job writes into this partial's output with a Turbo update rather than
+    replacing the element around it, so the live region stays put across all
+    three states — which is what lets a screen reader announce the player
+    arriving instead of the change happening silently.
+
+    The subscription lives in the preparing branch alone. It is the only state
+    an update can arrive in, and rendered unconditionally it would open a cable
+    connection on every edition anybody reads, polling the cable database twice
+    a second, for a page where nothing will ever be broadcast.
 
     The element is the browser's own <audio controls> and not a player of this
     app's making, which is a deliberate and temporary departure from
@@ -13,15 +24,13 @@
 
     preload="none" so an edition nobody plays costs no bytes, and so the range
     request that starts playback happens when the reader asks for it. %>
-<div class="listen" id="<%= recording.frame %>">
+<% if recording.ready? %>
+  <audio class="listen__player" controls preload="none"
+    src="<%= recording.path %>" aria-label="<%= recording.label %>"></audio>
+<% elsif recording.preparing? %>
   <%= turbo_stream_from recording.channel %>
 
-  <% if recording.ready? %>
-    <audio class="listen__player" controls preload="none"
-      src="<%= recording.path %>" aria-label="<%= recording.label %>"></audio>
-  <% elsif recording.preparing? %>
-    <p class="listen__preparing"><%= recording.preparing_line %></p>
-  <% else %>
-    <%= button_to recording.invitation, recording.path, class: "listen__button" %>
-  <% end %>
-</div>
+  <p class="listen__preparing"><%= recording.preparing_line %></p>
+<% else %>
+  <%= button_to recording.invitation, recording.path, class: "listen__button" %>
+<% end %>

@@ -100,6 +100,65 @@ RSpec.describe Edition::RecordingJob do
     end
   end
 
+  # The failure nobody planned for, which on a fresh deployment is the likeliest
+  # of the lot: neither variable is set, so Edition::Voice raises KeyError on
+  # the way to building a request. It is neither Unavailable nor Rejected, so
+  # without a catch-all nothing stamps the row and the page draws "Preparing
+  # the audio" for ever, with no button to ask again.
+  it "marks the recording failed when something nobody planned for goes wrong" do
+    recording = create(:edition_recording, edition: an_edition_of_one_story)
+
+    suppress(KeyError) { Edition::RecordingJob.perform_now(recording) }
+
+    expect(recording.reload).to be_failed
+  end
+
+  # Stamped and still raised. The stamp is for the reader, who gets the button
+  # back; the raise is for whoever deploys, who gets a failed job rather than a
+  # silent one.
+  it "still fails the job when something nobody planned for goes wrong" do
+    recording = create(:edition_recording, edition: an_edition_of_one_story)
+
+    expect { Edition::RecordingJob.perform_now(recording) }.to raise_error(KeyError)
+  end
+
+  # The catch-all must not swallow the one failure that is worth waiting for,
+  # or the first rate limit would end the attempt instead of pausing it.
+  it "still tries again when the voice is briefly unavailable" do
+    with_a_voice do
+      refusing_to_speak(status: 429)
+      recording = create(:edition_recording, edition: an_edition_of_one_story)
+
+      Edition::RecordingJob.perform_now(recording)
+
+      expect(recording.reload).not_to be_failed
+    end
+  end
+
+  describe "telling the page" do
+    it "announces on the edition's own channel once the audio is ready" do
+      with_a_voice do
+        speaking
+        edition = an_edition_of_one_story
+        recording = create(:edition_recording, edition: edition)
+
+        expect { Edition::RecordingJob.perform_now(recording) }
+          .to have_broadcasted_to("edition_#{edition.id}_recording")
+      end
+    end
+
+    it "announces a failure too, so the preparing line is replaced" do
+      with_a_voice do
+        refusing_to_speak(status: 401)
+        edition = an_edition_of_one_story
+        recording = create(:edition_recording, edition: edition)
+
+        expect { Edition::RecordingJob.perform_now(recording) }
+          .to have_broadcasted_to("edition_#{edition.id}_recording")
+      end
+    end
+  end
+
   # An edition destroyed while its recording was being made. There is nothing
   # left to record and nothing waiting will bring it back.
   it "gives up on a recording that has gone" do

@@ -84,6 +84,8 @@ en:
       play: Play edition
       preparing: Preparing the audio. It appears here when ready, or reload.
       retry: Try preparing the audio again
+      too_many: That is a lot of editions to record at once. Try again in a
+        minute.
     script:
       masthead: Edition %{number}, %{date}.
     sections:

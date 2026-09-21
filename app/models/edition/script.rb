@@ -50,10 +50,12 @@ class Edition::Script
     I18n.t("editions.script.masthead", number: edition.number, date: date)
   end
 
-  # The day covered, in the same format the masthead prints, because an
-  # edition composed late is still the earlier day's edition.
+  # Asked of the presenter rather than formatted again here. It is the same
+  # day in the same format the masthead prints, and a second call to I18n.l
+  # would be a third owner of that format — the thing the class comment above
+  # cites docs/briefing-followups.md about.
   def date
-    I18n.l(edition.published_on, format: :edition_masthead)
+    presenter.date
   end
 
   def spoken_sections

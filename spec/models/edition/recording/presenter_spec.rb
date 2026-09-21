@@ -80,4 +80,23 @@ RSpec.describe Edition::Recording::Presenter do
     expect(Edition::Recording::Presenter.new(edition).channel)
       .to eq("edition_#{edition.id}_recording")
   end
+
+  # The element the job writes into, which is also the page's live region. The
+  # two have to name the same thing or the broadcast lands nowhere and the
+  # preparing line never changes — and nothing else would notice.
+  it "names the element the page keeps the recording in" do
+    expect(Edition::Recording::Presenter.new(create(:edition)).frame)
+      .to eq("edition_recording")
+  end
+
+  # A bare <audio> announces itself as "audio" and nothing else.
+  it "gives the player an accessible name" do
+    expect(Edition::Recording::Presenter.new(create(:edition)).label)
+      .to eq("Listen to this edition")
+  end
+
+  it "says what is happening while the audio is being made" do
+    expect(Edition::Recording::Presenter.new(create(:edition)).preparing_line)
+      .to eq("Preparing the audio. It appears here when ready, or reload.")
+  end
 end
