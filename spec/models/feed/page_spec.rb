@@ -166,6 +166,23 @@ RSpec.describe Feed::Page do
     expect(Feed::Page.new.items).to eq([ released ])
   end
 
+  # Muting stops a source reaching an edition, not arriving — so the archive
+  # keeps showing it. The two features meet here and nowhere else, and the
+  # tempting mistake is to narrow this page the way Edition::Window is
+  # narrowed.
+  it "holds mail from a muted sender" do
+    create(:newsletter_sender, sender_email: "peter@rubyweekly.com", silenced_at: 1.day.ago)
+    muted = create(:newsletter, sender_email: "peter@rubyweekly.com")
+
+    expect(Feed::Page.new.items).to eq([ muted ])
+  end
+
+  it "holds posts from a muted blog" do
+    muted = create(:blog_post, blog: create(:blog, silenced_at: 1.day.ago))
+
+    expect(Feed::Page.new.items).to eq([ muted ])
+  end
+
   # The archive reaches all the way back now. A seven-day window was what
   # stopped it answering the question it exists for — finding something weeks
   # later, outside any edition.
