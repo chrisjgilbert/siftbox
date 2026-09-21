@@ -8,12 +8,24 @@ Rails.application.routes.draw do
   # No index: the roster is a section of the Subscriptions page, which is
   # where the reader already goes to see what reaches them and what does not.
   # Adding one here would be a second answer to the same question.
-  resources :blogs, only: [ :create, :destroy ]
+  # Muting is not removing, so it is a resource of its own rather than an
+  # update to the blog: destroy takes the posts and the citations naming them,
+  # creating a silence takes nothing and can be undone.
+  resources :blogs, only: [ :create, :destroy ] do
+    resource :silence, only: [ :create, :destroy ], module: :blogs
+  end
   resources :editions, only: [ :index, :show ]
   # Singular: there is one public page, and what it shows is fixed. It is the
   # root as well, which is the only address it is reached at in practice —
   # named here so the page is a resource rather than a bare root.
   resource :landing, only: :show
+  # No index of its own: a muted sender is a row of the roster on the
+  # Subscriptions page, which is where the reader already goes to see what
+  # reaches them. Only the way back is addressed here — the way in is a
+  # silence on the issue the reader is reading, below.
+  resources :newsletter_senders, only: [] do
+    resource :silence, only: :destroy, module: :newsletter_senders
+  end
   resources :newsletters, only: :index do
     # The two ways out of the pen, as nouns: creating a dismissal is the
     # reader saying the confirmation is dealt with, creating a release is them
@@ -23,6 +35,10 @@ Rails.application.routes.draw do
     resources :images, only: :show, module: :newsletters
     resource :original, only: :show, module: :newsletters
     resource :release, only: :create, module: :newsletters
+    # Muting the sender, from an issue they sent. Nested under the newsletter
+    # because that is what the reader is looking at when they decide; what it
+    # mutes is the address on it, which is Newsletter::Sender's business.
+    resource :silence, only: :create, module: :newsletters
     resource :source, only: :show, module: :newsletters
   end
   # Singular, and the token travels as a parameter rather than a path

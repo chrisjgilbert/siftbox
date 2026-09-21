@@ -52,19 +52,44 @@ class Subscriptions
     @_sections ||= [ awaiting, new_senders, bounced ]
   end
 
-  # The roster, newest first so a blog just added is at the top where the
-  # reader is looking. Ordered on the id rather than on created_at, which the
-  # table does not carry an index for and which ties on a seeded roster.
+  # The roster: both kinds of source the reader has made a decision about, in
+  # one list, because deciding what reaches them is one question.
+  #
+  # Blogs first, then the muted senders. The section is where a blog is added,
+  # so blogs are what it is mostly about; a muted sender is the tail of
+  # decisions that have nowhere else to live. A muted blog keeps its place
+  # among the blogs with its poll state showing rather than moving to that
+  # tail — it is still a blog, and still being fetched.
+  #
+  # Each row picks its own template, so no template asks which kind it is
+  # holding. Two queries rather than anything cleverer: they are different
+  # tables holding different things and the page wants a handful of each.
+  def sources
+    @_sources ||= blogs + silenced_senders
+  end
+
+  private
+
+  # Newest first so a blog just added is at the top where the reader is
+  # looking. Ordered on the id rather than on created_at, which the table does
+  # not carry an index for and which ties on a seeded roster.
   #
   # The counts come from one grouped query rather than from each row asking.
   # Not includes(:posts) either, which is the obvious fix and the wrong one:
   # it would read every body_html — tens of kilobytes each, two hundred rows
   # for one blog — into memory to print "200 posts".
   def blogs
-    @_blogs ||= Blog.order(id: :desc).map { |blog| Blog::Row.new(blog, stored.fetch(blog.id, 0)) }
+    Blog.order(id: :desc).map { |blog| Blog::Row.new(blog, stored.fetch(blog.id, 0)) }
   end
 
-  private
+  # Only the muted ones, and that is the whole of the table that matters here:
+  # a Newsletter::Sender row exists because the reader muted it, so an unmuted
+  # one is a decision they have taken back. The roster holds decisions rather
+  # than addresses.
+  def silenced_senders
+    Newsletter::Sender.silenced.order(silenced_at: :desc)
+      .map { |sender| Newsletter::Sender::Row.new(sender) }
+  end
 
   def stored
     @_stored ||= Blog::Post.group(:blog_id).count

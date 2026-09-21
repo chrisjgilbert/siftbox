@@ -19,7 +19,7 @@ RSpec.describe "The blogs on the Subscriptions page" do
 
     visit subscriptions_path
 
-    expect(page).to have_text("Blogs").and have_text("No blogs yet")
+    expect(page).to have_text("Sources").and have_text("Nothing here yet")
   end
 
   it "puts a followed blog on the roster with what it read" do
@@ -63,9 +63,9 @@ RSpec.describe "The blogs on the Subscriptions page" do
     sign_in_through_the_form
 
     visit subscriptions_path
-    click_button "Remove"
+    click_button "Remove Query Plan Weekly"
 
-    expect(page).to have_text("No blogs yet")
+    expect(page).to have_text("Nothing here yet")
   end
 
   it "says how long a blog has not been answering" do

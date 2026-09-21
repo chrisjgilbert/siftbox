@@ -35,6 +35,12 @@ RSpec.configure do |config|
   # exactly as a browser would and costs no driver, no server and no wait.
   config.before(:each, type: :system) { driven_by :rack_test }
 
+  # So a spec can press a button by the name a screen reader announces, per
+  # .claude/rules/testing.md. Several rows carry the same visible word — three
+  # Remove buttons, two Mute — and the aria-label is the only thing that tells
+  # them apart, which is exactly why the markup carries one.
+  Capybara.enable_aria_label = true
+
   # The rate limits on sign-in, password reset and adding a blog count in
   # Rails.cache, which the test environment keeps in memory for the whole run.
   # Without this, one example exhausting a limit answers 429 to every example

@@ -6,7 +6,7 @@
 class Blog::Row
   include ActionView::Helpers::DateHelper
 
-  delegate :feed_url, :name, :to_param, to: :blog
+  delegate :feed_url, :name, :silenced?, :to_param, to: :blog
 
   # The count is handed over rather than asked for: the page draws the whole
   # roster, and a row that counted its own posts would be one query each.

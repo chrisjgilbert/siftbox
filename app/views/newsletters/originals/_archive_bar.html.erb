@@ -1,13 +1,27 @@
-<%# The bar an original in the archive wears: the way back to the archive, and
-    nothing else. Held mail wears the pen's bar instead.
+<%# The bar an original in the archive wears: the way back, and the one
+    decision this page can record. Held mail wears the pen's bar instead,
+    whose two endings are what a hold has and where muting would be the wrong
+    answer — a sender the reader never subscribed to is dismissed, not muted.
 
-    It pointed at the reader until the reader was deleted. Where back goes now
+    Back pointed at the reader until the reader was deleted. Where it goes now
     depends on where the mail lives rather than on where the reader came from:
     the archive for content, the pen for a dismissed confirmation, which
     Newsletter.content keeps off the archive while the new-senders list still
-    links to it. The presenter owns that choice and the label with it. %>
+    links to it. The presenter owns that choice and the label with it.
+
+    Muting is a POST, so it is a button_to and has to stop looking like one —
+    the same shape the pen bar's two actions wear. It mutes the sender rather
+    than this issue: the decision is about who writes, and the issue stays
+    exactly where it is. %>
 <header class="topbar">
   <%= link_to newsletter.back_label,
         newsletter.back_path,
         class: "topbar__back" %>
+
+  <div class="topbar__actions">
+    <%= button_to t("newsletters.original.silence"),
+          newsletter_silence_path(newsletter),
+          class: "topbar__action",
+          form_class: "topbar__form" %>
+  </div>
 </header>

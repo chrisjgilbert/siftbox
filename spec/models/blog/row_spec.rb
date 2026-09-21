@@ -97,4 +97,24 @@ RSpec.describe Blog::Row do
 
     expect(row).not_to be_feed
   end
+
+  # Which way the row's mute button points. Read off the blog rather than
+  # decided in the template, the way the state line's class is.
+  it "says a muted blog is muted" do
+    row = Blog::Row.new(build_stubbed(:blog, silenced_at: 1.day.ago), 0)
+
+    expect(row).to be_silenced
+  end
+
+  it "says a blog nobody has muted is not" do
+    row = Blog::Row.new(build_stubbed(:blog, silenced_at: nil), 0)
+
+    expect(row).not_to be_silenced
+  end
+
+  it "draws through the template for a blog" do
+    row = Blog::Row.new(build_stubbed(:blog), 0)
+
+    expect(row.to_partial_path).to eq("blogs/row")
+  end
 end

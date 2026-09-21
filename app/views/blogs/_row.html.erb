@@ -1,13 +1,15 @@
-<%# Name, feed, state, count, and the way off the roster.
+<%# Name, feed, state, count, and the two ways to stop hearing from a blog.
 
-    Removing is a button rather than a link, because it is a DELETE — see
-    .claude/rules/views.md — and it confirms, because it is the one
-    irreversible cascade in this app: the posts go, and so do the citations in
-    published editions naming them.
+    Muting and removing are both POSTs, so both are buttons rather than links
+    — see .claude/rules/views.md. Only removing confirms, because only
+    removing is irreversible: the posts go, and so do the citations in
+    published editions naming them. Muting takes nothing and can be undone
+    from this same row, so a confirmation would be ceremony over a decision
+    the reader can see the result of immediately.
 
-    The button carries its own accessible name. Every row's says "Remove", so
-    a reader who cannot see which row they are in has nothing to tell three
-    of them apart. %>
+    Each button carries its own accessible name. Every row's says "Remove"
+    and "Mute", so a reader who cannot see which row they are in has nothing
+    to tell three of them apart. %>
 <li class="pen__item pen__item--source">
   <span class="sources__name"><%= row.name %></span>
   <% if row.feed? %>
@@ -15,6 +17,15 @@
   <% end %>
   <span class="<%= row.state_class %>"><%= row.state %></span>
   <span class="sources__count"><%= row.count %></span>
+  <% if row.silenced? %>
+    <%= button_to t(".unmute"), blog_silence_path(row), method: :delete,
+          class: "sources__mute", form_class: "sources__mute-form",
+          aria: { label: t(".unmute_blog", name: row.name) } %>
+  <% else %>
+    <%= button_to t(".mute"), blog_silence_path(row),
+          class: "sources__mute", form_class: "sources__mute-form",
+          aria: { label: t(".mute_blog", name: row.name) } %>
+  <% end %>
   <%= button_to t(".remove"), blog_path(row), method: :delete,
         class: "sources__remove", form_class: "sources__remove-form",
         aria: { label: t(".remove_blog", name: row.name) },
