@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_21_060427) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_21_060529) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "message_checksum", null: false
@@ -72,10 +72,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_060427) do
     t.string "feed_url", null: false
     t.string "last_modified_header", default: "", null: false
     t.datetime "polled_at"
+    t.datetime "silenced_at"
     t.string "site_url", default: "", null: false
     t.string "title", default: "", null: false
     t.datetime "updated_at", null: false
     t.index ["feed_url"], name: "index_blogs_on_unique_feed_url", unique: true
+    t.index ["silenced_at"], name: "index_blogs_on_silenced_at", where: "silenced_at IS NOT NULL"
   end
 
   create_table "edition_citations", force: :cascade do |t|

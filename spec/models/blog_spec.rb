@@ -116,4 +116,44 @@ RSpec.describe Blog do
   it "gives back a blank blog when nothing arrived" do
     expect(Blog.offered(nil).feed_url).to be_nil
   end
+
+  # The same vocabulary Newsletter::Sender carries, because the Subscriptions
+  # page holds both in one roster and a reader mutes either the same way. A
+  # muted blog is still polled and its posts still reach the originals
+  # archive; what stops is its reaching an edition.
+  it "is not silenced when it has never been muted" do
+    expect(build_stubbed(:blog, silenced_at: nil)).not_to be_silenced
+  end
+
+  it "is silenced once it has been muted" do
+    expect(build_stubbed(:blog, silenced_at: 1.day.ago)).to be_silenced
+  end
+
+  it "records when it was muted" do
+    blog = create(:blog, silenced_at: nil)
+
+    blog.silence
+
+    expect(blog.silenced_at).to be_present
+  end
+
+  # The first muting stands, for the reason it does on a sender: pressing a
+  # button whose state is not visible is not a second decision, and the
+  # roster prints the date the reader decided.
+  it "keeps the first muting when muted again" do
+    blog = create(:blog, silenced_at: 2.days.ago)
+    stamped = blog.silenced_at
+
+    blog.silence
+
+    expect(blog.reload.silenced_at).to eq(stamped)
+  end
+
+  it "stops being silenced when unmuted" do
+    blog = create(:blog, silenced_at: 1.day.ago)
+
+    blog.unsilence
+
+    expect(blog).not_to be_silenced
+  end
 end
