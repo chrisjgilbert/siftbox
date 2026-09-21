@@ -30,10 +30,10 @@ class Feed::Cursor
     model = KINDS[kind.to_s]
     return unless model && id.to_s.match?(/\A\d+\z/)
 
-    # The two ordering keys and nothing else. Read whole, this loads a
-    # body_html running to hundreds of kilobytes on every paged request, to
-    # take three fields off it — the same discipline Newsletter::FEED_COLUMNS
-    # keeps for the rows the page actually prints.
+    # The two ordering keys it does not already have, and nothing else. Read
+    # whole, this loads a body_html running to hundreds of kilobytes on every
+    # paged request — the same discipline Newsletter::FEED_COLUMNS keeps for
+    # the rows the page actually prints.
     row = model.select(:id, :received_at).find_by(id: id)
     return unless row
 

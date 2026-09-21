@@ -13,20 +13,14 @@
 class Feed
   Group = Struct.new(:label, :sublabel, :items)
 
-  # Today, Yesterday and Earlier, and then months. The named groups cover the
-  # week Newsletter::Age knows about; past that a heading reading "Earlier /
-  # This week" over mail from June is a heading that lies, and the archive now
-  # reaches back that far.
-  NAMED = [ :today, :yesterday, :earlier ].freeze
-
   def initialize(after: nil)
     @page = Feed::Page.new(after: after)
   end
 
   delegate :more?, :last, to: :page
 
-  # Memoised because the view asks twice: once to render, once to decide
-  # between the end-of-list line and the empty state.
+  # Memoised because the view asks twice: once to render, once to know whether
+  # anything was drawn.
   def groups
     @_groups ||= numbered(grouped)
   end
@@ -36,10 +30,17 @@ class Feed
   # under "12 items" would put a number on the archive that is off by every
   # page before it.
   #
-  # Two counts rather than one, because the archive is two tables. Asked for
-  # only when the end line is drawn, which is only on the last page.
+  # Arithmetic rather than a count, because both halves are already in hand:
+  # what is above this page plus what is on it. True whenever there is nothing
+  # below — which is the only place it is read — and zero exactly when the
+  # archive is empty, so the view's empty state comes free with it.
+  #
+  # Counting instead meant two more queries on every last page, and the worse
+  # of them was the only whole-table scan the archive did: Newsletter.content
+  # is an OR across held_at and released_at, which defeats both partial
+  # indexes.
   def item_count
-    @_item_count ||= Newsletter.content.count + Blog::Post.count
+    page.preceding + items.length
   end
 
   private
@@ -90,8 +91,17 @@ class Feed
     Group.new(label_for(name), sublabel_for(name), present(found, offset))
   end
 
+  # A month group is keyed by a Date and a named one by a Symbol, so the key
+  # answers which it is. Asked of the key rather than held in a list of the
+  # named buckets beside Newsletter::Age's own, which would be a copy to keep
+  # in step by hand — add a bucket there and the feed would print it as a
+  # month.
+  def month?(name)
+    name.is_a?(Date)
+  end
+
   def label_for(name)
-    return I18n.l(name, format: :feed_month) unless NAMED.include?(name)
+    return I18n.l(name, format: :feed_month) if month?(name)
 
     I18n.t("feed.groups.#{name}")
   end
@@ -101,7 +111,7 @@ class Feed
   # one, because an archive is read across years and a bare "June" leaves the
   # reader counting back.
   def sublabel_for(name)
-    return I18n.l(name, format: :feed_year) unless NAMED.include?(name)
+    return I18n.l(name, format: :feed_year) if month?(name)
     return I18n.t("feed.groups.this_week") if name == :earlier
     return I18n.l(Date.current, format: :feed_group) if name == :today
 
