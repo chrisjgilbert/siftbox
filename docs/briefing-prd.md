@@ -230,9 +230,8 @@ arrival receipt. Routes stay resourceful: the page is an index; dismiss
 and release are nested `only: :create` resources.
 
 The page is named **Subscriptions**, not Confirmations, deliberately: it
-is the roster's future home — silencing (see Later) lands there as a
-Sources section, making it the roster's front door and back door in one
-place.
+is the roster's home — silencing lands there as a Sources section, making
+it the roster's front door and back door in one place.
 
 **Failure modes, traced end to end.** The feared outcome is a
 subscription that never shows up and fails silently. Tracing the
@@ -479,7 +478,7 @@ For discussion, not a migration:
 - Email or RSS delivery of editions.
 - Per-sender prompt hints, including special handling for link-roundup
   newsletters.
-- Silencing sources (first fast follow — see Later).
+- Silencing sources (shipped as the first fast follow — see Later).
 - Personalisation, feedback ("more like this"), topic weighting.
 - Search, audio, multi-user, public sign-up.
 - Any change to ingestion beyond the confirmation flag.
@@ -500,15 +499,22 @@ Honest ones, at n=1:
 
 ## Later
 
-- **Silencing sources** (first fast follow): mute a sender from inside
-  the app — unsubscribing's in-app cousin, living on the Subscriptions
-  page as a Sources section. Mail from a silenced sender still arrives
-  and is stored, but is excluded from edition windows and the coverage
-  guarantee; the archive still shows it. Silencing is the roster's back
-  door as confirmations are its front door — and it is the moment
-  "sender" becomes a model rather than a string column, the same
-  `Source` concept that per-sender hints and RSS feeds also want. True
-  unsubscribing stays manual via the original's unsubscribe link;
+- **Silencing sources** — **shipped.** Mute a sender from the issue in
+  front of you, mute a blog from the roster, unmute either from the
+  Sources section of the Subscriptions page. A muted source still arrives
+  and is still stored; it is excluded from edition windows and from the
+  coverage guarantee, and the originals archive still shows it.
+
+  It did become the moment "sender" stops being a string column, but not
+  in the shape this entry guessed. There is no single `Source` table. A
+  blog was already the row the reader added, so muting is a column on it;
+  a sender had no row at all, so `Newsletter::Sender` is the one they
+  lacked, made at the moment of muting. One table holding both would have
+  needed an address present for one kind and absent for the other — the
+  type switch `.claude/rules/models.md` warns off — to save a column. The
+  roster is one list in the page and two tables underneath.
+
+  True unsubscribing stays manual via the original's unsubscribe link;
   automating it through the `List-Unsubscribe` header (RFC 8058 one-click)
   is a further step down this road.
 - **Afternoon edition**, ~15:00 Europe/London, to catch US morning
