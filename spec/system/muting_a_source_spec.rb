@@ -83,6 +83,18 @@ RSpec.describe "Muting a source" do
     expect(page).to have_text("Query Plan Weekly")
   end
 
+  # In the row's own words. Read off which way the button points, a muted
+  # blog is indistinguishable from an unmuted one to anybody scanning the
+  # list — and being able to see what is muted is the whole feature.
+  it "says on the row that a blog is muted" do
+    create(:blog, title: "Query Plan Weekly", silenced_at: 3.days.ago)
+    sign_in_through_the_form
+
+    visit subscriptions_path
+
+    expect(page).to have_text("Muted 3 days ago")
+  end
+
   it "unmutes a blog from the roster" do
     create(:blog, title: "Query Plan Weekly", silenced_at: 1.day.ago)
     sign_in_through_the_form

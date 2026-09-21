@@ -18,6 +18,7 @@
   <span class="<%= row.state_class %>"><%= row.state %></span>
   <span class="sources__count"><%= row.count %></span>
   <% if row.silenced? %>
+    <span class="sources__state sources__state--muted"><%= row.muted %></span>
     <%= button_to t(".unmute"), blog_silence_path(row), method: :delete,
           class: "sources__mute", form_class: "sources__mute-form",
           aria: { label: t(".unmute_blog", name: row.name) } %>

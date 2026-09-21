@@ -830,6 +830,13 @@ a {
   color: var(--ink);
 }
 
+/* In ink for the same reason, and it is the stronger of the two facts a row
+   can carry: a blog that has stopped answering will answer again, a muted one
+   only stops when the reader says so. */
+.sources__state--muted {
+  color: var(--ink);
+}
+
 /* button_to generates a <button> inside a <form> under Rails 8 defaults, so
    the grid placement goes on the form — which is the grid item — and the
    appearance on the button. Styling ` input` matched only the hidden _method

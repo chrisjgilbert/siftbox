@@ -106,6 +106,34 @@ RSpec.describe Blog::Row do
     expect(row).to be_silenced
   end
 
+  # In the row's own words, not only in which way its button points. A muted
+  # blog otherwise reads exactly like an unmuted one to anybody scanning the
+  # list, which is the state the whole feature exists to make visible — and
+  # the failing line beside it is the precedent: a condition worth knowing
+  # about says itself rather than being inferred from a control.
+  it "says how long a muted blog has been muted" do
+    row = Blog::Row.new(build_stubbed(:blog, silenced_at: 3.days.ago), 0)
+
+    expect(row.muted).to eq("Muted 3 days ago")
+  end
+
+  it "says nothing about muting for a blog nobody has muted" do
+    row = Blog::Row.new(build_stubbed(:blog, silenced_at: nil), 0)
+
+    expect(row.muted).to be_nil
+  end
+
+  # Both, because both are true and they want different fixing: a muted blog
+  # that has also stopped answering is still worth unmuting only once it
+  # answers again.
+  it "keeps saying a muted blog is failing" do
+    row = Blog::Row.new(
+      build_stubbed(:blog, silenced_at: 1.day.ago, failing_since: 3.days.ago), 0
+    )
+
+    expect(row.state).to eq("Not answering for 3 days")
+  end
+
   it "says a blog nobody has muted is not" do
     row = Blog::Row.new(build_stubbed(:blog, silenced_at: nil), 0)
 

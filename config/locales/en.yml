@@ -66,6 +66,7 @@ en:
     state:
       failing: Not answering for %{duration}
       polled: Checked %{duration} ago
+      silenced: Muted %{duration} ago
       unpolled: Not checked yet
     too_many: That is a lot of feeds at once. Try again in a minute.
   date:

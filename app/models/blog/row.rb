@@ -30,6 +30,20 @@ class Blog::Row
     blog.failing_since.present?
   end
 
+  # Said in the row's own words rather than left to which way the button
+  # points. A muted blog otherwise reads exactly like an unmuted one to
+  # anybody scanning the list, and the state line above is the precedent: a
+  # condition worth knowing about says itself.
+  #
+  # Beside the state line rather than in place of it, because both are true
+  # and they want different fixing — a muted blog that has also stopped
+  # answering is worth unmuting only once it answers again.
+  def muted
+    return unless silenced?
+
+    I18n.t("blogs.state.silenced", duration: since(blog.silenced_at))
+  end
+
   def count
     I18n.t("blogs.count", count: stored)
   end
