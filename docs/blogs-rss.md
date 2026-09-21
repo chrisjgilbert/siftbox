@@ -309,14 +309,39 @@ What that concedes is the roster. What it does not concede is the shape of
 its feed half — see below.
 
 **Note on the name.** `Newsletter::Source` (the PORO serving the sandboxed
-frame's HTML) is renamed to `Newsletter::Markup` on the silencing branch,
-in its own commit, because Rails resolves an association's class name
-through the owner's nesting and `Newsletter::Source` therefore wins over a
-top-level `Source`. Verified independently: for `type_name = "Source"` on
-`Newsletter`, `ActiveRecord::Inheritance#compute_type` builds
-`["Newsletter::Source", "Source"]` and takes the first. This branch adds no
-new references to `Newsletter::Source` in the meantime; existing mentions
-in this document and the plan are of the class as it stands today.
+frame's HTML) would have to be renamed to `Newsletter::Markup` if a
+top-level `Source` landed, because Rails resolves an association's class
+name through the owner's nesting and `Newsletter::Source` therefore wins.
+Verified independently: for `type_name = "Source"` on `Newsletter`,
+`ActiveRecord::Inheritance#compute_type` builds
+`["Newsletter::Source", "Source"]` and takes the first.
+
+### How it actually shipped
+
+**RSS landed first, and the roster concession was never cashed.** By the
+time silencing was built, `Blog` was a merged table with its own identity,
+poll bookkeeping and posts — so the question had changed from "design one
+abstraction against two futures" to "fold a shipped table into a new one".
+
+What shipped is the objection below, taken to its conclusion: **two
+tables, one roster in the page.** `blogs.silenced_at` is a column on the
+row the reader already added. `Newsletter::Sender` is the row a sender
+never had, made at the moment of muting and keyed on the address. The
+Subscriptions page merges both into one Sources list, each row drawn
+through its own template.
+
+That makes the three consequences below moot rather than answered: there
+is no `sources.identifier` to fall out of step with `blogs.feed_url`, no
+second uniqueness constraint over one logical value, and redirects are the
+fetcher's business as they always were. It also means no top-level
+`Source` constant, so `Newsletter::Source` keeps its name and the rename
+above never happened — the collision it was written against does not
+exist.
+
+The cost, stated plainly: `silenced_at` is a column in two tables and the
+three-method vocabulary around it is written twice. That is six lines of
+duplication bought in exchange for never needing a column that is present
+for one kind of row and absent for the other.
 
 ### Option E, named so it can be rejected: fabricate email
 

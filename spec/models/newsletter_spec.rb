@@ -377,4 +377,64 @@ RSpec.describe Newsletter do
 
     expect { row.body_html }.to raise_error(ActiveModel::MissingAttributeError)
   end
+
+  def muted(address)
+    create(:newsletter_sender, sender_email: address, silenced_at: 1.day.ago)
+  end
+
+  it "counts mail from a sender nobody has muted" do
+    create(:newsletter, sender_email: "peter@rubyweekly.com")
+
+    expect(Newsletter.unsilenced.count).to eq(1)
+  end
+
+  it "leaves out mail from a muted sender" do
+    muted("peter@rubyweekly.com")
+    create(:newsletter, sender_email: "peter@rubyweekly.com")
+
+    expect(Newsletter.unsilenced).to be_empty
+  end
+
+  it "counts mail from a sender that was muted and then unmuted" do
+    create(:newsletter_sender, sender_email: "peter@rubyweekly.com", silenced_at: nil)
+    create(:newsletter, sender_email: "peter@rubyweekly.com")
+
+    expect(Newsletter.unsilenced.count).to eq(1)
+  end
+
+  # The silence is on an address, not on an issue, so it reaches backwards as
+  # well as forwards: the roster holds a decision rather than a mark made on
+  # each piece of mail as it arrived.
+  it "leaves out mail that arrived before its sender was muted" do
+    create(:newsletter, sender_email: "peter@rubyweekly.com", received_at: 3.days.ago)
+    muted("peter@rubyweekly.com")
+
+    expect(Newsletter.unsilenced).to be_empty
+  end
+
+  it "counts mail from every sender except the muted one" do
+    muted("peter@rubyweekly.com")
+    heard = create(:newsletter, sender_email: "matt@stratechery.com")
+    create(:newsletter, sender_email: "peter@rubyweekly.com")
+
+    expect(Newsletter.unsilenced).to eq([ heard ])
+  end
+
+  # A sender does not write from one casing, and a silence a changed From
+  # header walks past is not one. The column collates NOCASE for this.
+  it "leaves out mail from a muted sender writing in another case" do
+    muted("peter@rubyweekly.com")
+    create(:newsletter, sender_email: "Peter@RubyWeekly.com")
+
+    expect(Newsletter.unsilenced).to be_empty
+  end
+
+  # Mail whose From header carried no address. It cannot be muted — there is
+  # nothing to mute — so it must not be swept out by somebody else's silence.
+  it "counts mail carrying no address when another sender is muted" do
+    muted("peter@rubyweekly.com")
+    create(:newsletter, sender_email: "")
+
+    expect(Newsletter.unsilenced.count).to eq(1)
+  end
 end

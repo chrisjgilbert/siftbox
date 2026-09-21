@@ -69,6 +69,31 @@ class Blog < ApplicationRecord
     title.presence || feed_url
   end
 
+  # Muted: still polled, still storing posts, still in the originals archive,
+  # and no longer reaching an edition. The same three methods Newsletter::Sender
+  # carries, because the Subscriptions page holds both kinds in one roster and
+  # a reader mutes either the same way.
+  #
+  # Not the same as removing. BlogsController#destroy takes the posts and the
+  # citations naming them with it; this takes nothing.
+  def silenced?
+    silenced_at.present?
+  end
+
+  # The first muting stands. Pressing a button whose state is not visible is
+  # not a second decision, and the roster prints the date the reader decided.
+  def silence
+    return if silenced?
+
+    update!(silenced_at: Time.current)
+  end
+
+  def unsilence
+    return unless silenced?
+
+    update!(silenced_at: nil)
+  end
+
   # This poll did not come home with a feed. Here rather than in Blog::Poll
   # because the rule is a fact about the column: the first failure's time
   # survives the ones after it, so the Sources page can say how long a blog

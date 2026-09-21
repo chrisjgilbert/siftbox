@@ -771,11 +771,19 @@ a {
    the line inside it. */
 .pen__item--source {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: baseline;
   row-gap: 4px;
   column-gap: 16px;
   padding: 16px 0;
+}
+
+/* A muted sender has no feed, no poll state and no stored count, so the last
+   column is the only one it fills beside the name. Without this the Unmute
+   would sit in the blogs' middle column and the roster would read as two
+   lists with different right edges. */
+.pen__item--sender {
+  grid-template-columns: 1fr auto;
 }
 
 .sources__name {
@@ -822,14 +830,35 @@ a {
   color: var(--ink);
 }
 
+/* In ink for the same reason, and it is the stronger of the two facts a row
+   can carry: a blog that has stopped answering will answer again, a muted one
+   only stops when the reader says so. */
+.sources__state--muted {
+  color: var(--ink);
+}
+
 /* button_to generates a <button> inside a <form> under Rails 8 defaults, so
    the grid placement goes on the form — which is the grid item — and the
    appearance on the button. Styling ` input` matched only the hidden _method
    field, and left the control at the browser's own Arial, outset border and
    rounded corners: a third typeface, a rule weight the system does not have,
    and a radius, in one control. */
-.sources__remove-form {
+.sources__mute-form {
   grid-column: 2;
+  grid-row: 1 / -1;
+  align-self: center;
+  margin: 0;
+}
+
+/* A sender's row has two columns, so its Unmute takes the second and the
+   blogs' third stays empty. Stated on the item rather than on a class of its
+   own, so both kinds of row keep one right edge. */
+.pen__item--sender .sources__mute-form {
+  grid-column: 2;
+}
+
+.sources__remove-form {
+  grid-column: 3;
   grid-row: 1 / -1;
   align-self: center;
   margin: 0;
@@ -838,7 +867,12 @@ a {
 /* Borderless mute text, which is the app's second button treatment, after
    .topbar__action. A bordered one would be a third the system does not have
    — and --rule on paper is 1.28:1, well under the 3:1 a control edge needs
-   to be seen at all. */
+   to be seen at all.
+
+   Muting takes the same treatment rather than one of its own, for that
+   reason: two controls on a row, one weight between them, and which is
+   which is the word each carries. */
+.sources__mute,
 .sources__remove {
   border: 0;
   border-radius: 0;
@@ -852,6 +886,7 @@ a {
   cursor: pointer;
 }
 
+.sources__mute:hover,
 .sources__remove:hover {
   color: var(--ink);
 }
@@ -918,6 +953,7 @@ a {
   .sources__count,
   .sources__feed,
   .sources__state,
+  .sources__mute,
   .sources__remove {
     font-size: 11px;
   }

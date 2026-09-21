@@ -1,0 +1,17 @@
+<%# One line of the roster that is a muted sender: a name, how long it has
+    been muted, and the way back.
+
+    No feed address, no poll state and no stored count — the three things a
+    blog's row is mostly made of — because a sender has none of them. The
+    name takes the width they occupy, so the roster keeps one left rail.
+
+    No Remove beside the Unmute. Taking a sender off the roster and unmuting
+    them are the same act: the row exists because there is a decision to
+    record, and there stops being one the moment it is taken back. %>
+<li class="pen__item pen__item--source pen__item--sender">
+  <span class="sources__name"><%= row.name %></span>
+  <span class="sources__state"><%= row.state %></span>
+  <%= button_to t(".unmute"), newsletter_sender_silence_path(row), method: :delete,
+        class: "sources__mute", form_class: "sources__mute-form",
+        aria: { label: t(".unmute_sender", name: row.name) } %>
+</li>

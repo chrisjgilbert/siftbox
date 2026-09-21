@@ -48,12 +48,16 @@ en:
     row:
       confirm: Remove %{name}? Its posts go too, and so do the citations in
         published editions that name them.
+      mute: Mute
+      mute_blog: Mute %{name}
       remove: Remove
       remove_blog: Remove %{name}
+      unmute: Unmute
+      unmute_blog: Unmute %{name}
     section:
-      empty: No blogs yet. Paste a feed address above and siftbox will read it
-        every hour.
-      heading: Blogs
+      empty: Nothing here yet. Paste a feed address above and siftbox will read
+        it every hour.
+      heading: Sources
       label: Feed address
       note: The feed address, or the blog's home page — siftbox will find the feed
         from it. Read hourly; new posts go in the archive and the next edition.
@@ -62,6 +66,7 @@ en:
     state:
       failing: Not answering for %{duration}
       polled: Checked %{duration} ago
+      silenced: Muted %{duration} ago
       unpolled: Not checked yet
     too_many: That is a lot of feeds at once. Try again in a minute.
   date:
@@ -172,6 +177,12 @@ en:
     application:
       title: siftbox
       wordmark: siftbox
+  newsletter_senders:
+    row:
+      unmute: Unmute
+      unmute_sender: Unmute %{name}
+    state:
+      silenced: Muted %{duration} ago
   newsletters:
     age: "%{duration} ago"
     index:
@@ -191,6 +202,7 @@ en:
         back: Back to subscriptions
         done: Done
         release: This is a newsletter
+      silence: Silence this sender
     unknown_sender: Unknown sender
   passwords:
     edit:

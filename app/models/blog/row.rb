@@ -6,7 +6,7 @@
 class Blog::Row
   include ActionView::Helpers::DateHelper
 
-  delegate :feed_url, :name, :to_param, to: :blog
+  delegate :feed_url, :name, :silenced?, :to_param, to: :blog
 
   # The count is handed over rather than asked for: the page draws the whole
   # roster, and a row that counted its own posts would be one query each.
@@ -28,6 +28,20 @@ class Blog::Row
 
   def failing?
     blog.failing_since.present?
+  end
+
+  # Said in the row's own words rather than left to which way the button
+  # points. A muted blog otherwise reads exactly like an unmuted one to
+  # anybody scanning the list, and the state line above is the precedent: a
+  # condition worth knowing about says itself.
+  #
+  # Beside the state line rather than in place of it, because both are true
+  # and they want different fixing — a muted blog that has also stopped
+  # answering is worth unmuting only once it answers again.
+  def muted
+    return unless silenced?
+
+    I18n.t("blogs.state.silenced", duration: since(blog.silenced_at))
   end
 
   def count

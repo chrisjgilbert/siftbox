@@ -159,4 +159,39 @@ RSpec.describe Blog::Post do
 
     expect(post.reload.url).to eq("https://queryplanweekly.dev/ab")
   end
+
+  it "counts a post from a blog nobody has muted" do
+    create(:blog_post)
+
+    expect(Blog::Post.unsilenced.count).to eq(1)
+  end
+
+  it "leaves out a post from a muted blog" do
+    create(:blog_post, blog: create(:blog, silenced_at: 1.day.ago))
+
+    expect(Blog::Post.unsilenced).to be_empty
+  end
+
+  it "counts a post from a blog that was muted and then unmuted" do
+    create(:blog_post, blog: create(:blog, silenced_at: nil))
+
+    expect(Blog::Post.unsilenced.count).to eq(1)
+  end
+
+  # The silence is on the blog rather than on each post, so it reaches the
+  # back catalogue as well as what arrives next.
+  it "leaves out a post that arrived before its blog was muted" do
+    blog = create(:blog)
+    create(:blog_post, blog: blog, received_at: 3.days.ago)
+    blog.silence
+
+    expect(Blog::Post.unsilenced).to be_empty
+  end
+
+  it "counts posts from every blog except the muted one" do
+    heard = create(:blog_post)
+    create(:blog_post, blog: create(:blog, silenced_at: 1.day.ago))
+
+    expect(Blog::Post.unsilenced).to eq([ heard ])
+  end
 end

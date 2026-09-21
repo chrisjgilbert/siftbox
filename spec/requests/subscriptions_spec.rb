@@ -61,6 +61,19 @@ RSpec.describe "Subscriptions" do
     expect(count_queries { get subscriptions_path }).to eq(one_blog)
   end
 
+  # A muted sender is one more row on the roster and no more queries: the
+  # senders come in one read, the way the blogs do.
+  it "reads any number of muted senders in the same number of queries" do
+    sign_in
+    create(:newsletter_sender, silenced_at: 1.day.ago)
+    get subscriptions_path
+    one_sender = count_queries { get subscriptions_path }
+
+    4.times { create(:newsletter_sender, silenced_at: 1.day.ago) }
+
+    expect(count_queries { get subscriptions_path }).to eq(one_sender)
+  end
+
   it "counts the posts each blog has stored" do
     sign_in
     blog = create(:blog, title: "Query Plan Weekly")
