@@ -59,6 +59,13 @@ FactoryBot.define do
     received_at { 1.hour.ago }
   end
 
+  # Sequenced because the address is uniquely indexed, so an example building
+  # two senders would otherwise supply addresses by hand to dodge a collision
+  # it did not set out to test.
+  factory :newsletter_sender, class: "Newsletter::Sender" do
+    sequence(:sender_email) { |n| "peter#{n}@rubyweekly.com" }
+  end
+
   factory :user do
     email_address { "reader@example.com" }
     password { "a-long-enough-password" }
