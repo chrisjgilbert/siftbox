@@ -18,6 +18,18 @@ class Edition::RecordingJob < ApplicationJob
   ATTEMPTS = 3
   WAIT = 30.seconds
 
+  # The longest a run of this job can legitimately take: every attempt spending
+  # the whole of the client's patience, and the waits in between.
+  #
+  # Here rather than on Edition::Recording, which is what asks: how long a
+  # recording may take is this job's knowledge and the client's, and guessing
+  # it again as a literal on the row is how the two come to disagree. They did
+  # — the guess was five minutes against a real worst case of over seven, so a
+  # slow but healthy retry went stale, the page offered the button again, and
+  # the next tap paid for a second synthesis of an edition already in flight.
+  LONGEST_RUN = (ATTEMPTS * (Edition::Voice::OPEN_TIMEOUT + Edition::Voice::READ_TIMEOUT)).seconds +
+    (ATTEMPTS - 1) * WAIT
+
   # The failure worth waiting for, and once the waiting is spent the recording
   # carries the failure rather than the queue: the reader is looking at the page,
   # and the page reads the row.
@@ -59,17 +71,13 @@ class Edition::RecordingJob < ApplicationJob
   # only carries within one process, and bin/dev runs the worker beside the
   # server rather than inside it. Reloading the page shows the same thing, which
   # is what the preparing line tells the reader to do.
-  # An update rather than a replace: the element this writes into is the live
-  # region the page announces the change through, and replacing the region
-  # itself is what a screen reader is least reliable about noticing. Writing
-  # inside it leaves the region in place across every state.
+  # Asked of the presenter rather than assembled here. Which partial draws the
+  # recording, what the local is called and which element it is written into
+  # are display facts, and the presenter already owns the other two the
+  # broadcast needs — the channel and the frame — and is itself the local.
+  # Spelling them out in a job made this the third file that knew them.
   def self.announce(recording)
-    presenter = Edition::Recording::Presenter.new(recording.edition)
-
-    Turbo::StreamsChannel.broadcast_update_to(
-      presenter.channel, target: presenter.frame,
-      partial: "editions/recording", locals: { recording: presenter }
-    )
+    Edition::Recording::Presenter.new(recording.edition).announce
   end
 
   # The voice is asked its name as well as for the audio, so what is stored

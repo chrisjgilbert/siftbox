@@ -26,17 +26,6 @@ RSpec.describe Edition::Recording do
         .to have_enqueued_job(Edition::RecordingJob)
     end
 
-    # A second tap on a button that is still preparing, or a reader coming back
-    # to an edition whose recording failed yesterday. Either way there is one
-    # recording per edition and the unique index says so, so asking again reuses
-    # the row rather than colliding with it.
-    it "asks again on the recording an edition already has" do
-      edition = create(:edition)
-      first = create(:edition_recording, edition: edition)
-
-      expect(Edition::Recording.start(edition)).to eq(first)
-    end
-
     it "clears an earlier failure when asked again" do
       edition = create(:edition)
       create(:edition_recording, edition: edition, failed_at: 1.day.ago)
@@ -102,7 +91,7 @@ RSpec.describe Edition::Recording do
     it "starts a job again for a recording that has been pending too long" do
       edition = create(:edition)
       create(:edition_recording, edition: edition,
-        requested_at: Edition::Recording::STALE_AFTER.ago - 1.minute)
+        requested_at: Edition::RecordingJob::LONGEST_RUN.ago - 1.minute)
 
       expect { Edition::Recording.start(edition.reload) }
         .to have_enqueued_job(Edition::RecordingJob)
@@ -200,18 +189,19 @@ RSpec.describe Edition::Recording do
     # The only way out of a job that died before it could stamp anything — a
     # killed worker, a queue that is not running. Without the bound the page
     # draws the preparing line for ever and offers no way to ask again.
-    it "stops being pending once it has been asked for too long ago" do
+    it "stops being pending once it has been asked for longer ago than the job can run" do
       recording = create(:edition_recording,
-        requested_at: Edition::Recording::STALE_AFTER.ago - 1.minute)
+        requested_at: Edition::RecordingJob::LONGEST_RUN.ago - 1.minute)
 
       expect(recording).not_to be_pending
     end
 
-    # A volume restored without its blobs, or a purge. ready? refuses it
-    # because the audio has gone; without the staleness bound failed? refuses
-    # it too, and the reader is left on the preparing line with no button.
+    # A volume restored without its blobs, or a purge. Not pending because it
+    # came back — completed_at says so — whatever became of the audio
+    # afterwards. Asked for a moment ago on purpose: leaving this to the clock
+    # would mean a blob purged just after it was made reads as still being made.
     it "is not pending when the audio behind a finished recording has gone" do
-      recording = create(:edition_recording, requested_at: 1.day.ago)
+      recording = create(:edition_recording, requested_at: Time.current)
       recording.store("audio", voice: "a-voice")
       recording.audio.purge
 

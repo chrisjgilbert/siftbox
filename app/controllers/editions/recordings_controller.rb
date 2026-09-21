@@ -31,14 +31,24 @@ class Editions::RecordingsController < ApplicationController
     redirect_to edition_url(edition)
   end
 
+  # The validator is not decoration, and it is the part of
+  # ActiveStorage::Blobs::ProxyController's shape that did not come across the
+  # first time. Without one, Rack::ETag — which is in this app's middleware —
+  # digests the whole response to make its own, so every full answer read a few
+  # megabytes off disk and then hashed them again, and a conditional request
+  # still paid for both before answering 304. The blob's checksum is already on
+  # the row this action loads, so stating it costs nothing and stops both.
+  #
+  # It is also what lets the cache window stay short without being expensive: a
+  # recording that failed and was asked for again replaces the audio at this
+  # same address, so the reader has to be able to find that out — and now
+  # finding out is a 304 rather than a download.
   def show
     blob = playable
     return head :not_found if blob.nil?
+    return unless stale?(strong_etag: blob.checksum, last_modified: blob.created_at,
+      public: false)
 
-    # An hour rather than a year, which is what an immutable file would earn.
-    # A recording that failed and was asked for again replaces the audio at this
-    # same address, so a long cache would serve the reader the silence they
-    # complained about. An hour covers one listening session's range requests.
     expires_in 1.hour, public: false
     serve(blob)
   end
@@ -58,37 +68,36 @@ class Editions::RecordingsController < ApplicationController
     @_edition ||= Edition.select(:id).find(params[:edition_id])
   end
 
-  # The recording reached through its edition rather than found by its own id,
-  # so an address that names one edition can never answer with another's audio.
+  # Keyed on the edition id from the path rather than reached through a loaded
+  # Edition, which answers the same question — a recording belongs to one
+  # edition, so an address naming one can never answer with another's audio —
+  # without reading a row this action then never touches. show runs on every
+  # seek, so the read it does not need is the one worth not doing.
   def recording
-    edition.recording
+    Edition::Recording.find_by(edition_id: params[:edition_id])
   end
 
-  # nil for every reason the page should not be offering audio: no recording,
-  # one still being made, one that failed, or one whose blob is labelled as
-  # something this controller does not serve. The label is this app's own rather
-  # than a stranger's, so the last is a floor rather than a defence — it is here
-  # so the thing that writes the type and the thing that serves it cannot drift
-  # apart in silence.
+  # nil for every reason the page should not be offering audio: no recording at
+  # all, one still being made, or one that failed.
   def playable
     found = recording
     return if found.nil? || !found.ready?
 
-    blob = found.audio.blob
-    blob if blob.content_type == Edition::Recording::AUDIO_TYPE
+    found.audio.blob
   end
 
+  # Accept-Ranges on every answer, which is what tells a player it may seek at
+  # all. Set once here rather than in each of the three ways out below, all of
+  # which want it.
   def serve(blob)
+    response.headers["Accept-Ranges"] = "bytes"
     range = request.headers["Range"]
     return send_whole(blob) if range.blank?
 
     send_range(blob, range)
   end
 
-  # Accept-Ranges on the first answer is what tells a player it may seek at all.
   def send_whole(blob)
-    response.headers["Accept-Ranges"] = "bytes"
-
     send_data blob.download, type: blob.content_type, disposition: :inline
   end
 
@@ -116,14 +125,12 @@ class Editions::RecordingsController < ApplicationController
   # since a second recording can be shorter than the one it replaced at this
   # same address — has nothing to re-request from without the real length.
   def unsatisfiable(blob)
-    response.headers["Accept-Ranges"] = "bytes"
     response.headers["Content-Range"] = "bytes */#{blob.byte_size}"
 
     head :range_not_satisfiable
   end
 
   def send_chunk(blob, range)
-    response.headers["Accept-Ranges"] = "bytes"
     response.headers["Content-Range"] = "bytes #{range.begin}-#{range.end}/#{blob.byte_size}"
 
     send_data blob.download_chunk(range), type: blob.content_type,

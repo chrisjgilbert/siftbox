@@ -28,6 +28,21 @@ namespace :edition do
   end
 end
 
+# Which edition a task's DATE argument names, for the two that take one.
+#
+# One rule with one owner: the latest by default, because that is the edition
+# any change — a new prompt, a new voice — is normally judged against, and a
+# date picks any other. It is what the masthead prints and what the unique
+# index counts one edition a day by. Held here rather than written out in each
+# task, so that what DATE means cannot come to differ between them.
+module ChosenEdition
+  def self.for(date)
+    return Edition.latest if date.blank?
+
+    Edition.find_by(published_on: Date.parse(date))
+  end
+end
+
 # Judging what the editor writes, which is done by reading it: compose an
 # edition from a window and dump it, so the PRD's five checks — clustering,
 # attribution, coverage, selection, classification — are made by reading
@@ -154,7 +169,7 @@ end
 # there is no undo.
 module Regeneration
   def self.rewrite(date)
-    edition = chosen(date)
+    edition = ChosenEdition.for(date)
     return puts "No edition to rewrite." if edition.nil?
 
     regeneration = EditionRegeneration.new(edition)
@@ -162,15 +177,6 @@ module Regeneration
     puts EditionTranscript.new(regeneration.rewrite, regeneration.sources).text
     puts "No. #{edition.number} is now the edition above. Its number, its day and " \
       "its window are unchanged, so the next composition still starts where it closed."
-  end
-
-  # The latest edition by default, which is the one a prompt change is
-  # normally being judged against. A date picks any other: it is what the
-  # masthead prints and what the unique index counts one edition a day by.
-  def self.chosen(date)
-    return Edition.latest if date.blank?
-
-    Edition.find_by(published_on: Date.parse(date))
   end
 
   # Said before the request rather than after it, because this is the moment
@@ -205,7 +211,7 @@ module Reading
   DIRECTORY = "tmp/readings".freeze
 
   def self.aloud(date)
-    edition = chosen(date)
+    edition = ChosenEdition.for(date)
     return puts "No edition to read." if edition.nil?
 
     voice = Edition::Voice.new(Edition::Script.new(edition).text)
@@ -213,14 +219,6 @@ module Reading
 
     written = written(edition, voice.speak, voice.name)
     puts "Written to #{written}. Listen to it before deciding anything."
-  end
-
-  # The latest by default, which is the one a voice change is normally being
-  # judged against. A date picks any other, the way regenerate's does.
-  def self.chosen(date)
-    return Edition.latest if date.blank?
-
-    Edition.find_by(published_on: Date.parse(date))
   end
 
   # Named by the edition and the voice that read it, so two voices over one
@@ -231,7 +229,8 @@ module Reading
   # the thing that does.
   def self.written(edition, bytes, voice)
     FileUtils.mkdir_p(DIRECTORY)
-    path = File.join(DIRECTORY, "edition-#{edition.number}-#{voice.parameterize}.mp3")
+    name = "edition-#{edition.number}-#{voice.parameterize}.#{Edition::Voice::EXTENSION}"
+    path = File.join(DIRECTORY, name)
     File.binwrite(path, bytes)
 
     path

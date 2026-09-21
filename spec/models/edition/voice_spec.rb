@@ -3,10 +3,11 @@ require "rails_helper"
 RSpec.describe Edition::Voice do
   # Stubbed on the thing being asserted rather than asserted after the fact:
   # WebMock refuses a request no stub matches, so a narrowed stub that was
-  # requested is the assertion.
+  # requested is the assertion. Narrowed off the support helper rather than
+  # rebuilt, because what a good answer looks like belongs in one place — #with
+  # and #to_return both answer the stub, so the two compose.
   def speaking_only_when(**expected)
-    stub_request(:post, voice_url).with(**expected)
-      .to_return(body: VoiceServing::AUDIO, headers: { "Content-Type" => "audio/mpeg" })
+    speaking.with(**expected)
   end
 
   it "sends the words it was given as the text to speak" do
@@ -154,14 +155,11 @@ RSpec.describe Edition::Voice do
   # it in the environment for bin/rails "edition:record", so without this the
   # example passes on CI and fails for exactly the people working on this.
   it "fails on the name of the missing variable when the key is not set" do
-    key = ENV.delete("ELEVENLABS_API_KEY")
-    voice = ENV["ELEVENLABS_VOICE_ID"]
-    ENV["ELEVENLABS_VOICE_ID"] = VoiceServing::VOICE_ID
+    with_a_voice do
+      ENV.delete("ELEVENLABS_API_KEY")
 
-    expect { Edition::Voice.new("Anything.").speak }
-      .to raise_error(KeyError, /ELEVENLABS_API_KEY/)
-  ensure
-    ENV["ELEVENLABS_API_KEY"] = key
-    ENV["ELEVENLABS_VOICE_ID"] = voice
+      expect { Edition::Voice.new("Anything.").speak }
+        .to raise_error(KeyError, /ELEVENLABS_API_KEY/)
+    end
   end
 end

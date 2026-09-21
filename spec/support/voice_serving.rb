@@ -15,9 +15,11 @@ module VoiceServing
   # arrives intact.
   AUDIO = "ID3\x04and then some frames".freeze
 
+  # Built from the constants the code posts to rather than from a second copy
+  # of the address: half-reused, an endpoint change breaks every stub here with
+  # no failure that names the cause.
   def voice_url
-    "https://api.elevenlabs.io/v1/text-to-speech/#{VOICE_ID}" \
-      "?output_format=#{Edition::Voice::FORMAT}"
+    "#{Edition::Voice::ENDPOINT}/#{VOICE_ID}?output_format=#{Edition::Voice::FORMAT}"
   end
 
   def speaking(bytes: AUDIO)

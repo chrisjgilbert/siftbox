@@ -44,9 +44,7 @@ RSpec.describe Edition::RecordingJob do
   it "sends the edition's own script to be read" do
     with_a_voice do
       edition = an_edition_of_one_story
-      request = stub_request(:post, voice_url)
-        .with(body: hash_including(text: Edition::Script.new(edition).text))
-        .to_return(body: VoiceServing::AUDIO, headers: { "Content-Type" => "audio/mpeg" })
+      request = speaking.with(body: hash_including(text: Edition::Script.new(edition).text))
 
       Edition::RecordingJob.perform_now(create(:edition_recording, edition: edition))
 

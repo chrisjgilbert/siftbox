@@ -1,12 +1,8 @@
 require "rails_helper"
 
 RSpec.describe Edition::Recording::Presenter do
-  def recording_for(edition, **attributes)
-    create(:edition_recording, edition: edition, **attributes)
-  end
-
   def finished_recording_for(edition)
-    recording = recording_for(edition)
+    recording = create(:edition_recording, edition: edition)
     recording.store("audio", voice: "a-voice")
 
     recording
@@ -25,7 +21,7 @@ RSpec.describe Edition::Recording::Presenter do
 
   it "is preparing while the recording has been asked for and nothing has come back" do
     edition = create(:edition)
-    recording_for(edition)
+    create(:edition_recording, edition: edition)
 
     expect(Edition::Recording::Presenter.new(edition.reload)).to be_preparing
   end
@@ -46,7 +42,7 @@ RSpec.describe Edition::Recording::Presenter do
   # it did not work says nothing about what happened.
   it "is not preparing once the recording has failed" do
     edition = create(:edition)
-    recording_for(edition, failed_at: 1.minute.ago)
+    create(:edition_recording, edition: edition, failed_at: 1.minute.ago)
 
     expect(Edition::Recording::Presenter.new(edition.reload)).not_to be_preparing
   end
@@ -58,7 +54,7 @@ RSpec.describe Edition::Recording::Presenter do
 
   it "invites the reader to try again after a failure" do
     edition = create(:edition)
-    recording_for(edition, failed_at: 1.minute.ago)
+    create(:edition_recording, edition: edition, failed_at: 1.minute.ago)
 
     expect(Edition::Recording::Presenter.new(edition.reload).invitation)
       .to eq("Try preparing the audio again")
@@ -98,5 +94,14 @@ RSpec.describe Edition::Recording::Presenter do
   it "says what is happening while the audio is being made" do
     expect(Edition::Recording::Presenter.new(create(:edition)).preparing_line)
       .to eq("Preparing the audio. It appears here when ready, or reload.")
+  end
+
+  # Every fact the broadcast needs is already here — the channel, the frame,
+  # the partial and the local — so the job asks rather than assembling it.
+  it "announces itself on the edition's own channel" do
+    edition = create(:edition)
+
+    expect { Edition::Recording::Presenter.new(edition).announce }
+      .to have_broadcasted_to("edition_#{edition.id}_recording")
   end
 end

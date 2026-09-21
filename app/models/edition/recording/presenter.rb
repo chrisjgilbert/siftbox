@@ -12,20 +12,16 @@
 # has no business reachable from the object the editor's words come out of,
 # where this is the same edition in another medium.
 class Edition::Recording::Presenter
-  # One recording per page, so the id it is replaced at is a constant rather
-  # than something derived. The job broadcasts to it when the audio is ready.
-  FRAME = "edition_recording".freeze
-
   def initialize(edition)
     @edition = edition
   end
 
   def ready?
-    recording.present? && recording.ready?
+    recording&.ready? || false
   end
 
   def preparing?
-    recording.present? && recording.pending?
+    recording&.pending? || false
   end
 
   # "Play edition" the first time, and something that admits what happened after
@@ -51,8 +47,27 @@ class Edition::Recording::Presenter
     I18n.t("editions.recording.label")
   end
 
+  # The element the page keeps the recording in, and what a broadcast writes
+  # into. One recording per page, so it is a fixed name rather than one derived
+  # from the edition.
   def frame
-    FRAME
+    "edition_recording"
+  end
+
+  # Replace what the page is showing with what it should be showing now. Called
+  # by Edition::RecordingJob when the audio arrives or the attempt is given up
+  # on, and the reason every fact it needs lives here: the channel, the frame,
+  # the partial and the local are all display, and a job that spelled them out
+  # was a second place that knew them.
+  #
+  # An update rather than a replace: the frame is the live region the page
+  # announces the change through, and replacing the region itself is what a
+  # screen reader is least reliable about noticing. Writing inside it leaves
+  # the region in place across every state.
+  def announce
+    Turbo::StreamsChannel.broadcast_update_to(
+      channel, target: frame, partial: "editions/recording", locals: { recording: self }
+    )
   end
 
   # Both the address the button posts to and the one the player reads from: the

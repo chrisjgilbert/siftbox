@@ -11,26 +11,10 @@
 # fail, or is it still being made.
 class Edition::Recording < ApplicationRecord
   # What the vendor sends and what the controller serves, read off the voice
-  # rather than spelled again here. The two have to agree — the voice checks
-  # what came back and this stamps what is stored — and two literals that must
-  # match is a pair that can drift: changing FORMAT to an Opus variant and
-  # only the voice's own constant would leave a blob labelled as MP3, served
-  # inline as MP3, and decodable by nothing.
+  # rather than spelled again here: the voice checks what came back, this
+  # stamps what is stored, and two literals that must match is a pair that can
+  # drift.
   AUDIO_TYPE = Edition::Voice::CONTENT_TYPE
-
-  # How long a recording may sit unfinished before the page stops calling it
-  # pending and offers the button again.
-  #
-  # Without a bound this state has no way out. #pending? is "neither ready nor
-  # failed", which is every state nothing stamped: a worker killed mid-job, a
-  # queue that is not running, a purged blob leaving completed_at behind. The
-  # job now stamps a failure whatever goes wrong, but it cannot stamp one if it
-  # never runs, so the clock is what makes the page recover on its own.
-  #
-  # Three attempts thirty seconds apart plus synthesis and the queue's own
-  # polling is under two minutes, so five leaves room for a slow morning
-  # without leaving a reader in front of a line that will never change.
-  STALE_AFTER = 5.minutes
 
   # Deliberately not touched, for the reason Edition::Story gives: an edition
   # is written once at composition and immutable after, and a recording made
@@ -44,15 +28,6 @@ class Edition::Recording < ApplicationRecord
   validates :edition, uniqueness: true
   validates :requested_at, presence: true
 
-  # A reader has asked to hear this edition. Creates the recording or picks up
-  # the one already there, clears whatever happened last time, and hands the
-  # work to a job.
-  #
-  # Enqueued here rather than in the controller, the way Blog::Subscription and
-  # Newsletter::InboundMessage enqueue theirs: the controller's job is to answer
-  # the request, and what asking for a recording involves is this class's to
-  # know.
-  #
   # A reader has asked to hear this edition, which is not the same as a reader
   # having tapped a button: a double tap on a phone, a back button, a retried
   # Turbo submission and a stale tab all arrive here, and each synthesis is a
@@ -60,8 +35,13 @@ class Edition::Recording < ApplicationRecord
   # asked for again — a recording being made will arrive on its own, and one
   # already made is what the reader wanted.
   #
+  # The job is enqueued here rather than in the controller, the way
+  # Blog::Subscription and Newsletter::InboundMessage enqueue theirs: the
+  # controller's job is to answer the request, and what asking for a recording
+  # involves is this class's to know.
+  #
   # What does start a job: no recording at all, one that failed, and one that
-  # has been pending longer than STALE_AFTER, which is the worker having died
+  # has been pending longer than a job can run, which is the worker having died
   # with the row still saying it was working.
   #
   # The rescue is the backstop under the index for two callers arriving in the
@@ -72,13 +52,10 @@ class Edition::Recording < ApplicationRecord
   # row really is there now, because a validation failing for any other reason
   # is a bug rather than a race.
   def self.start(edition)
-    recording = find_or_initialize_by(edition: edition)
-    return recording if recording.ready? || recording.pending?
+    found = find_by(edition: edition)
+    return found if found&.ready? || found&.pending?
 
-    recording.update!(requested_at: Time.current, failed_at: nil)
-    Edition::RecordingJob.perform_later(recording)
-
-    recording
+    asked(found || new(edition: edition))
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
     won = find_by(edition: edition)
     raise if won.nil?
@@ -86,12 +63,22 @@ class Edition::Recording < ApplicationRecord
     won
   end
 
+  # Stamped and handed to the queue. Separate from .start so that reads the way
+  # it decides — what is in hand, or ask for one — rather than mixing the
+  # decision with the asking.
+  def self.asked(recording)
+    recording.update!(requested_at: Time.current, failed_at: nil)
+    Edition::RecordingJob.perform_later(recording)
+
+    recording
+  end
+
   # One transaction over the two writes, per .claude/rules/database.md. They
   # are two commits otherwise — Active Storage saves the attachment against an
   # already-persisted record the moment it is attached — so a failure between
   # them would leave audio stored and paid for behind a row that never says it
-  # is ready, which is the stuck state STALE_AFTER exists to end and no reason
-  # to enter one.
+  # is ready, which is the stuck state #pending?'s two clauses exist to end and
+  # no reason to enter one.
   #
   # Both stamps in one update: a retry that works has to clear the failure as
   # well as record the success, or the page would draw a player and offer to
@@ -118,18 +105,23 @@ class Edition::Recording < ApplicationRecord
     failed_at.present?
   end
 
-  # Bounded by the clock rather than defined as whatever is left over. A
-  # recording is pending while it was asked for recently and nothing has come
-  # back; past STALE_AFTER the page stops waiting and offers the button again,
-  # which is the only way out of a job that died before it could stamp
-  # anything. requested_at is what the migration comment said it was for.
+  # Two clauses, and they answer different failures. completed_at is the first:
+  # a recording that came back is not still being made, whatever became of its
+  # audio afterwards — so a purged blob falls straight through to the button
+  # rather than being called pending and waiting out a clock to correct it.
   #
-  # Nil-safe on requested_at because .start asks this of a record it has only
-  # just built, before there is a moment to compare.
+  # The clock is the second, and it covers only what it can: a job that never
+  # ran at all. The job stamps a failure for anything that goes wrong while it
+  # is running, but a killed worker or a stopped queue stamps nothing, and
+  # without a bound that row says "still being made" for ever.
+  #
+  # The bound is the job's own worst case rather than a number chosen here.
+  # Asked at call time rather than held as a constant, so nothing loads in a
+  # particular order to make it true.
   def pending?
-    return false if ready? || failed?
+    return false if failed? || completed_at.present?
 
-    requested_at.present? && requested_at > STALE_AFTER.ago
+    requested_at > Edition::RecordingJob::LONGEST_RUN.ago
   end
 
   private
@@ -137,6 +129,6 @@ class Edition::Recording < ApplicationRecord
   # What a reader gets if they save the file, so it names the edition rather
   # than the row.
   def filename
-    "edition-#{edition.number}.mp3"
+    "edition-#{edition.number}.#{Edition::Voice::EXTENSION}"
   end
 end

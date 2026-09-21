@@ -40,21 +40,33 @@ class Edition::Voice
   # player that plays nothing.
   CONTENT_TYPE = "audio/mpeg".freeze
 
+  # What a file of it is called, beside the type rather than spelled out
+  # wherever a filename is built. FORMAT is the one decision and these two
+  # follow from it: an Opus variant would otherwise leave blobs typed audio/ogg
+  # and still named .mp3, which is the half of the drift the constant above was
+  # added to close.
+  EXTENSION = "mp3".freeze
+
   OPEN_TIMEOUT = 5
 
   # Generous, and deliberately: a job can wait, and an edition cut off halfway
   # through synthesis costs the whole request rather than part of it.
   READ_TIMEOUT = 120
 
-  # The ordinary ways a request to somebody else's server dies. None is
-  # recoverable here and all of them mean the same thing to the caller, so they
-  # are gathered rather than rescued one at a time.
-  FAILURES = [
-    EOFError, IOError, Net::HTTPBadResponse, Net::ProtocolError,
-    OpenSSL::SSL::SSLError, SocketError, SystemCallError, Timeout::Error
-  ].freeze
+  # The ordinary ways a request to somebody else's server dies, which this app
+  # has already had to enumerate once for the fetches that go the other way.
+  # Listed again here it would be two lists that have to be kept in step with
+  # nothing linking them, and Download's is already the canonical one — a blog
+  # spec reasons about membership in it by name. Its two extras cost nothing:
+  # there is no gzip on this response, and URI::Error is designed out by the
+  # escaping in #uri.
+  FAILURES = Download::FAILURES
 
-  # One family, so a caller with nothing to do about either can say so once.
+  # The family the two below belong to. Nothing rescues it and nothing should:
+  # Edition::RecordingJob names the two children one by one on purpose, so that
+  # a third raised here later falls to its catch-all and gets stamped on the
+  # row rather than being let through by a rule written before it existed. It
+  # is here to say the two are one kind of thing, and for a console.
   Error = Class.new(StandardError)
 
   # Waiting might fix it: a rate limit, a server error, an unreachable host, or
@@ -121,8 +133,12 @@ class Edition::Voice
     content_type(response) == CONTENT_TYPE
   end
 
+  # Net::HTTP parses this header itself — #content_type splits the parameters
+  # off and strips what is left, and answers nil when the header is absent — so
+  # the type and the charset never have to be told apart here. to_s covers the
+  # absent case and downcase the sender who shouted it.
   def content_type(response)
-    response["Content-Type"].to_s.split(";").first.to_s.strip.downcase
+    response.content_type.to_s.downcase
   end
 
   def request
