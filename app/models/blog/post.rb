@@ -64,8 +64,11 @@ class Blog::Post < ApplicationRecord
   # every plan this query gets — index scan and temp b-tree alike — so an
   # example asserting the result passes with the tie-break deleted. It is kept
   # because the guarantee should not rest on which index the planner reaches
-  # for. Where it is genuinely load-bearing is Feed#ordering, which sorts in
-  # Ruby, where sort_by is not stable — and that one is specced.
+  # for — Edition::Window reads this order to decide what one edition covers,
+  # and a batch reordering between two runs is a post covered twice or not at
+  # all. Where the same tie-break is genuinely load-bearing and specced is
+  # Feed::Page, which pages the archive: an order that is not total there
+  # re-shows one row on the next page and drops another.
   def self.oldest_first
     order(received_at: :asc, id: :asc)
   end

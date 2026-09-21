@@ -73,6 +73,8 @@ en:
     formats:
       edition_masthead: "%A %-d %B"
       feed_group: "%A %-d %B"
+      feed_month: "%B"
+      feed_year: "%Y"
   editions:
     index:
       count:
@@ -191,6 +193,7 @@ en:
       line: Originals
       no_image: No image in email
       no_image_compact: No image
+      older: Older →
       subscribe: Subscribe with %{address}
     original:
       back: Back to the archive
