@@ -3,7 +3,7 @@ source "https://rubygems.org"
 ruby "3.3.6"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "8.1.3.1"
+gem "rails", "8.1.4"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use sqlite3 as the database for Active Record
@@ -65,7 +65,7 @@ group :test do
   # browser and no driver gem.
   gem "capybara", "~> 3.40"
   gem "shoulda-matchers", "~> 6.4"
-  gem "webmock", "~> 3.24"
+  gem "webmock", "~> 3.34"
 end
 
 group :development do
@@ -73,7 +73,7 @@ group :development do
   gem "web-console"
 end
 
-gem "honeybadger", "~> 6.9"
+gem "honeybadger", "~> 6.10"
 
 # The model that writes the edition [https://github.com/anthropics/anthropic-sdk-ruby]
 gem "anthropic", "~> 1.62"
